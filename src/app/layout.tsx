@@ -1,7 +1,6 @@
-// Add a module declaration for CSS files if missing
+import { Metadata } from "next";
+import { ReactNode } from "react";
 import "./globals.css";
-import type { Metadata } from "next";
-
 export const metadata: Metadata = {
   title: "WhatsApp Support Dashboard",
   description: "Dashboard support WhatsApp avec agent IA",
@@ -10,11 +9,11 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <html lang="fr">
       <body>{children}</body>
     </html>
   );
-}
+};
