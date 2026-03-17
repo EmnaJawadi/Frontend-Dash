@@ -1,7 +1,7 @@
 // src/components/dashboard/recent-conversations.tsx
 
 import Link from "next/link";
-import type { RecentConversationItem } from   "@/src/features/dashboard/types/dashboard.types"
+import type { RecentConversationItem } from "@/src/features/dashboard/types/dashboard.types";
 import { cn } from "@/lib/utils";
 
 type RecentConversationsProps = {
@@ -11,13 +11,13 @@ type RecentConversationsProps = {
 function getStatusLabel(status: RecentConversationItem["status"]) {
   switch (status) {
     case "bot_active":
-      return "Bot Active";
+      return "Bot actif";
     case "human_assigned":
-      return "Human Assigned";
+      return "Agent assigné";
     case "waiting_customer":
-      return "Waiting Customer";
+      return "En attente du client";
     case "closed":
-      return "Closed";
+      return "Fermée";
     default:
       return status;
   }
@@ -51,6 +51,19 @@ function getPriorityClass(priority: RecentConversationItem["priority"]) {
   }
 }
 
+function getPriorityLabel(priority: RecentConversationItem["priority"]) {
+  switch (priority) {
+    case "high":
+      return "Haute";
+    case "medium":
+      return "Moyenne";
+    case "low":
+      return "Basse";
+    default:
+      return priority;
+  }
+}
+
 export function RecentConversations({
   conversations,
 }: RecentConversationsProps) {
@@ -60,10 +73,10 @@ export function RecentConversations({
         <div className="mb-6 flex items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-semibold md:text-lg">
-              Recent Conversations
+              Conversations récentes
             </h3>
             <p className="text-sm text-muted-foreground">
-              Review the latest customer activity and jump into details.
+              Consultez les dernières activités des clients et accédez rapidement aux détails.
             </p>
           </div>
 
@@ -71,7 +84,7 @@ export function RecentConversations({
             href="/conversations"
             className="text-sm font-medium text-primary transition hover:underline"
           >
-            View all
+            Voir tout
           </Link>
         </div>
 
@@ -100,11 +113,11 @@ export function RecentConversations({
 
                     <span
                       className={cn(
-                        "inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize",
+                        "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
                         getPriorityClass(conversation.priority)
                       )}
                     >
-                      {conversation.priority}
+                      {getPriorityLabel(conversation.priority)}
                     </span>
                   </div>
 
@@ -117,10 +130,10 @@ export function RecentConversations({
                   </p>
 
                   <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                    <span>Updated {conversation.updatedAt}</span>
+                    <span>Mis à jour : {conversation.updatedAt}</span>
 
                     {conversation.assignedAgent && (
-                      <span>Assigned to {conversation.assignedAgent}</span>
+                      <span>Assigné à : {conversation.assignedAgent}</span>
                     )}
                   </div>
                 </div>

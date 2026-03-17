@@ -5,11 +5,11 @@ import { cn } from "@/lib/utils";
 import type { ConversationMessage } from "@/src/features/conversations/types/conversations.types";
 
 type MessageBubbleProps = {
-  message: ConversationMessage; 
+  message: ConversationMessage;
 };
 
 function formatMessageTime(timestamp: string) {
-  return new Date(timestamp).toLocaleTimeString([], {
+  return new Date(timestamp).toLocaleTimeString("fr-FR", {
     hour: "2-digit",
     minute: "2-digit",
   });

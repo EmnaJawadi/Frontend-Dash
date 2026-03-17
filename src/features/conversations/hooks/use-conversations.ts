@@ -41,8 +41,8 @@ export function useConversations(initialPageSize = 10) {
       setConversations(response.data);
       setTotal(response.total);
     } catch (err) {
-      console.error("Failed to load conversations:", err);
-      setError("Failed to load conversations. Please try again.");
+      console.error("Échec du chargement des conversations :", err);
+      setError("Impossible de charger les conversations. Veuillez réessayer.");
     } finally {
       setIsLoading(false);
     }

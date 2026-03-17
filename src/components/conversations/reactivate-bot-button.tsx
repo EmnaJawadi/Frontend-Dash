@@ -1,4 +1,5 @@
 // src/components/conversations/reactivate-bot-button.tsx
+
 "use client";
 
 type ReactivateBotButtonProps = {
@@ -24,7 +25,7 @@ export function ReactivateBotButton({
       disabled={disabled || isLoading}
       className="inline-flex items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {isLoading ? "Reactivating..." : "Réactiver bot"}
+      {isLoading ? "Réactivation..." : "Réactiver le bot"}
     </button>
   );
 }

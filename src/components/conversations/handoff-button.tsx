@@ -25,7 +25,7 @@ export function HandoffButton({
       disabled={disabled || isLoading}
       className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {isLoading ? "Taking over..." : "Prendre la main"}
+      {isLoading ? "Prise en charge..." : "Prendre la main"}
     </button>
   );
 }

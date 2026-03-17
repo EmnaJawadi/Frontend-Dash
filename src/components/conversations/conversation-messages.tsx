@@ -1,13 +1,15 @@
+// src/components/conversations/conversation-messages.tsx
 
 import { MessageBubble } from "@/src/components/conversations/message-bubble";
 import type { ConversationMessage } from "@/src/features/conversations/types/conversations.types";
+
 type ConversationMessagesProps = {
   messages: ConversationMessage[];
 };
 
 function formatDateLabel(timestamp: string) {
   const date = new Date(timestamp);
-  return date.toLocaleDateString([], {
+  return date.toLocaleDateString("fr-FR", {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -15,16 +17,19 @@ function formatDateLabel(timestamp: string) {
 }
 
 function groupMessagesByDate(messages: ConversationMessage[]) {
-  return messages.reduce<Record<string, ConversationMessage[]>>((acc, message) => {
-    const key = new Date(message.timestamp).toDateString();
+  return messages.reduce<Record<string, ConversationMessage[]>>(
+    (acc, message) => {
+      const key = new Date(message.timestamp).toDateString();
 
-    if (!acc[key]) {
-      acc[key] = [];
-    }
+      if (!acc[key]) {
+        acc[key] = [];
+      }
 
-    acc[key].push(message);
-    return acc;
-  }, {});
+      acc[key].push(message);
+      return acc;
+    },
+    {}
+  );
 }
 
 export function ConversationMessages({
@@ -54,7 +59,7 @@ export function ConversationMessages({
 
           {messages.length === 0 && (
             <div className="flex h-[40vh] items-center justify-center text-sm text-muted-foreground">
-              No messages in this conversation yet.
+              Aucun message dans cette conversation pour le moment.
             </div>
           )}
         </div>

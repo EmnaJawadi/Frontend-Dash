@@ -6,20 +6,20 @@ import { Bell, Search } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const pageTitles: Record<string, string> = {
-  "/dashboard": "Dashboard",
+  "/dashboard": "Tableau de bord",
   "/conversations": "Conversations",
   "/contacts": "Contacts",
-  "/knowledge-base": "Knowledge Base",
-  "/analytics": "Analytics",
-  "/settings": "Settings",
+  "/knowledge-base": "Base de connaissances",
+  "/analytics": "Analyses",
+  "/settings": "Paramètres",
 };
 
 function getPageTitle(pathname: string) {
   if (pathname.startsWith("/conversations/")) {
-    return "Conversation Details";
+    return "Détails de la conversation";
   }
 
-  return pageTitles[pathname] ?? "Dashboard";
+  return pageTitles[pathname] ?? "Tableau de bord";
 }
 
 export function Header() {
@@ -32,7 +32,7 @@ export function Header() {
         <div className="min-w-0">
           <h1 className="truncate text-lg font-semibold md:text-xl">{title}</h1>
           <p className="text-sm text-muted-foreground">
-            Monitor activity, manage inbox, and review conversations.
+            Suivez l’activité, gérez la boîte de réception et consultez les conversations.
           </p>
         </div>
 
@@ -41,7 +41,7 @@ export function Header() {
             <Search className="h-4 w-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Rechercher..."
               className="w-48 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
@@ -60,8 +60,8 @@ export function Header() {
             </div>
 
             <div className="hidden text-left md:block">
-              <p className="text-sm font-medium">Emna Jawadi</p>
-              <p className="text-xs text-muted-foreground">Support Agent</p>
+              <p className="text-sm font-medium">Majdi Abbes</p>
+              <p className="text-xs text-muted-foreground">Agent de support</p>
             </div>
           </div>
         </div>

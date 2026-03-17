@@ -10,9 +10,11 @@ export function BotPerformanceCard({ data }: BotPerformanceCardProps) {
     <div className="section-card">
       <div className="section-card-content">
         <div className="mb-6">
-          <h3 className="text-base font-semibold md:text-lg">Bot Performance</h3>
+          <h3 className="text-base font-semibold md:text-lg">
+            Performance du bot
+          </h3>
           <p className="text-sm text-muted-foreground">
-            Monitor automation quality and response efficiency.
+            Suivez la qualité de l’automatisation et l’efficacité des réponses.
           </p>
         </div>
 
@@ -37,22 +39,22 @@ export function BotPerformanceCard({ data }: BotPerformanceCardProps) {
 
         <div className="mt-6 grid gap-3 rounded-2xl border bg-muted/40 p-4 text-sm sm:grid-cols-2">
           <div>
-            <span className="text-muted-foreground">Automation Rate:</span>
+            <span className="text-muted-foreground">Taux d’automatisation :</span>
             <span className="ml-2 font-semibold">{data.automationRate}%</span>
           </div>
 
           <div>
-            <span className="text-muted-foreground">Avg Confidence:</span>
+            <span className="text-muted-foreground">Confiance moyenne :</span>
             <span className="ml-2 font-semibold">{data.averageConfidence}%</span>
           </div>
 
           <div>
-            <span className="text-muted-foreground">Avg Response Time:</span>
+            <span className="text-muted-foreground">Temps de réponse moyen :</span>
             <span className="ml-2 font-semibold">{data.averageResponseTime}</span>
           </div>
 
           <div>
-            <span className="text-muted-foreground">Fallback Rate:</span>
+            <span className="text-muted-foreground">Taux de bascule :</span>
             <span className="ml-2 font-semibold">{data.fallbackRate}%</span>
           </div>
         </div>

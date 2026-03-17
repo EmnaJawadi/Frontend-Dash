@@ -16,13 +16,13 @@ type ConversationDetailsProps = {
 function getStatusLabel(status: ConversationDetailsType["status"]) {
   switch (status) {
     case "bot_active":
-      return "Bot Active";
+      return "Bot actif";
     case "human_assigned":
-      return "Human Assigned";
+      return "Agent assigné";
     case "waiting_customer":
-      return "Waiting Customer";
+      return "En attente du client";
     case "closed":
-      return "Closed";
+      return "Fermée";
     default:
       return status;
   }
@@ -54,10 +54,23 @@ function getPriorityClass(priority: ConversationDetailsType["priority"]) {
   }
 }
 
+function getPriorityLabel(priority: ConversationDetailsType["priority"]) {
+  switch (priority) {
+    case "high":
+      return "Haute";
+    case "medium":
+      return "Moyenne";
+    case "low":
+      return "Basse";
+    default:
+      return priority;
+  }
+}
+
 function formatDateTime(value?: string | null) {
   if (!value) return "—";
 
-  return new Date(value).toLocaleString([], {
+  return new Date(value).toLocaleString("fr-FR", {
     dateStyle: "medium",
     timeStyle: "short",
   });
@@ -87,10 +100,10 @@ export function ConversationDetails({
       <div className="section-card-content space-y-6">
         <div>
           <h3 className="text-base font-semibold md:text-lg">
-            Conversation Details
+            Détails de la conversation
           </h3>
           <p className="text-sm text-muted-foreground">
-            Contact profile, status, and support actions.
+            Profil du contact, statut et actions de support.
           </p>
         </div>
 
@@ -119,19 +132,19 @@ export function ConversationDetails({
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Language</span>
+              <span className="text-muted-foreground">Langue</span>
               <span>{conversation.contact.language ?? "—"}</span>
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Location</span>
+              <span className="text-muted-foreground">Localisation</span>
               <span>{conversation.contact.location ?? "—"}</span>
             </div>
           </div>
         </div>
 
         <div className="rounded-2xl border bg-background p-4">
-          <p className="mb-3 text-sm font-semibold">Status & Priority</p>
+          <p className="mb-3 text-sm font-semibold">Statut et priorité</p>
 
           <div className="flex flex-wrap gap-2">
             <span
@@ -145,11 +158,11 @@ export function ConversationDetails({
 
             <span
               className={cn(
-                "inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize",
+                "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
                 getPriorityClass(conversation.priority)
               )}
             >
-              {conversation.priority}
+              {getPriorityLabel(conversation.priority)}
             </span>
 
             <span
@@ -158,35 +171,37 @@ export function ConversationDetails({
                 botIsActive ? "status-success" : "status-warning"
               )}
             >
-              {botIsActive ? "Bot Active" : "Bot Paused"}
+              {botIsActive ? "Bot actif" : "Bot en pause"}
             </span>
           </div>
 
           <div className="mt-4 space-y-2 text-sm">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Assigned Agent</span>
+              <span className="text-muted-foreground">Agent assigné</span>
               <span>{conversation.activity.assignedAgent ?? "—"}</span>
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Created At</span>
+              <span className="text-muted-foreground">Créée le</span>
               <span>{formatDateTime(conversation.createdAt)}</span>
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Updated At</span>
+              <span className="text-muted-foreground">Mise à jour le</span>
               <span>{formatDateTime(conversation.updatedAt)}</span>
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Last Bot Message</span>
+              <span className="text-muted-foreground">Dernier message du bot</span>
               <span>
                 {formatDateTime(conversation.activity.lastBotMessageAt)}
               </span>
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Last Agent Reply</span>
+              <span className="text-muted-foreground">
+                Dernière réponse de l'agent
+              </span>
               <span>
                 {formatDateTime(conversation.activity.lastAgentReplyAt)}
               </span>
@@ -195,7 +210,7 @@ export function ConversationDetails({
         </div>
 
         <div className="rounded-2xl border bg-background p-4">
-          <p className="mb-3 text-sm font-semibold">Tags</p>
+          <p className="mb-3 text-sm font-semibold">Étiquettes</p>
 
           <div className="flex flex-wrap gap-2">
             {conversation.tags.length > 0 ? (
@@ -208,15 +223,17 @@ export function ConversationDetails({
                 </span>
               ))
             ) : (
-              <span className="text-sm text-muted-foreground">No tags</span>
+              <span className="text-sm text-muted-foreground">
+                Aucune étiquette
+              </span>
             )}
           </div>
         </div>
 
         <div className="rounded-2xl border bg-background p-4">
-          <p className="mb-3 text-sm font-semibold">Internal Notes</p>
+          <p className="mb-3 text-sm font-semibold">Notes internes</p>
           <p className="text-sm text-muted-foreground">
-            {conversation.notes?.trim() || "No notes available."}
+            {conversation.notes?.trim() || "Aucune note disponible."}
           </p>
         </div>
 

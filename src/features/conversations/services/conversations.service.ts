@@ -12,28 +12,28 @@ const conversationsMock: ConversationListItem[] = [
     id: "conv_001",
     contactName: "Sarah Ben Ali",
     phone: "+216 20 123 456",
-    lastMessage: "I still haven’t received my order confirmation.",
+    lastMessage: "Je n’ai toujours pas reçu ma confirmation de commande.",
     lastMessageAt: "2026-03-15T09:25:00Z",
     status: "human_assigned",
     priority: "high",
     unreadCount: 2,
     tags: [
-      { id: "tag_1", label: "Order Issue" },
+      { id: "tag_1", label: "Problème de commande" },
       { id: "tag_2", label: "VIP" },
     ],
-    assignedAgent: "Emna Jawadi",
+    assignedAgent: "Majdi Abbes",
     botActive: false,
   },
   {
     id: "conv_002",
     contactName: "Omar Khaled",
     phone: "+216 55 987 321",
-    lastMessage: "Can I change my delivery address?",
+    lastMessage: "Puis-je changer mon adresse de livraison ?",
     lastMessageAt: "2026-03-15T09:12:00Z",
     status: "bot_active",
     priority: "medium",
     unreadCount: 0,
-    tags: [{ id: "tag_3", label: "Delivery" }],
+    tags: [{ id: "tag_3", label: "Livraison" }],
     assignedAgent: null,
     botActive: true,
   },
@@ -41,12 +41,12 @@ const conversationsMock: ConversationListItem[] = [
     id: "conv_003",
     contactName: "Nour Haddad",
     phone: "+216 29 444 210",
-    lastMessage: "Thank you, that solved my issue.",
+    lastMessage: "Merci, cela a résolu mon problème.",
     lastMessageAt: "2026-03-15T08:41:00Z",
     status: "closed",
     priority: "low",
     unreadCount: 0,
-    tags: [{ id: "tag_4", label: "Resolved" }],
+    tags: [{ id: "tag_4", label: "Résolu" }],
     assignedAgent: null,
     botActive: false,
   },
@@ -54,12 +54,12 @@ const conversationsMock: ConversationListItem[] = [
     id: "conv_004",
     contactName: "Karim Trabelsi",
     phone: "+216 98 765 100",
-    lastMessage: "I need to speak to a real person please.",
+    lastMessage: "J’ai besoin de parler à une vraie personne, s’il vous plaît.",
     lastMessageAt: "2026-03-15T08:10:00Z",
     status: "waiting_customer",
     priority: "high",
     unreadCount: 1,
-    tags: [{ id: "tag_5", label: "Handoff" }],
+    tags: [{ id: "tag_5", label: "Transfert" }],
     assignedAgent: "Sarra Mnif",
     botActive: false,
   },
@@ -75,18 +75,18 @@ const conversationDetailsMock: Record<string, ConversationDetails> = {
       name: "Sarah Ben Ali",
       phone: "+216 20 123 456",
       email: "sarah.benali@example.com",
-      language: "French",
-      location: "Tunis, Tunisia",
+      language: "Français",
+      location: "Tunis, Tunisie",
     },
     tags: [
-      { id: "tag_1", label: "Order Issue" },
+      { id: "tag_1", label: "Problème de commande" },
       { id: "tag_2", label: "VIP" },
     ],
-    notes: "Customer is waiting for a payment/order confirmation email.",
+    notes: "La cliente attend un e-mail de confirmation de paiement/commande.",
     createdAt: "2026-03-15T08:55:00Z",
     updatedAt: "2026-03-15T09:25:00Z",
     activity: {
-      assignedAgent: "Emna Jawadi",
+      assignedAgent: "Majdi Abbes",
       handoffRequired: true,
       botActive: false,
       lastBotMessageAt: "2026-03-15T09:01:00Z",
@@ -99,7 +99,8 @@ const conversationDetailsMock: Record<string, ConversationDetails> = {
         senderType: "customer",
         direction: "inbound",
         type: "text",
-        content: "Hi, I placed an order but I didn’t receive the confirmation email.",
+        content:
+          "Bonjour, j’ai passé une commande mais je n’ai pas reçu l’e-mail de confirmation.",
         timestamp: "2026-03-15T08:56:00Z",
         status: "read",
       },
@@ -109,7 +110,8 @@ const conversationDetailsMock: Record<string, ConversationDetails> = {
         senderType: "bot",
         direction: "outbound",
         type: "text",
-        content: "I’m checking that for you. Can you confirm the phone number used for the order?",
+        content:
+          "Je vérifie cela pour vous. Pouvez-vous confirmer le numéro de téléphone utilisé pour la commande ?",
         timestamp: "2026-03-15T08:56:20Z",
         status: "read",
       },
@@ -119,7 +121,7 @@ const conversationDetailsMock: Record<string, ConversationDetails> = {
         senderType: "customer",
         direction: "inbound",
         type: "text",
-        content: "Yes, it is this same number.",
+        content: "Oui, c’est bien ce même numéro.",
         timestamp: "2026-03-15T08:57:10Z",
         status: "read",
       },
@@ -129,7 +131,7 @@ const conversationDetailsMock: Record<string, ConversationDetails> = {
         senderType: "system",
         direction: "outbound",
         type: "system",
-        content: "Conversation handed off to human agent.",
+        content: "Conversation transférée à un agent humain.",
         timestamp: "2026-03-15T09:18:00Z",
       },
       {
@@ -138,7 +140,8 @@ const conversationDetailsMock: Record<string, ConversationDetails> = {
         senderType: "agent",
         direction: "outbound",
         type: "text",
-        content: "Hello Sarah, I’m taking over this conversation. I’m verifying your order now.",
+        content:
+          "Bonjour Sarah, je prends en charge cette conversation. Je vérifie votre commande maintenant.",
         timestamp: "2026-03-15T09:20:00Z",
         status: "delivered",
       },
@@ -153,11 +156,11 @@ const conversationDetailsMock: Record<string, ConversationDetails> = {
       name: "Omar Khaled",
       phone: "+216 55 987 321",
       email: "omar.khaled@example.com",
-      language: "Arabic",
-      location: "Sfax, Tunisia",
+      language: "Arabe",
+      location: "Sfax, Tunisie",
     },
-    tags: [{ id: "tag_3", label: "Delivery" }],
-    notes: "Customer wants to update shipping destination.",
+    tags: [{ id: "tag_3", label: "Livraison" }],
+    notes: "Le client souhaite modifier l’adresse de livraison.",
     createdAt: "2026-03-15T08:50:00Z",
     updatedAt: "2026-03-15T09:12:00Z",
     activity: {
@@ -174,7 +177,7 @@ const conversationDetailsMock: Record<string, ConversationDetails> = {
         senderType: "customer",
         direction: "inbound",
         type: "text",
-        content: "Can I change my delivery address?",
+        content: "Puis-je changer mon adresse de livraison ?",
         timestamp: "2026-03-15T09:11:00Z",
         status: "read",
       },
@@ -184,7 +187,8 @@ const conversationDetailsMock: Record<string, ConversationDetails> = {
         senderType: "bot",
         direction: "outbound",
         type: "text",
-        content: "Yes, I can help. Please send me your order number first.",
+        content:
+          "Oui, je peux vous aider. Veuillez d’abord m’envoyer votre numéro de commande.",
         timestamp: "2026-03-15T09:12:00Z",
         status: "delivered",
       },
@@ -264,7 +268,7 @@ export const conversationsService = {
     const conversation = conversationDetailsMock[id];
 
     if (!conversation) {
-      throw new Error("Conversation not found");
+      throw new Error("Conversation introuvable");
     }
 
     return conversation;
@@ -274,7 +278,7 @@ export const conversationsService = {
     await wait(500);
 
     if (!conversationDetailsMock[id]) {
-      throw new Error("Conversation not found");
+      throw new Error("Conversation introuvable");
     }
 
     return { success: true };
@@ -284,7 +288,7 @@ export const conversationsService = {
     await wait(500);
 
     if (!conversationDetailsMock[id]) {
-      throw new Error("Conversation not found");
+      throw new Error("Conversation introuvable");
     }
 
     return { success: true };

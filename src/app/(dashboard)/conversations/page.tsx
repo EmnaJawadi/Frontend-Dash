@@ -1,6 +1,7 @@
 // src/app/(dashboard)/conversations/page.tsx
 
 "use client";
+
 import { ConversationFilters } from "@/src/components/conversations/conversation-filters";
 import { ConversationList } from "@/src/components/conversations/conversation-list";
 import { ConversationTable } from "@/src/components/conversations/conversation-table";
@@ -25,9 +26,11 @@ export default function ConversationsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Conversations Inbox</h2>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Boîte de réception des conversations
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Loading conversations...
+            Chargement des conversations...
           </p>
         </div>
 
@@ -42,7 +45,9 @@ export default function ConversationsPage() {
       <div className="section-card">
         <div className="section-card-content flex flex-col items-start gap-4">
           <div>
-            <h2 className="text-xl font-semibold">Unable to load conversations</h2>
+            <h2 className="text-xl font-semibold">
+              Impossible de charger les conversations
+            </h2>
             <p className="text-sm text-muted-foreground">{error}</p>
           </div>
 
@@ -51,7 +56,7 @@ export default function ConversationsPage() {
             onClick={refetch}
             className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
           >
-            Retry
+            Réessayer
           </button>
         </div>
       </div>
@@ -62,28 +67,30 @@ export default function ConversationsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Conversations Inbox</h2>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Boîte de réception des conversations
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Review, filter, and manage customer conversations.
+            Consultez, filtrez et gérez les conversations clients.
           </p>
         </div>
 
         <div className="text-sm text-muted-foreground">
-          {total} conversation{total !== 1 ? "s" : ""} found
+          {total} conversation{total !== 1 ? "s" : ""} trouvée{total !== 1 ? "s" : ""}
         </div>
       </div>
 
       <ConversationFilters
-  filters={{
-    search: filters.search ?? "",
-    status: filters.status ?? "all",
-    priority: filters.priority ?? "all",
-    assignedTo: filters.assignedTo ?? "all",
-    botState: filters.botState ?? "all",
-  }}
-  onChange={setFilters}
-  onReset={resetFilters}
-/>
+        filters={{
+          search: filters.search ?? "",
+          status: filters.status ?? "all",
+          priority: filters.priority ?? "all",
+          assignedTo: filters.assignedTo ?? "all",
+          botState: filters.botState ?? "all",
+        }}
+        onChange={setFilters}
+        onReset={resetFilters}
+      />
 
       <div className="hidden lg:block">
         <ConversationTable conversations={conversations} />
@@ -96,7 +103,7 @@ export default function ConversationsPage() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between rounded-2xl border bg-background px-4 py-3">
           <p className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
+            Page {page} sur {totalPages}
           </p>
 
           <div className="flex items-center gap-2">
@@ -106,7 +113,7 @@ export default function ConversationsPage() {
               disabled={page === 1}
               className="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Previous
+              Précédent
             </button>
 
             <button
@@ -115,7 +122,7 @@ export default function ConversationsPage() {
               disabled={page === totalPages}
               className="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Next
+              Suivant
             </button>
           </div>
         </div>

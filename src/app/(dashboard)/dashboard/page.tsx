@@ -9,8 +9,6 @@ import { RecentConversations } from "@/src/components/dashboard/recent-conversat
 import { StatsCard } from "@/src/components/dashboard/stats-card";
 import { useDashboard } from "@/src/features/dashboard/hooks/use-dashboard";
 
-
-
 export default function DashboardPage() {
   const { data, isLoading, error, refetch } = useDashboard();
 
@@ -79,7 +77,7 @@ export default function DashboardPage() {
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        {data.stats.map((stat: unknown) => (
+        {data.stats.map((stat) => (
           <StatsCard key={stat.key} stat={stat} />
         ))}
       </section>

@@ -11,13 +11,13 @@ type ConversationListProps = {
 function getStatusLabel(status: ConversationListItem["status"]) {
   switch (status) {
     case "bot_active":
-      return "Bot Active";
+      return "Bot actif";
     case "human_assigned":
-      return "Human Assigned";
+      return "Agent assigné";
     case "waiting_customer":
-      return "Waiting Customer";
+      return "En attente du client";
     case "closed":
-      return "Closed";
+      return "Fermée";
     default:
       return status;
   }
@@ -51,12 +51,25 @@ function getPriorityClass(priority: ConversationListItem["priority"]) {
   }
 }
 
+function getPriorityLabel(priority: ConversationListItem["priority"]) {
+  switch (priority) {
+    case "high":
+      return "Haute";
+    case "medium":
+      return "Moyenne";
+    case "low":
+      return "Basse";
+    default:
+      return priority;
+  }
+}
+
 export function ConversationList({ conversations }: ConversationListProps) {
   if (conversations.length === 0) {
     return (
       <div className="section-card">
         <div className="section-card-content py-10 text-center text-sm text-muted-foreground">
-          No conversations found.
+          Aucune conversation trouvée.
         </div>
       </div>
     );
@@ -90,11 +103,11 @@ export function ConversationList({ conversations }: ConversationListProps) {
 
                     <span
                       className={cn(
-                        "inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize",
+                        "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
                         getPriorityClass(conversation.priority)
                       )}
                     >
-                      {conversation.priority}
+                      {getPriorityLabel(conversation.priority)}
                     </span>
                   </div>
 
@@ -121,10 +134,11 @@ export function ConversationList({ conversations }: ConversationListProps) {
 
                   <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                     <span>
-                      Updated {new Date(conversation.lastMessageAt).toLocaleString()}
+                      Mis à jour le{" "}
+                      {new Date(conversation.lastMessageAt).toLocaleString("fr-FR")}
                     </span>
-                    <span>Assigned: {conversation.assignedAgent ?? "—"}</span>
-                    <span>Bot: {conversation.botActive ? "Active" : "Paused"}</span>
+                    <span>Agent assigné : {conversation.assignedAgent ?? "—"}</span>
+                    <span>Bot : {conversation.botActive ? "Actif" : "En pause"}</span>
                   </div>
                 </div>
 

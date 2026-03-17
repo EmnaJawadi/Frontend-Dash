@@ -65,7 +65,9 @@ export function StatsCard({ stat }: StatsCardProps) {
               {stat.change}%
             </span>
 
-            <span className="text-xs text-muted-foreground">from previous period</span>
+            <span className="text-xs text-muted-foreground">
+              par rapport à la période précédente
+            </span>
           </div>
         )}
       </div>

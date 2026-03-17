@@ -23,8 +23,8 @@ export function useConversationDetails(conversationId: string) {
       const data = await conversationsService.getConversationById(conversationId);
       setConversation(data);
     } catch (err) {
-      console.error("Failed to load conversation details:", err);
-      setError("Failed to load conversation details. Please try again.");
+      console.error("Échec du chargement des détails de la conversation :", err);
+      setError("Impossible de charger les détails de la conversation. Veuillez réessayer.");
     } finally {
       setIsLoading(false);
     }
@@ -46,8 +46,8 @@ export function useConversationDetails(conversationId: string) {
 
       return true;
     } catch (err) {
-      console.error("Failed to handoff conversation:", err);
-      setError("Failed to handoff conversation. Please try again.");
+      console.error("Échec du transfert de la conversation :", err);
+      setError("Impossible de transférer la conversation. Veuillez réessayer.");
       return false;
     } finally {
       setIsHandoffLoading(false);
@@ -66,8 +66,8 @@ export function useConversationDetails(conversationId: string) {
 
       return true;
     } catch (err) {
-      console.error("Failed to reactivate bot:", err);
-      setError("Failed to reactivate bot. Please try again.");
+      console.error("Échec de la réactivation du bot :", err);
+      setError("Impossible de réactiver le bot. Veuillez réessayer.");
       return false;
     } finally {
       setIsReactivatingBot(false);

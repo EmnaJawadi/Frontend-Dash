@@ -26,7 +26,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
-    label: "Dashboard",
+    label: "Tableau de bord",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
@@ -42,17 +42,17 @@ const navItems: NavItem[] = [
     icon: Users,
   },
   {
-    label: "Knowledge Base",
+    label: "Base de connaissances",
     href: "/knowledge-base",
     icon: BookOpen,
   },
   {
-    label: "Analytics",
+    label: "Analyses",
     href: "/analytics",
     icon: BarChart3,
   },
   {
-    label: "Settings",
+    label: "Paramètres",
     href: "/settings",
     icon: Settings,
   },
@@ -80,7 +80,7 @@ export function Sidebar() {
     >
       <div className="flex h-16 items-center justify-between border-b px-4">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground font-bold">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary font-bold text-primary-foreground">
             WA
           </div>
 
@@ -88,7 +88,7 @@ export function Sidebar() {
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">Support OS</p>
               <p className="truncate text-xs text-muted-foreground">
-                WhatsApp Dashboard
+                Tableau de bord WhatsApp
               </p>
             </div>
           )}
@@ -98,7 +98,7 @@ export function Sidebar() {
           type="button"
           onClick={() => setCollapsed((prev) => !prev)}
           className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground transition hover:bg-muted"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Développer la barre latérale" : "Réduire la barre latérale"}
         >
           {collapsed ? (
             <ChevronRight className="h-4 w-4" />
@@ -141,9 +141,9 @@ export function Sidebar() {
         >
           {!collapsed ? (
             <>
-              <p className="text-sm font-semibold">Agent Workspace</p>
+              <p className="text-sm font-semibold">Espace agent</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Manage conversations, handoff, and bot activity.
+                Gérez les conversations, les prises en charge et l’activité du bot.
               </p>
             </>
           ) : (

@@ -1,3 +1,5 @@
+// src/components/conversations/conversation-table.tsx
+
 import Link from "next/link";
 import type { ConversationListItem } from "@/src/features/conversations/types/conversations.types";
 import { cn } from "@/lib/utils";
@@ -9,13 +11,13 @@ type ConversationTableProps = {
 function getStatusLabel(status: ConversationListItem["status"]) {
   switch (status) {
     case "bot_active":
-      return "Bot Active";
+      return "Bot actif";
     case "human_assigned":
-      return "Human Assigned";
+      return "Prise en charge humaine";
     case "waiting_customer":
-      return "Waiting Customer";
+      return "En attente du client";
     case "closed":
-      return "Closed";
+      return "Clôturée";
     default:
       return status;
   }
@@ -32,6 +34,19 @@ function getStatusClass(status: ConversationListItem["status"]) {
       return "status-neutral";
     default:
       return "status-neutral";
+  }
+}
+
+function getPriorityLabel(priority: ConversationListItem["priority"]) {
+  switch (priority) {
+    case "high":
+      return "Haute";
+    case "medium":
+      return "Moyenne";
+    case "low":
+      return "Basse";
+    default:
+      return priority;
   }
 }
 
@@ -61,22 +76,22 @@ export function ConversationTable({
                 Contact
               </th>
               <th className="px-4 py-3 font-medium text-muted-foreground">
-                Last Message
+                Dernier message
               </th>
               <th className="px-4 py-3 font-medium text-muted-foreground">
-                Status
+                Statut
               </th>
               <th className="px-4 py-3 font-medium text-muted-foreground">
-                Priority
+                Priorité
               </th>
               <th className="px-4 py-3 font-medium text-muted-foreground">
-                Unread
+                Non lus
               </th>
               <th className="px-4 py-3 font-medium text-muted-foreground">
-                Assigned
+                Assigné à
               </th>
               <th className="px-4 py-3 font-medium text-muted-foreground">
-                Updated
+                Mise à jour
               </th>
             </tr>
           </thead>
@@ -113,16 +128,14 @@ export function ConversationTable({
                     {Array.isArray(conversation.tags) &&
                       conversation.tags.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">
-                          {conversation.tags.map(
-                            (tag: { id: string; label: string }) => (
-                              <span
-                                key={tag.id}
-                                className="inline-flex rounded-full border bg-background px-2 py-1 text-[11px] text-muted-foreground"
-                              >
-                                {tag.label}
-                              </span>
-                            )
-                          )}
+                          {conversation.tags.map((tag) => (
+                            <span
+                              key={tag.id}
+                              className="inline-flex rounded-full border bg-background px-2 py-1 text-[11px] text-muted-foreground"
+                            >
+                              {tag.label}
+                            </span>
+                          ))}
                         </div>
                       )}
                   </Link>
@@ -142,11 +155,11 @@ export function ConversationTable({
                 <td className="px-4 py-4 align-top">
                   <span
                     className={cn(
-                      "inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize",
+                      "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
                       getPriorityClass(conversation.priority)
                     )}
                   >
-                    {conversation.priority}
+                    {getPriorityLabel(conversation.priority)}
                   </span>
                 </td>
 
@@ -168,7 +181,7 @@ export function ConversationTable({
 
                 <td className="px-4 py-4 align-top">
                   <span className="text-sm text-muted-foreground">
-                    {new Date(conversation.lastMessageAt).toLocaleString()}
+                    {new Date(conversation.lastMessageAt).toLocaleString("fr-FR")}
                   </span>
                 </td>
               </tr>
@@ -180,7 +193,7 @@ export function ConversationTable({
                   colSpan={7}
                   className="px-4 py-10 text-center text-sm text-muted-foreground"
                 >
-                  No conversations found.
+                  Aucune conversation trouvée.
                 </td>
               </tr>
             )}

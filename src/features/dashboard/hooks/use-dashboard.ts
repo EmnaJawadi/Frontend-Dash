@@ -19,8 +19,8 @@ export function useDashboard() {
       const response = await dashboardService.getDashboardData();
       setData(response);
     } catch (err) {
-      console.error("Failed to load dashboard data:", err);
-      setError("Failed to load dashboard data. Please try again.");
+      console.error("Échec du chargement des données du tableau de bord :", err);
+      setError("Impossible de charger les données du tableau de bord. Veuillez réessayer.");
     } finally {
       setIsLoading(false);
     }
