@@ -1,8 +1,20 @@
 // src/components/conversations/conversation-table.tsx
 
 import Link from "next/link";
+import {
+  ArrowUpDown,
+  CircleDashed,
+  Clock3,
+  Flag,
+  MailOpen,
+  MessageSquareText,
+  Square,
+  User,
+  UserRound,
+} from "lucide-react";
+import { DataTable } from "@/src/components/shared/data-table";
+import { StatusBadge } from "@/src/components/shared/status-badge";
 import type { ConversationListItem } from "@/src/features/conversations/types/conversations.types";
-import { cn } from "@/lib/utils";
 
 type ConversationTableProps = {
   conversations: ConversationListItem[];
@@ -23,17 +35,18 @@ function getStatusLabel(status: ConversationListItem["status"]) {
   }
 }
 
-function getStatusClass(status: ConversationListItem["status"]) {
+function getStatusVariant(
+  status: ConversationListItem["status"]
+): "success" | "warning" | "neutral" {
   switch (status) {
     case "bot_active":
-      return "status-success";
+      return "success";
     case "human_assigned":
-      return "status-warning";
+      return "warning";
     case "waiting_customer":
     case "closed":
-      return "status-neutral";
     default:
-      return "status-neutral";
+      return "neutral";
   }
 }
 
@@ -50,156 +63,180 @@ function getPriorityLabel(priority: ConversationListItem["priority"]) {
   }
 }
 
-function getPriorityClass(priority: ConversationListItem["priority"]) {
+function getPriorityVariant(
+  priority: ConversationListItem["priority"]
+): "success" | "warning" | "danger" {
   switch (priority) {
     case "high":
-      return "status-danger";
+      return "danger";
     case "medium":
-      return "status-warning";
+      return "warning";
     case "low":
-      return "status-success";
     default:
-      return "status-neutral";
+      return "success";
   }
 }
 
-export function ConversationTable({
-  conversations,
-}: ConversationTableProps) {
+function HeaderCell({
+  icon,
+  label,
+  sortable = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  sortable?: boolean;
+}) {
   return (
-    <div className="section-card overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-muted/40 text-left">
-            <tr className="border-b">
-              <th className="px-4 py-3 font-medium text-muted-foreground">
-                Contact
-              </th>
-              <th className="px-4 py-3 font-medium text-muted-foreground">
-                Dernier message
-              </th>
-              <th className="px-4 py-3 font-medium text-muted-foreground">
-                Statut
-              </th>
-              <th className="px-4 py-3 font-medium text-muted-foreground">
-                Priorité
-              </th>
-              <th className="px-4 py-3 font-medium text-muted-foreground">
-                Non lus
-              </th>
-              <th className="px-4 py-3 font-medium text-muted-foreground">
-                Assigné à
-              </th>
-              <th className="px-4 py-3 font-medium text-muted-foreground">
-                Mise à jour
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {conversations.map((conversation) => (
-              <tr
-                key={conversation.id}
-                className="border-b transition hover:bg-muted/30"
-              >
-                <td className="px-4 py-4 align-top">
-                  <Link
-                    href={`/conversations/${conversation.id}`}
-                    className="block"
-                  >
-                    <div className="font-semibold">
-                      {conversation.contactName}
-                    </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {conversation.phone}
-                    </div>
-                  </Link>
-                </td>
-
-                <td className="px-4 py-4 align-top">
-                  <Link
-                    href={`/conversations/${conversation.id}`}
-                    className="block max-w-[320px]"
-                  >
-                    <p className="line-clamp-2 text-sm text-foreground/90">
-                      {conversation.lastMessage}
-                    </p>
-
-                    {Array.isArray(conversation.tags) &&
-                      conversation.tags.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {conversation.tags.map((tag) => (
-                            <span
-                              key={tag.id}
-                              className="inline-flex rounded-full border bg-background px-2 py-1 text-[11px] text-muted-foreground"
-                            >
-                              {tag.label}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                  </Link>
-                </td>
-
-                <td className="px-4 py-4 align-top">
-                  <span
-                    className={cn(
-                      "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                      getStatusClass(conversation.status)
-                    )}
-                  >
-                    {getStatusLabel(conversation.status)}
-                  </span>
-                </td>
-
-                <td className="px-4 py-4 align-top">
-                  <span
-                    className={cn(
-                      "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                      getPriorityClass(conversation.priority)
-                    )}
-                  >
-                    {getPriorityLabel(conversation.priority)}
-                  </span>
-                </td>
-
-                <td className="px-4 py-4 align-top">
-                  {conversation.unreadCount > 0 ? (
-                    <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground">
-                      {conversation.unreadCount}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">0</span>
-                  )}
-                </td>
-
-                <td className="px-4 py-4 align-top">
-                  <span className="text-sm text-muted-foreground">
-                    {conversation.assignedAgent ?? "—"}
-                  </span>
-                </td>
-
-                <td className="px-4 py-4 align-top">
-                  <span className="text-sm text-muted-foreground">
-                    {new Date(conversation.lastMessageAt).toLocaleString("fr-FR")}
-                  </span>
-                </td>
-              </tr>
-            ))}
-
-            {conversations.length === 0 && (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-10 text-center text-sm text-muted-foreground"
-                >
-                  Aucune conversation trouvée.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+    <div className="flex items-center gap-2">
+      <span className="text-muted-foreground">{icon}</span>
+      <span>{label}</span>
+      {sortable ? (
+        <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+      ) : null}
     </div>
+  );
+}
+
+export function ConversationTable({ conversations }: ConversationTableProps) {
+  return (
+    <DataTable<ConversationListItem>
+      data={conversations}
+      rowKey={(item) => item.id}
+      emptyMessage="Aucune conversation trouvée."
+      columns={[
+        {
+          key: "select",
+          header: <Square className="h-4 w-4 text-muted-foreground" />,
+          className: "w-[52px]",
+          render: () => (
+            <button
+              type="button"
+              aria-label="Sélectionner"
+              className="inline-flex h-4 w-4 rounded border border-border bg-background"
+            />
+          ),
+        },
+        {
+          key: "contact",
+          header: (
+            <HeaderCell
+              icon={<User className="h-4 w-4" />}
+              label="Contact"
+              sortable
+            />
+          ),
+          render: (item) => (
+            <Link href={`/conversations/${item.id}`} className="block">
+              <div className="font-semibold">{item.contactName}</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {item.phone}
+              </div>
+            </Link>
+          ),
+        },
+        {
+          key: "message",
+          header: (
+            <HeaderCell
+              icon={<MessageSquareText className="h-4 w-4" />}
+              label="Dernier message"
+            />
+          ),
+          render: (item) => (
+            <Link
+              href={`/conversations/${item.id}`}
+              className="block max-w-[320px]"
+            >
+              <p className="line-clamp-2 text-sm text-foreground/90">
+                {item.lastMessage}
+              </p>
+
+              {item.tags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {item.tags.map((tag) => (
+                    <span
+                      key={tag.id}
+                      className="inline-flex rounded-full border bg-background px-2 py-1 text-[11px] text-muted-foreground"
+                    >
+                      {tag.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </Link>
+          ),
+        },
+        {
+          key: "status",
+          header: (
+            <HeaderCell
+              icon={<CircleDashed className="h-4 w-4" />}
+              label="Statut"
+            />
+          ),
+          render: (item) => (
+            <StatusBadge variant={getStatusVariant(item.status)}>
+              {getStatusLabel(item.status)}
+            </StatusBadge>
+          ),
+        },
+        {
+          key: "priority",
+          header: (
+            <HeaderCell icon={<Flag className="h-4 w-4" />} label="Priorité" />
+          ),
+          render: (item) => (
+            <StatusBadge variant={getPriorityVariant(item.priority)}>
+              {getPriorityLabel(item.priority)}
+            </StatusBadge>
+          ),
+        },
+        {
+          key: "unread",
+          header: (
+            <HeaderCell
+              icon={<MailOpen className="h-4 w-4" />}
+              label="Non lus"
+            />
+          ),
+          render: (item) =>
+            item.unreadCount > 0 ? (
+              <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground">
+                {item.unreadCount}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">0</span>
+            ),
+        },
+        {
+          key: "assigned",
+          header: (
+            <HeaderCell
+              icon={<UserRound className="h-4 w-4" />}
+              label="Assigné à"
+            />
+          ),
+          render: (item) => (
+            <span className="text-sm text-muted-foreground">
+              {item.assignedAgent ?? "—"}
+            </span>
+          ),
+        },
+        {
+          key: "updated",
+          header: (
+            <HeaderCell
+              icon={<Clock3 className="h-4 w-4" />}
+              label="Mise à jour"
+            />
+          ),
+          render: (item) => (
+            <span className="text-sm text-muted-foreground">
+              {new Date(item.lastMessageAt).toLocaleString("fr-FR")}
+            </span>
+          ),
+        },
+      ]}
+    />
   );
 }

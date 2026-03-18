@@ -5,6 +5,8 @@
 import { ConversationFilters } from "@/src/components/conversations/conversation-filters";
 import { ConversationList } from "@/src/components/conversations/conversation-list";
 import { ConversationTable } from "@/src/components/conversations/conversation-table";
+import { LoadingSpinner } from "@/src/components/shared/loading-spinner";
+import { SectionCard } from "@/src/components/shared/section-card";
 import { useConversations } from "@/src/features/conversations/hooks/use-conversations";
 
 export default function ConversationsPage() {
@@ -24,59 +26,58 @@ export default function ConversationsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Boîte de réception des conversations
-          </h2>
+      <div className="space-y-8">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Conversations</h1>
           <p className="text-sm text-muted-foreground">
-            Chargement des conversations...
+            Consultez, filtrez et gérez les conversations client.
           </p>
         </div>
 
-        <div className="section-card h-[130px] animate-pulse bg-muted/40" />
-        <div className="section-card h-[420px] animate-pulse bg-muted/40" />
+        <SectionCard contentClassName="py-14">
+          <LoadingSpinner
+            size="lg"
+            label="Chargement des conversations..."
+          />
+        </SectionCard>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="section-card">
-        <div className="section-card-content flex flex-col items-start gap-4">
-          <div>
-            <h2 className="text-xl font-semibold">
-              Impossible de charger les conversations
-            </h2>
-            <p className="text-sm text-muted-foreground">{error}</p>
-          </div>
-
-          <button
-            type="button"
-            onClick={refetch}
-            className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-          >
-            Réessayer
-          </button>
+      <SectionCard contentClassName="flex flex-col items-start gap-4">
+        <div>
+          <h2 className="text-xl font-semibold">
+            Impossible de charger les conversations
+          </h2>
+          <p className="text-sm text-muted-foreground">{error}</p>
         </div>
-      </div>
+
+        <button
+          type="button"
+          onClick={refetch}
+          className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+        >
+          Réessayer
+        </button>
+      </SectionCard>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Boîte de réception des conversations
-          </h2>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Conversations</h1>
           <p className="text-sm text-muted-foreground">
-            Consultez, filtrez et gérez les conversations clients.
+            Consultez, filtrez et gérez les conversations client.
           </p>
         </div>
 
         <div className="text-sm text-muted-foreground">
-          {total} conversation{total !== 1 ? "s" : ""} trouvée{total !== 1 ? "s" : ""}
+          {total} conversation{total !== 1 ? "s" : ""} trouvée
+          {total !== 1 ? "s" : ""}
         </div>
       </div>
 
@@ -101,7 +102,7 @@ export default function ConversationsPage() {
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between rounded-2xl border bg-background px-4 py-3">
+        <div className="flex items-center justify-between rounded-2xl border bg-background px-5 py-4">
           <p className="text-sm text-muted-foreground">
             Page {page} sur {totalPages}
           </p>

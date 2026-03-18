@@ -7,6 +7,8 @@ import { ConversationsChart } from "@/src/components/dashboard/conversations-cha
 import { EscalationSummary } from "@/src/components/dashboard/escalation-summary";
 import { RecentConversations } from "@/src/components/dashboard/recent-conversations";
 import { StatsCard } from "@/src/components/dashboard/stats-card";
+import { LoadingSpinner } from "@/src/components/shared/loading-spinner";
+import { SectionCard } from "@/src/components/shared/section-card";
 import { useDashboard } from "@/src/features/dashboard/hooks/use-dashboard";
 
 export default function DashboardPage() {
@@ -16,63 +18,51 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Tableau de bord</h2>
           <p className="text-sm text-muted-foreground">
-            Loading dashboard insights...
+            Chargement des données...
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div
-              key={index}
-              className="section-card h-[140px] animate-pulse bg-muted/40"
-            />
-          ))}
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-3">
-          <div className="section-card h-[380px] animate-pulse bg-muted/40 xl:col-span-2" />
-          <div className="section-card h-[380px] animate-pulse bg-muted/40" />
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-2">
-          <div className="section-card h-[380px] animate-pulse bg-muted/40" />
-          <div className="section-card h-[380px] animate-pulse bg-muted/40" />
-        </div>
+        <SectionCard contentClassName="py-12">
+          <LoadingSpinner
+            size="lg"
+            label="Chargement du tableau de bord..."
+          />
+        </SectionCard>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="section-card">
-        <div className="section-card-content flex flex-col items-start gap-4">
-          <div>
-            <h2 className="text-xl font-semibold">Unable to load dashboard</h2>
-            <p className="text-sm text-muted-foreground">
-              {error ?? "Something went wrong while fetching dashboard data."}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={refetch}
-            className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-          >
-            Retry
-          </button>
+      <SectionCard contentClassName="flex flex-col items-start gap-4">
+        <div>
+          <h2 className="text-xl font-semibold">
+            Impossible de charger le tableau de bord
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {error ?? "Une erreur est survenue lors du chargement des données."}
+          </p>
         </div>
-      </div>
+
+        <button
+          type="button"
+          onClick={refetch}
+          className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+        >
+          Réessayer
+        </button>
+      </SectionCard>
     );
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Dashboard Overview</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Tableau de bord</h2>
         <p className="text-sm text-muted-foreground">
-          Monitor conversation volume, bot performance, and escalation activity.
+          Suivez le volume des conversations, la performance du bot et les escalades.
         </p>
       </div>
 

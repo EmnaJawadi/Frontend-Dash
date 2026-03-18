@@ -1,8 +1,9 @@
 // src/components/conversations/conversation-list.tsx
 
 import Link from "next/link";
+import { EmptyState } from "@/src/components/shared/empty-state";
+import { StatusBadge } from "@/src/components/shared/status-badge";
 import type { ConversationListItem } from "@/src/features/conversations/types/conversations.types";
-import { cn } from "@/lib/utils";
 
 type ConversationListProps = {
   conversations: ConversationListItem[];
@@ -13,41 +14,28 @@ function getStatusLabel(status: ConversationListItem["status"]) {
     case "bot_active":
       return "Bot actif";
     case "human_assigned":
-      return "Agent assigné";
+      return "Prise en charge humaine";
     case "waiting_customer":
       return "En attente du client";
     case "closed":
-      return "Fermée";
+      return "Clôturée";
     default:
       return status;
   }
 }
 
-function getStatusClass(status: ConversationListItem["status"]) {
+function getStatusVariant(
+  status: ConversationListItem["status"]
+): "success" | "warning" | "neutral" {
   switch (status) {
     case "bot_active":
-      return "status-success";
+      return "success";
     case "human_assigned":
-      return "status-warning";
+      return "warning";
     case "waiting_customer":
-      return "status-neutral";
     case "closed":
-      return "status-neutral";
     default:
-      return "status-neutral";
-  }
-}
-
-function getPriorityClass(priority: ConversationListItem["priority"]) {
-  switch (priority) {
-    case "high":
-      return "status-danger";
-    case "medium":
-      return "status-warning";
-    case "low":
-      return "status-success";
-    default:
-      return "status-neutral";
+      return "neutral";
   }
 }
 
@@ -64,14 +52,27 @@ function getPriorityLabel(priority: ConversationListItem["priority"]) {
   }
 }
 
+function getPriorityVariant(
+  priority: ConversationListItem["priority"]
+): "success" | "warning" | "danger" {
+  switch (priority) {
+    case "high":
+      return "danger";
+    case "medium":
+      return "warning";
+    case "low":
+    default:
+      return "success";
+  }
+}
+
 export function ConversationList({ conversations }: ConversationListProps) {
   if (conversations.length === 0) {
     return (
-      <div className="section-card">
-        <div className="section-card-content py-10 text-center text-sm text-muted-foreground">
-          Aucune conversation trouvée.
-        </div>
-      </div>
+      <EmptyState
+        title="Aucune conversation trouvée"
+        description="Essayez de modifier les filtres ou d’effectuer une nouvelle recherche."
+      />
     );
   }
 
@@ -92,23 +93,15 @@ export function ConversationList({ conversations }: ConversationListProps) {
                       {conversation.contactName}
                     </h3>
 
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                        getStatusClass(conversation.status)
-                      )}
-                    >
+                    <StatusBadge variant={getStatusVariant(conversation.status)}>
                       {getStatusLabel(conversation.status)}
-                    </span>
+                    </StatusBadge>
 
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                        getPriorityClass(conversation.priority)
-                      )}
+                    <StatusBadge
+                      variant={getPriorityVariant(conversation.priority)}
                     >
                       {getPriorityLabel(conversation.priority)}
-                    </span>
+                    </StatusBadge>
                   </div>
 
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -137,8 +130,12 @@ export function ConversationList({ conversations }: ConversationListProps) {
                       Mis à jour le{" "}
                       {new Date(conversation.lastMessageAt).toLocaleString("fr-FR")}
                     </span>
-                    <span>Agent assigné : {conversation.assignedAgent ?? "—"}</span>
-                    <span>Bot : {conversation.botActive ? "Actif" : "En pause"}</span>
+                    <span>
+                      Assigné à : {conversation.assignedAgent ?? "—"}
+                    </span>
+                    <span>
+                      Bot : {conversation.botActive ? "Actif" : "En pause"}
+                    </span>
                   </div>
                 </div>
 

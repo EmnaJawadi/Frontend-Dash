@@ -56,7 +56,7 @@ export function Header() {
 
           <div className="flex items-center gap-3 rounded-xl border bg-background px-3 py-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-              EJ
+              MA
             </div>
 
             <div className="hidden text-left md:block">

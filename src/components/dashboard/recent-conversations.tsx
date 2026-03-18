@@ -1,8 +1,8 @@
 // src/components/dashboard/recent-conversations.tsx
 
 import Link from "next/link";
+import { StatusBadge } from "@/src/components/shared/status-badge";
 import type { RecentConversationItem } from "@/src/features/dashboard/types/dashboard.types";
-import { cn } from "@/lib/utils";
 
 type RecentConversationsProps = {
   conversations: RecentConversationItem[];
@@ -13,41 +13,28 @@ function getStatusLabel(status: RecentConversationItem["status"]) {
     case "bot_active":
       return "Bot actif";
     case "human_assigned":
-      return "Agent assigné";
+      return "Prise en charge humaine";
     case "waiting_customer":
       return "En attente du client";
     case "closed":
-      return "Fermée";
+      return "Clôturée";
     default:
       return status;
   }
 }
 
-function getStatusClass(status: RecentConversationItem["status"]) {
+function getStatusVariant(
+  status: RecentConversationItem["status"]
+): "success" | "warning" | "neutral" {
   switch (status) {
     case "bot_active":
-      return "status-success";
+      return "success";
     case "human_assigned":
-      return "status-warning";
+      return "warning";
     case "waiting_customer":
-      return "status-neutral";
     case "closed":
-      return "status-neutral";
     default:
-      return "status-neutral";
-  }
-}
-
-function getPriorityClass(priority: RecentConversationItem["priority"]) {
-  switch (priority) {
-    case "high":
-      return "status-danger";
-    case "medium":
-      return "status-warning";
-    case "low":
-      return "status-success";
-    default:
-      return "status-neutral";
+      return "neutral";
   }
 }
 
@@ -64,6 +51,20 @@ function getPriorityLabel(priority: RecentConversationItem["priority"]) {
   }
 }
 
+function getPriorityVariant(
+  priority: RecentConversationItem["priority"]
+): "success" | "warning" | "danger" {
+  switch (priority) {
+    case "high":
+      return "danger";
+    case "medium":
+      return "warning";
+    case "low":
+    default:
+      return "success";
+  }
+}
+
 export function RecentConversations({
   conversations,
 }: RecentConversationsProps) {
@@ -76,7 +77,7 @@ export function RecentConversations({
               Conversations récentes
             </h3>
             <p className="text-sm text-muted-foreground">
-              Consultez les dernières activités des clients et accédez rapidement aux détails.
+              Consultez rapidement les dernières activités client.
             </p>
           </div>
 
@@ -102,23 +103,15 @@ export function RecentConversations({
                       {conversation.contactName}
                     </h4>
 
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                        getStatusClass(conversation.status)
-                      )}
-                    >
+                    <StatusBadge variant={getStatusVariant(conversation.status)}>
                       {getStatusLabel(conversation.status)}
-                    </span>
+                    </StatusBadge>
 
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                        getPriorityClass(conversation.priority)
-                      )}
+                    <StatusBadge
+                      variant={getPriorityVariant(conversation.priority)}
                     >
                       {getPriorityLabel(conversation.priority)}
-                    </span>
+                    </StatusBadge>
                   </div>
 
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -130,7 +123,7 @@ export function RecentConversations({
                   </p>
 
                   <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                    <span>Mis à jour : {conversation.updatedAt}</span>
+                    <span>Mise à jour : {conversation.updatedAt}</span>
 
                     {conversation.assignedAgent && (
                       <span>Assigné à : {conversation.assignedAgent}</span>
