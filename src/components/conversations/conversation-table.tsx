@@ -1,6 +1,6 @@
-// src/components/conversations/conversation-table.tsx
+"use client";
 
-import Link from "next/link";
+import * as React from "react";
 import {
   ArrowUpDown,
   CircleDashed,
@@ -12,6 +12,7 @@ import {
   User,
   UserRound,
 } from "lucide-react";
+
 import { DataTable } from "@/src/components/shared/data-table";
 import { StatusBadge } from "@/src/components/shared/status-badge";
 import type { ConversationListItem } from "@/src/features/conversations/types/conversations.types";
@@ -77,6 +78,16 @@ function getPriorityVariant(
   }
 }
 
+function formatDate(date: string) {
+  return new Date(date).toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function HeaderCell({
   icon,
   label,
@@ -87,32 +98,32 @@ function HeaderCell({
   sortable?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-muted-foreground">{icon}</span>
+    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+      {icon}
       <span>{label}</span>
-      {sortable ? (
-        <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-      ) : null}
+      {sortable ? <ArrowUpDown className="h-4 w-4 opacity-60" /> : null}
     </div>
   );
 }
 
-export function ConversationTable({ conversations }: ConversationTableProps) {
+export function ConversationTable({
+  conversations,
+}: ConversationTableProps) {
   return (
-    <DataTable<ConversationListItem>
+    <DataTable
       data={conversations}
       rowKey={(item) => item.id}
       emptyMessage="Aucune conversation trouvée."
       columns={[
         {
           key: "select",
-          header: <Square className="h-4 w-4 text-muted-foreground" />,
+          header: <Square className="h-4 w-4" />,
           className: "w-[52px]",
           render: () => (
-            <button
-              type="button"
-              aria-label="Sélectionner"
-              className="inline-flex h-4 w-4 rounded border border-border bg-background"
+            <input
+              type="checkbox"
+              aria-label="Sélectionner la conversation"
+              className="h-4 w-4 rounded border border-border"
             />
           ),
         },
@@ -125,13 +136,12 @@ export function ConversationTable({ conversations }: ConversationTableProps) {
               sortable
             />
           ),
+          className: "min-w-[190px]",
           render: (item) => (
-            <Link href={`/conversations/${item.id}`} className="block">
-              <div className="font-semibold">{item.contactName}</div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                {item.phone}
-              </div>
-            </Link>
+            <div className="space-y-1">
+              <p className="font-medium text-foreground">{item.contactName}</p>
+              <p className="text-sm text-muted-foreground">{item.phone}</p>
+            </div>
           ),
         },
         {
@@ -142,28 +152,26 @@ export function ConversationTable({ conversations }: ConversationTableProps) {
               label="Dernier message"
             />
           ),
+          className: "min-w-[320px]",
           render: (item) => (
-            <Link
-              href={`/conversations/${item.id}`}
-              className="block max-w-[320px]"
-            >
-              <p className="line-clamp-2 text-sm text-foreground/90">
+            <div className="space-y-2">
+              <p className="line-clamp-2 text-sm leading-6 text-foreground">
                 {item.lastMessage}
               </p>
 
-              {item.tags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
+              {item.tags && item.tags.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
                   {item.tags.map((tag) => (
                     <span
                       key={tag.id}
-                      className="inline-flex rounded-full border bg-background px-2 py-1 text-[11px] text-muted-foreground"
+                      className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-xs text-muted-foreground"
                     >
                       {tag.label}
                     </span>
                   ))}
                 </div>
-              )}
-            </Link>
+              ) : null}
+            </div>
           ),
         },
         {
@@ -174,6 +182,7 @@ export function ConversationTable({ conversations }: ConversationTableProps) {
               label="Statut"
             />
           ),
+          className: "min-w-[180px]",
           render: (item) => (
             <StatusBadge variant={getStatusVariant(item.status)}>
               {getStatusLabel(item.status)}
@@ -183,8 +192,12 @@ export function ConversationTable({ conversations }: ConversationTableProps) {
         {
           key: "priority",
           header: (
-            <HeaderCell icon={<Flag className="h-4 w-4" />} label="Priorité" />
+            <HeaderCell
+              icon={<Flag className="h-4 w-4" />}
+              label="Priorité"
+            />
           ),
+          className: "min-w-[130px]",
           render: (item) => (
             <StatusBadge variant={getPriorityVariant(item.priority)}>
               {getPriorityLabel(item.priority)}
@@ -199,14 +212,12 @@ export function ConversationTable({ conversations }: ConversationTableProps) {
               label="Non lus"
             />
           ),
-          render: (item) =>
-            item.unreadCount > 0 ? (
-              <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground">
-                {item.unreadCount}
-              </span>
-            ) : (
-              <span className="text-xs text-muted-foreground">0</span>
-            ),
+          className: "min-w-[90px]",
+          render: (item) => (
+            <span className="text-sm font-medium text-foreground">
+              {item.unreadCount}
+            </span>
+          ),
         },
         {
           key: "assigned",
@@ -216,8 +227,9 @@ export function ConversationTable({ conversations }: ConversationTableProps) {
               label="Assigné à"
             />
           ),
+          className: "min-w-[140px]",
           render: (item) => (
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-foreground">
               {item.assignedAgent ?? "—"}
             </span>
           ),
@@ -230,9 +242,10 @@ export function ConversationTable({ conversations }: ConversationTableProps) {
               label="Mise à jour"
             />
           ),
+          className: "min-w-[160px]",
           render: (item) => (
-            <span className="text-sm text-muted-foreground">
-              {new Date(item.lastMessageAt).toLocaleString("fr-FR")}
+            <span className="text-sm text-foreground">
+              {formatDate(item.lastMessageAt)}
             </span>
           ),
         },
