@@ -1,5 +1,3 @@
-// src/app/(dashboard)/conversations/page.tsx
-
 "use client";
 
 import { ConversationFilters } from "@/src/components/conversations/conversation-filters";
@@ -8,6 +6,7 @@ import { ConversationTable } from "@/src/components/conversations/conversation-t
 import { LoadingSpinner } from "@/src/components/shared/loading-spinner";
 import { SectionCard } from "@/src/components/shared/section-card";
 import { useConversations } from "@/src/features/conversations/hooks/use-conversations";
+import { conversationsService } from "@/src/features/conversations/services/conversations.service";
 
 export default function ConversationsPage() {
   const {
@@ -94,7 +93,13 @@ export default function ConversationsPage() {
       />
 
       <div className="hidden lg:block">
-        <ConversationTable conversations={conversations} />
+        <ConversationTable
+          conversations={conversations}
+          onDeleteConversation={async (conversationId) => {
+            await conversationsService.deleteConversation(conversationId);
+            await refetch();
+          }}
+        />
       </div>
 
       <div className="lg:hidden">

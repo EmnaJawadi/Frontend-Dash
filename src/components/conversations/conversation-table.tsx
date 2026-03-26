@@ -1,14 +1,17 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   ArrowUpDown,
   CircleDashed,
   Clock3,
+  Eye,
   Flag,
   MailOpen,
   MessageSquareText,
   Square,
+  Trash2,
   User,
   UserRound,
 } from "lucide-react";
@@ -19,6 +22,7 @@ import type { ConversationListItem } from "@/src/features/conversations/types/co
 
 type ConversationTableProps = {
   conversations: ConversationListItem[];
+  onDeleteConversation?: (conversationId: string) => void | Promise<void>;
 };
 
 function getStatusLabel(status: ConversationListItem["status"]) {
@@ -108,7 +112,18 @@ function HeaderCell({
 
 export function ConversationTable({
   conversations,
+  onDeleteConversation,
 }: ConversationTableProps) {
+  const handleDelete = async (conversationId: string, contactName: string) => {
+    const confirmed = window.confirm(
+      `Voulez-vous vraiment supprimer la conversation de ${contactName} ?`
+    );
+
+    if (!confirmed) return;
+
+    await onDeleteConversation?.(conversationId);
+  };
+
   return (
     <DataTable
       data={conversations}
@@ -159,7 +174,7 @@ export function ConversationTable({
                 {item.lastMessage}
               </p>
 
-              {item.tags && item.tags.length > 0 ? (
+              {item.tags?.length ? (
                 <div className="flex flex-wrap gap-2">
                   {item.tags.map((tag) => (
                     <span
@@ -247,6 +262,31 @@ export function ConversationTable({
             <span className="text-sm text-foreground">
               {formatDate(item.lastMessageAt)}
             </span>
+          ),
+        },
+        {
+          key: "actions",
+          header: <span className="text-sm font-medium">Actions</span>,
+          className: "min-w-[220px]",
+          render: (item) => (
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/conversations/${item.id}`}
+                className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+              >
+                <Eye className="h-4 w-4" />
+                Voir détails
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => handleDelete(item.id, item.contactName)}
+                className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100"
+              >
+                <Trash2 className="h-4 w-4" />
+                Supprimer
+              </button>
+            </div>
           ),
         },
       ]}

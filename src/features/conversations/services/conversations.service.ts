@@ -7,7 +7,7 @@ import type {
   ConversationsResponse,
 } from "@/src/features/conversations/types/conversations.types";
 
-const conversationsMock: ConversationListItem[] = [
+let conversationsMock: ConversationListItem[] = [
   {
     id: "conv_001",
     contactName: "Sarah Ben Ali",
@@ -65,7 +65,7 @@ const conversationsMock: ConversationListItem[] = [
   },
 ];
 
-const conversationDetailsMock: Record<string, ConversationDetails> = {
+let conversationDetailsMock: Record<string, ConversationDetails> = {
   conv_001: {
     id: "conv_001",
     status: "human_assigned",
@@ -104,47 +104,6 @@ const conversationDetailsMock: Record<string, ConversationDetails> = {
         timestamp: "2026-03-15T08:56:00Z",
         status: "read",
       },
-      {
-        id: "msg_002",
-        conversationId: "conv_001",
-        senderType: "bot",
-        direction: "outbound",
-        type: "text",
-        content:
-          "Je vérifie cela pour vous. Pouvez-vous confirmer le numéro de téléphone utilisé pour la commande ?",
-        timestamp: "2026-03-15T08:56:20Z",
-        status: "read",
-      },
-      {
-        id: "msg_003",
-        conversationId: "conv_001",
-        senderType: "customer",
-        direction: "inbound",
-        type: "text",
-        content: "Oui, c’est bien ce même numéro.",
-        timestamp: "2026-03-15T08:57:10Z",
-        status: "read",
-      },
-      {
-        id: "msg_004",
-        conversationId: "conv_001",
-        senderType: "system",
-        direction: "outbound",
-        type: "system",
-        content: "Conversation transférée à un agent humain.",
-        timestamp: "2026-03-15T09:18:00Z",
-      },
-      {
-        id: "msg_005",
-        conversationId: "conv_001",
-        senderType: "agent",
-        direction: "outbound",
-        type: "text",
-        content:
-          "Bonjour Sarah, je prends en charge cette conversation. Je vérifie votre commande maintenant.",
-        timestamp: "2026-03-15T09:20:00Z",
-        status: "delivered",
-      },
     ],
   },
   conv_002: {
@@ -181,16 +140,77 @@ const conversationDetailsMock: Record<string, ConversationDetails> = {
         timestamp: "2026-03-15T09:11:00Z",
         status: "read",
       },
+    ],
+  },
+  conv_003: {
+    id: "conv_003",
+    status: "closed",
+    priority: "low",
+    contact: {
+      id: "contact_003",
+      name: "Nour Haddad",
+      phone: "+216 29 444 210",
+      email: "nour.haddad@example.com",
+      language: "Français",
+      location: "Sousse, Tunisie",
+    },
+    tags: [{ id: "tag_4", label: "Résolu" }],
+    notes: "Conversation clôturée après résolution du problème signalé par le client.",
+    createdAt: "2026-03-15T08:20:00Z",
+    updatedAt: "2026-03-15T08:41:00Z",
+    activity: {
+      assignedAgent: null,
+      handoffRequired: false,
+      botActive: false,
+      lastBotMessageAt: "2026-03-15T08:39:00Z",
+      lastAgentReplyAt: null,
+    },
+    messages: [
       {
-        id: "msg_007",
-        conversationId: "conv_002",
-        senderType: "bot",
-        direction: "outbound",
+        id: "msg_008",
+        conversationId: "conv_003",
+        senderType: "customer",
+        direction: "inbound",
         type: "text",
-        content:
-          "Oui, je peux vous aider. Veuillez d’abord m’envoyer votre numéro de commande.",
-        timestamp: "2026-03-15T09:12:00Z",
-        status: "delivered",
+        content: "Merci, cela a résolu mon problème.",
+        timestamp: "2026-03-15T08:40:00Z",
+        status: "read",
+      },
+    ],
+  },
+  conv_004: {
+    id: "conv_004",
+    status: "waiting_customer",
+    priority: "high",
+    contact: {
+      id: "contact_004",
+      name: "Karim Trabelsi",
+      phone: "+216 98 765 100",
+      email: "karim.trabelsi@example.com",
+      language: "Arabe",
+      location: "Nabeul, Tunisie",
+    },
+    tags: [{ id: "tag_5", label: "Transfert" }],
+    notes: "Le client demande une prise en charge humaine et attend une réponse.",
+    createdAt: "2026-03-15T07:55:00Z",
+    updatedAt: "2026-03-15T08:10:00Z",
+    activity: {
+      assignedAgent: "Sarra Mnif",
+      handoffRequired: true,
+      botActive: false,
+      lastBotMessageAt: "2026-03-15T08:05:00Z",
+      lastAgentReplyAt: null,
+    },
+    messages: [
+      {
+        id: "msg_010",
+        conversationId: "conv_004",
+        senderType: "customer",
+        direction: "inbound",
+        type: "text",
+        content: "J’ai besoin de parler à une vraie personne, s’il vous plaît.",
+        timestamp: "2026-03-15T08:08:00Z",
+        status: "read",
       },
     ],
   },
@@ -248,7 +268,7 @@ export const conversationsService = {
     page = 1,
     pageSize = 10
   ): Promise<ConversationsResponse> {
-    await wait(400);
+    await wait(300);
 
     const filtered = applyConversationFilters(conversationsMock, filters);
     const start = (page - 1) * pageSize;
@@ -263,10 +283,9 @@ export const conversationsService = {
   },
 
   async getConversationById(id: string): Promise<ConversationDetails> {
-    await wait(300);
+    await wait(250);
 
     const conversation = conversationDetailsMock[id];
-
     if (!conversation) {
       throw new Error("Conversation introuvable");
     }
@@ -275,7 +294,7 @@ export const conversationsService = {
   },
 
   async handoffConversation(id: string): Promise<{ success: boolean }> {
-    await wait(500);
+    await wait(400);
 
     if (!conversationDetailsMock[id]) {
       throw new Error("Conversation introuvable");
@@ -285,11 +304,25 @@ export const conversationsService = {
   },
 
   async reactivateBot(id: string): Promise<{ success: boolean }> {
-    await wait(500);
+    await wait(400);
 
     if (!conversationDetailsMock[id]) {
       throw new Error("Conversation introuvable");
     }
+
+    return { success: true };
+  },
+
+  async deleteConversation(id: string): Promise<{ success: boolean }> {
+    await wait(400);
+
+    const exists = conversationsMock.some((item) => item.id === id);
+    if (!exists) {
+      throw new Error("Conversation introuvable");
+    }
+
+    conversationsMock = conversationsMock.filter((item) => item.id !== id);
+    delete conversationDetailsMock[id];
 
     return { success: true };
   },
