@@ -1,8 +1,9 @@
-// src/app/layout.tsx
-
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+
+import { QueryProvider } from "@/src/providers/query-provider";
+import { ThemeProvider } from "@/src/providers/theme-provider";
 
 export const metadata: Metadata = {
   title: "WhatsApp Support Dashboard",
@@ -15,8 +16,12 @@ type RootLayoutProps = {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="fr">
-      <body>{children}</body>
+    <html lang="fr" suppressHydrationWarning>
+      <body>
+        <ThemeProvider>
+          <QueryProvider>{children}</QueryProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
