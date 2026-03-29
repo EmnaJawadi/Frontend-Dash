@@ -117,8 +117,7 @@ select {
   border-radius: 1rem;
   background-color: hsl(var(--card));
   color: hsl(var(--card-foreground));
-  box-shadow:
-    0 1px 2px 0 rgb(0 0 0 / 0.05);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
 .section-card-content {
@@ -132,27 +131,27 @@ select {
 }
 
 .status-success {
-  border: 1px solid #bbf7d0;
-  background-color: #f0fdf4;
-  color: #15803d;
+  border: 1px solid hsl(var(--success) / 0.35);
+  background-color: hsl(var(--success) / 0.12);
+  color: hsl(var(--success));
 }
 
 .status-warning {
-  border: 1px solid #fef3c7;
-  background-color: #fffbeb;
-  color: #b45309;
+  border: 1px solid hsl(var(--warning) / 0.35);
+  background-color: hsl(var(--warning) / 0.12);
+  color: hsl(var(--warning));
 }
 
 .status-danger {
-  border: 1px solid #fecaca;
-  background-color: #fef2f2;
-  color: #b91c1c;
+  border: 1px solid hsl(var(--destructive) / 0.35);
+  background-color: hsl(var(--destructive) / 0.12);
+  color: hsl(var(--destructive));
 }
 
 .status-neutral {
-  border: 1px solid #e2e8f0;
-  background-color: #f8fafc;
-  color: #334155;
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
 }
 
 .scrollbar-thin {
@@ -161,10 +160,10 @@ select {
 }
 
 .chat-bg {
-  background-color: #e5ddd5;
+  background-color: hsl(var(--muted) / 0.35);
   background-image:
-    radial-gradient(circle at 25px 25px, rgba(0, 0, 0, 0.02) 2%, transparent 0),
-    radial-gradient(circle at 75px 75px, rgba(0, 0, 0, 0.02) 2%, transparent 0);
+    radial-gradient(circle at 25px 25px, hsl(var(--foreground) / 0.03) 2%, transparent 0),
+    radial-gradient(circle at 75px 75px, hsl(var(--foreground) / 0.03) 2%, transparent 0);
   background-size: 100px 100px;
 }
 
@@ -177,20 +176,18 @@ select {
   color: hsl(var(--card-foreground));
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  box-shadow:
-    0 1px 2px 0 rgb(0 0 0 / 0.05);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
 .message-bubble-outgoing {
   max-width: 80%;
   border-radius: 1rem;
   border-bottom-right-radius: 0.375rem;
-  background-color: #25d366;
-  color: #ffffff;
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  box-shadow:
-    0 1px 2px 0 rgb(0 0 0 / 0.05);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
 .message-meta {

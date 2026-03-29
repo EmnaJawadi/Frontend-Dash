@@ -18,7 +18,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="fr" suppressHydrationWarning>
       <body>
-        <ThemeProvider>
+        <ThemeProvider defaultTheme="light">
           <QueryProvider>{children}</QueryProvider>
         </ThemeProvider>
       </body>
