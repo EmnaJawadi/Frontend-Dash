@@ -14,6 +14,14 @@ import {
   MessageSquare,
   StickyNote,
   Phone,
+  Plus,
+  RefreshCw,
+  MoreHorizontal,
+  Pencil,
+  Eye,
+  ChevronRight,
+  Clock3,
+  SlidersHorizontal,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -32,6 +40,7 @@ import {
 type ContactStatus = "active" | "inactive" | "blocked";
 type ContactSource = "whatsapp" | "manual" | "import";
 type ContactSegment = "vip" | "lead" | "customer" | "inactive";
+type SortOption = "recent" | "oldest" | "most-conversations" | "most-notes";
 
 type ContactTag = {
   id: string;
@@ -204,9 +213,9 @@ function segmentLabel(segment: ContactSegment) {
     case "lead":
       return "Lead";
     case "customer":
-      return "Customer";
+      return "Client";
     case "inactive":
-      return "Inactive";
+      return "Inactif";
     default:
       return segment;
   }
@@ -234,7 +243,7 @@ function StatusBadge({ status }: { status: ContactStatus }) {
       : "border-red-200 bg-red-50 text-red-700";
 
   return (
-    <Badge variant="outline" className={classes}>
+    <Badge variant="outline" className={`rounded-full ${classes}`}>
       {statusLabel(status)}
     </Badge>
   );
@@ -250,7 +259,7 @@ function TagList({ tags }: { tags: ContactTag[] }) {
       {tags.map((tag) => (
         <span
           key={tag.id}
-          className="rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground"
+          className="rounded-full border border-border/60 bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground"
         >
           {tag.label}
         </span>
@@ -273,7 +282,7 @@ function SearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Rechercher par nom, téléphone, email, ville ou tag..."
-        className="h-11 rounded-xl pl-10 pr-10"
+        className="h-11 rounded-xl border-border/60 pl-10 pr-10"
       />
       {value ? (
         <Button
@@ -293,22 +302,25 @@ function SearchInput({
 function StatCard({
   title,
   value,
+  subtitle,
   icon,
 }: {
   title: string;
   value: number;
+  subtitle: string;
   icon: React.ReactNode;
 }) {
   return (
-    <Card className="rounded-2xl border shadow-sm">
+    <Card className="rounded-3xl border-border/60 shadow-sm transition hover:shadow-md">
       <CardContent className="p-5">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-sm text-muted-foreground">{title}</span>
-          <div className="rounded-xl bg-muted p-2 text-muted-foreground">
+          <div className="rounded-2xl bg-muted p-2.5 text-muted-foreground">
             {icon}
           </div>
         </div>
         <div className="text-2xl font-semibold tracking-tight">{value}</div>
+        <p className="mt-2 text-xs text-muted-foreground">{subtitle}</p>
       </CardContent>
     </Card>
   );
@@ -316,11 +328,11 @@ function StatCard({
 
 function ContactMobileCard({ contact }: { contact: Contact }) {
   return (
-    <Card className="overflow-hidden rounded-2xl border shadow-sm">
+    <Card className="overflow-hidden rounded-3xl border-border/60 shadow-sm transition hover:shadow-md">
       <CardContent className="p-4">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Avatar className="h-11 w-11">
+            <Avatar className="h-11 w-11 border border-border/60">
               <AvatarFallback>{getInitials(contact.fullName)}</AvatarFallback>
             </Avatar>
 
@@ -366,23 +378,34 @@ function ContactMobileCard({ contact }: { contact: Contact }) {
             <StickyNote className="h-4 w-4" />
             <span>{contact.notesCount} note(s)</span>
           </div>
+
+          <div className="flex items-center gap-2">
+            <Clock3 className="h-4 w-4" />
+            <span>{formatDate(contact.lastConversationAt)}</span>
+          </div>
         </div>
 
         <div className="mb-4">
           <TagList tags={contact.tags} />
         </div>
 
-        <div className="mb-4 rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground">
-          Dernière conversation: {formatDate(contact.lastConversationAt)}
-        </div>
-
         <div className="flex gap-2">
-          <Button asChild className="flex-1 rounded-xl">
-            <Link href={`/contacts/${contact.id}`}>Voir détail</Link>
+          <Button
+            asChild
+            className="flex-1 rounded-xl bg-slate-950 text-white hover:bg-slate-800"
+          >
+            <Link href={`/contacts/${contact.id}`}>
+              Voir détail
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Link>
           </Button>
 
           <Button variant="outline" size="icon" className="rounded-xl">
             <Phone className="h-4 w-4" />
+          </Button>
+
+          <Button variant="outline" size="icon" className="rounded-xl">
+            <MoreHorizontal className="h-4 w-4" />
           </Button>
         </div>
       </CardContent>
@@ -396,6 +419,13 @@ export default function ContactsPage() {
   const [segment, setSegment] = React.useState<ContactSegment | "all">("all");
   const [source, setSource] = React.useState<ContactSource | "all">("all");
   const [tag, setTag] = React.useState<string | "all">("all");
+  const [sortBy, setSortBy] = React.useState<SortOption>("recent");
+
+  const allTags = React.useMemo(() => {
+    return Array.from(
+      new Set(contactsMock.flatMap((contact) => contact.tags.map((t) => t.label)))
+    );
+  }, []);
 
   const filteredContacts = React.useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -425,6 +455,14 @@ export default function ContactsPage() {
         );
       })
       .sort((a, b) => {
+        if (sortBy === "most-conversations") {
+          return b.conversationsCount - a.conversationsCount;
+        }
+
+        if (sortBy === "most-notes") {
+          return b.notesCount - a.notesCount;
+        }
+
         const aDate = a.lastConversationAt
           ? new Date(a.lastConversationAt).getTime()
           : 0;
@@ -432,9 +470,13 @@ export default function ContactsPage() {
           ? new Date(b.lastConversationAt).getTime()
           : 0;
 
+        if (sortBy === "oldest") {
+          return aDate - bDate;
+        }
+
         return bDate - aDate;
       });
-  }, [search, status, segment, source, tag]);
+  }, [search, status, segment, source, tag, sortBy]);
 
   const stats = React.useMemo(() => {
     return {
@@ -448,9 +490,26 @@ export default function ContactsPage() {
     };
   }, [filteredContacts]);
 
+  function resetFilters() {
+    setSearch("");
+    setStatus("all");
+    setSegment("all");
+    setSource("all");
+    setTag("all");
+    setSortBy("recent");
+  }
+
+  const hasActiveFilters =
+    search.length > 0 ||
+    status !== "all" ||
+    segment !== "all" ||
+    source !== "all" ||
+    tag !== "all" ||
+    sortBy !== "recent";
+
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Contacts</h1>
           <p className="text-sm text-muted-foreground">
@@ -459,40 +518,59 @@ export default function ContactsPage() {
           </p>
         </div>
 
-        <Button className="rounded-xl">+ Nouveau contact</Button>
+        <Button className="rounded-xl bg-slate-950 text-white hover:bg-slate-800">
+          <Plus className="mr-2 h-4 w-4" />
+          Nouveau contact
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Total contacts"
           value={stats.total}
+          subtitle="Base client totale"
           icon={<Users className="h-4 w-4" />}
         />
         <StatCard
           title="Actifs"
           value={stats.active}
+          subtitle="Interactions récentes"
           icon={<UserCheck className="h-4 w-4" />}
         />
         <StatCard
           title="Inactifs"
           value={stats.inactive}
+          subtitle="À relancer"
           icon={<UserX className="h-4 w-4" />}
         />
         <StatCard
           title="Bloqués"
           value={stats.blocked}
+          subtitle="Contacts sensibles"
           icon={<ShieldAlert className="h-4 w-4" />}
         />
       </div>
 
-      <Card className="rounded-2xl border shadow-sm">
+      <Card className="rounded-3xl border-border/60 shadow-sm">
         <CardContent className="p-4">
+          <div className="mb-4 flex items-center gap-2">
+            <div className="rounded-xl bg-muted p-2 text-muted-foreground">
+              <SlidersHorizontal className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="font-medium">Filtres et recherche</p>
+              <p className="text-sm text-muted-foreground">
+                Filtrez vos contacts par état, segment, source ou tag.
+              </p>
+            </div>
+          </div>
+
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <div className="w-full xl:flex-1">
               <SearchInput value={search} onChange={setSearch} />
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
               <Select
                 value={status}
                 onValueChange={(value) =>
@@ -523,8 +601,8 @@ export default function ContactsPage() {
                   <SelectItem value="all">Tous segments</SelectItem>
                   <SelectItem value="vip">VIP</SelectItem>
                   <SelectItem value="lead">Lead</SelectItem>
-                  <SelectItem value="customer">Customer</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="customer">Client</SelectItem>
+                  <SelectItem value="inactive">Inactif</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -551,29 +629,57 @@ export default function ContactsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous tags</SelectItem>
-                  <SelectItem value="VIP">VIP</SelectItem>
-                  <SelectItem value="Livraison">Livraison</SelectItem>
-                  <SelectItem value="Réclamation">Réclamation</SelectItem>
-                  <SelectItem value="SAV">SAV</SelectItem>
-                  <SelectItem value="Prospect">Prospect</SelectItem>
-                  <SelectItem value="Blacklist">Blacklist</SelectItem>
-                  <SelectItem value="Fidèle">Fidèle</SelectItem>
-                  <SelectItem value="Upsell">Upsell</SelectItem>
-                  <SelectItem value="Nouveau">Nouveau</SelectItem>
-                  <SelectItem value="Campagne">Campagne</SelectItem>
+                  {allTags.map((currentTag) => (
+                    <SelectItem key={currentTag} value={currentTag}>
+                      {currentTag}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+
+              <Select
+                value={sortBy}
+                onValueChange={(value) => setSortBy(value as SortOption)}
+              >
+                <SelectTrigger className="h-11 w-full rounded-xl xl:w-[180px]">
+                  <SelectValue placeholder="Tri" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Dernière activité</SelectItem>
+                  <SelectItem value="oldest">Plus ancienne activité</SelectItem>
+                  <SelectItem value="most-conversations">
+                    Plus de conversations
+                  </SelectItem>
+                  <SelectItem value="most-notes">Plus de notes</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 rounded-xl"
+                onClick={resetFilters}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Réinitialiser
+              </Button>
             </div>
           </div>
+
+          {hasActiveFilters ? (
+            <div className="mt-4 text-sm text-muted-foreground">
+              Filtres actifs appliqués
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
-      <div className="rounded-2xl border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+      <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
         {filteredContacts.length} contact(s) trouvé(s)
       </div>
 
       {filteredContacts.length === 0 ? (
-        <Card className="rounded-2xl border shadow-sm">
+        <Card className="rounded-3xl border-border/60 shadow-sm">
           <CardContent className="flex min-h-[220px] flex-col items-center justify-center p-6 text-center">
             <div className="mb-3 rounded-full bg-muted p-3">
               <Users className="h-5 w-5 text-muted-foreground" />
@@ -583,11 +689,22 @@ export default function ContactsPage() {
               Essaie de modifier les filtres ou la recherche pour afficher plus
               de résultats.
             </p>
+
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <Button variant="outline" className="rounded-xl" onClick={resetFilters}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Réinitialiser
+              </Button>
+              <Button className="rounded-xl bg-slate-950 text-white hover:bg-slate-800">
+                <Plus className="mr-2 h-4 w-4" />
+                Nouveau contact
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
         <>
-          <div className="hidden overflow-hidden rounded-2xl border bg-background shadow-sm lg:block">
+          <div className="hidden overflow-hidden rounded-3xl border border-border/60 bg-background shadow-sm lg:block">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-left text-muted-foreground">
                 <tr>
@@ -597,16 +714,19 @@ export default function ContactsPage() {
                   <th className="px-4 py-3 font-medium">Tags</th>
                   <th className="px-4 py-3 font-medium">Activité</th>
                   <th className="px-4 py-3 font-medium">Statut</th>
-                  <th className="px-4 py-3 font-medium"></th>
+                  <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
 
               <tbody>
                 {filteredContacts.map((item) => (
-                  <tr key={item.id} className="border-t align-top">
+                  <tr
+                    key={item.id}
+                    className="border-t border-border/60 align-top transition hover:bg-muted/20"
+                  >
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
+                        <Avatar className="h-10 w-10 border border-border/60">
                           <AvatarFallback>
                             {getInitials(item.fullName)}
                           </AvatarFallback>
@@ -631,7 +751,10 @@ export default function ContactsPage() {
                         ) : (
                           <span>—</span>
                         )}
-                        <div>{item.city ?? "—"}</div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          <span>{item.city ?? "—"}</span>
+                        </div>
                       </div>
                     </td>
 
@@ -660,8 +783,9 @@ export default function ContactsPage() {
                           <StickyNote className="h-4 w-4" />
                           <span>{item.notesCount} note(s)</span>
                         </div>
-                        <div>
-                          Dernière activité: {formatDate(item.lastConversationAt)}
+                        <div className="flex items-center gap-2">
+                          <Clock3 className="h-4 w-4" />
+                          <span>{formatDate(item.lastConversationAt)}</span>
                         </div>
                       </div>
                     </td>
@@ -671,9 +795,26 @@ export default function ContactsPage() {
                     </td>
 
                     <td className="px-4 py-4">
-                      <Button asChild variant="outline" className="rounded-xl">
-                        <Link href={`/contacts/${item.id}`}>Voir détail</Link>
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="icon" className="rounded-xl">
+                          <Phone className="h-4 w-4" />
+                        </Button>
+
+                        <Button variant="outline" size="icon" className="rounded-xl">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+
+                        <Button asChild variant="outline" className="rounded-xl">
+                          <Link href={`/contacts/${item.id}`}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Voir détail
+                          </Link>
+                        </Button>
+
+                        <Button variant="outline" size="icon" className="rounded-xl">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

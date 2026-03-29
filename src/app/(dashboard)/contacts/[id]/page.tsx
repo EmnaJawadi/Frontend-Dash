@@ -15,6 +15,8 @@ import {
   Globe,
   Clock3,
   CircleAlert,
+  Pencil,
+  ExternalLink,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -395,9 +397,9 @@ function segmentLabel(segment: ContactSegment) {
     case "lead":
       return "Lead";
     case "customer":
-      return "Customer";
+      return "Client";
     case "inactive":
-      return "Inactive";
+      return "Inactif";
     default:
       return segment;
   }
@@ -429,6 +431,10 @@ function languageLabel(language?: "fr" | "ar" | "en") {
   }
 }
 
+function phoneToWhatsapp(phone: string) {
+  return phone.replace(/\D/g, "");
+}
+
 function StatusBadge({ status }: { status: ContactStatus }) {
   const classes =
     status === "active"
@@ -438,7 +444,7 @@ function StatusBadge({ status }: { status: ContactStatus }) {
       : "border-red-200 bg-red-50 text-red-700";
 
   return (
-    <Badge variant="outline" className={classes}>
+    <Badge variant="outline" className={`rounded-full ${classes}`}>
       {statusLabel(status)}
     </Badge>
   );
@@ -457,12 +463,41 @@ function ConversationStatusBadge({
       : "border-amber-200 bg-amber-50 text-amber-700";
 
   const label =
-    status === "open" ? "Ouverte" : status === "closed" ? "Clôturée" : "En attente";
+    status === "open"
+      ? "Ouverte"
+      : status === "closed"
+      ? "Clôturée"
+      : "En attente";
 
   return (
-    <Badge variant="outline" className={classes}>
+    <Badge variant="outline" className={`rounded-full ${classes}`}>
       {label}
     </Badge>
+  );
+}
+
+function StatMiniCard({
+  icon,
+  title,
+  value,
+  subtitle,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value: string | number;
+  subtitle: string;
+}) {
+  return (
+    <Card className="rounded-3xl border-border/60 shadow-sm">
+      <CardContent className="p-5">
+        <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+          {icon}
+          <span>{title}</span>
+        </div>
+        <p className="text-2xl font-semibold">{value}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -474,7 +509,7 @@ function EmptyBlock({
   description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed p-6 text-center">
+    <div className="rounded-2xl border border-dashed border-border/60 p-6 text-center">
       <p className="font-medium">{title}</p>
       <p className="mt-1 text-sm text-muted-foreground">{description}</p>
     </div>
@@ -500,15 +535,14 @@ export default function ContactDetailsPage() {
           </Link>
         </Button>
 
-        <Card className="rounded-2xl border shadow-sm">
+        <Card className="rounded-3xl border-border/60 shadow-sm">
           <CardContent className="flex min-h-[320px] flex-col items-center justify-center p-6 text-center">
             <div className="mb-4 rounded-full bg-muted p-3">
               <CircleAlert className="h-5 w-5 text-muted-foreground" />
             </div>
             <h2 className="text-xl font-semibold">Contact introuvable</h2>
             <p className="mt-2 max-w-md text-sm text-muted-foreground">
-              Aucun contact ne correspond à cet identifiant. Vérifie le lien ou
-              retourne à la liste des contacts.
+              Aucun contact ne correspond à cet identifiant. Vérifie le lien ou retourne à la liste des contacts.
             </p>
           </CardContent>
         </Card>
@@ -526,20 +560,41 @@ export default function ContactDetailsPage() {
           </Link>
         </Button>
 
-        <div className="flex gap-2">
-          <Button variant="outline" className="rounded-xl">
-            Modifier
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" className="rounded-xl">
+            <a href={`tel:${contact.phone}`}>
+              <Phone className="mr-2 h-4 w-4" />
+              Appeler
+            </a>
           </Button>
-          <Button className="rounded-xl">Nouvelle conversation</Button>
+
+          <Button asChild variant="outline" className="rounded-xl">
+            <a
+              href={`https://wa.me/${phoneToWhatsapp(contact.phone)}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <MessageSquare className="mr-2 h-4 w-4" />
+              WhatsApp
+              <ExternalLink className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+
+          <Button asChild variant="outline" className="rounded-xl">
+            <Link href={`/contacts/${contact.id}/edit`}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Modifier
+            </Link>
+          </Button>
         </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-1">
-          <Card className="rounded-2xl border shadow-sm">
+          <Card className="rounded-3xl border-border/60 shadow-sm">
             <CardContent className="p-6">
               <div className="mb-6 flex items-center gap-4">
-                <Avatar className="h-16 w-16">
+                <Avatar className="h-16 w-16 border border-border/60">
                   <AvatarFallback className="text-lg font-semibold">
                     {getInitials(contact.fullName)}
                   </AvatarFallback>
@@ -600,15 +655,13 @@ export default function ContactDetailsPage() {
                     contact.tags.map((tag) => (
                       <span
                         key={tag.id}
-                        className="rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground"
+                        className="rounded-full border border-border/60 bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground"
                       >
                         {tag.label}
                       </span>
                     ))
                   ) : (
-                    <span className="text-sm text-muted-foreground">
-                      Aucun tag
-                    </span>
+                    <span className="text-sm text-muted-foreground">Aucun tag</span>
                   )}
                 </div>
               </div>
@@ -616,44 +669,31 @@ export default function ContactDetailsPage() {
           </Card>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-            <Card className="rounded-2xl border shadow-sm">
-              <CardContent className="p-5">
-                <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-                  <MessageSquare className="h-4 w-4" />
-                  Conversations
-                </div>
-                <p className="text-2xl font-semibold">
-                  {contact.conversationsCount}
-                </p>
-              </CardContent>
-            </Card>
+            <StatMiniCard
+              icon={<MessageSquare className="h-4 w-4" />}
+              title="Conversations"
+              value={contact.conversationsCount}
+              subtitle="Interactions enregistrées"
+            />
 
-            <Card className="rounded-2xl border shadow-sm">
-              <CardContent className="p-5">
-                <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-                  <StickyNote className="h-4 w-4" />
-                  Notes internes
-                </div>
-                <p className="text-2xl font-semibold">{contact.notesCount}</p>
-              </CardContent>
-            </Card>
+            <StatMiniCard
+              icon={<StickyNote className="h-4 w-4" />}
+              title="Notes internes"
+              value={contact.notesCount}
+              subtitle="Contexte disponible"
+            />
 
-            <Card className="rounded-2xl border shadow-sm">
-              <CardContent className="p-5">
-                <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock3 className="h-4 w-4" />
-                  Dernière activité
-                </div>
-                <p className="text-sm font-medium">
-                  {formatDate(contact.lastConversationAt)}
-                </p>
-              </CardContent>
-            </Card>
+            <StatMiniCard
+              icon={<Clock3 className="h-4 w-4" />}
+              title="Dernière activité"
+              value={formatDate(contact.lastConversationAt)}
+              subtitle="Dernière mise à jour connue"
+            />
           </div>
         </div>
 
         <div className="space-y-6 xl:col-span-2">
-          <Card className="rounded-2xl border shadow-sm">
+          <Card className="rounded-3xl border-border/60 shadow-sm">
             <CardHeader>
               <CardTitle>Activité récente</CardTitle>
             </CardHeader>
@@ -668,7 +708,7 @@ export default function ContactDetailsPage() {
                   {contact.activities.map((activity) => (
                     <div
                       key={activity.id}
-                      className="rounded-2xl border bg-muted/30 p-4"
+                      className="rounded-2xl border border-border/60 bg-muted/20 p-4"
                     >
                       <div className="mb-2 flex items-center justify-between gap-3">
                         <Badge variant="outline" className="rounded-full">
@@ -684,9 +724,7 @@ export default function ContactDetailsPage() {
                         </span>
                       </div>
 
-                      <p className="text-sm text-foreground/90">
-                        {activity.content}
-                      </p>
+                      <p className="text-sm text-foreground/90">{activity.content}</p>
                     </div>
                   ))}
                 </div>
@@ -694,7 +732,7 @@ export default function ContactDetailsPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border shadow-sm">
+          <Card className="rounded-3xl border-border/60 shadow-sm">
             <CardHeader>
               <CardTitle>Conversations récentes</CardTitle>
             </CardHeader>
@@ -709,7 +747,7 @@ export default function ContactDetailsPage() {
                   {contact.recentConversations.map((conversation) => (
                     <div
                       key={conversation.id}
-                      className="flex flex-col gap-3 rounded-2xl border p-4 md:flex-row md:items-center md:justify-between"
+                      className="flex flex-col gap-3 rounded-2xl border border-border/60 p-4 md:flex-row md:items-center md:justify-between"
                     >
                       <div>
                         <p className="font-medium">{conversation.subject}</p>
@@ -731,7 +769,7 @@ export default function ContactDetailsPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border shadow-sm">
+          <Card className="rounded-3xl border-border/60 shadow-sm">
             <CardHeader>
               <CardTitle>Notes internes</CardTitle>
             </CardHeader>
@@ -746,7 +784,7 @@ export default function ContactDetailsPage() {
                   {contact.internalNotes.map((note) => (
                     <div
                       key={note.id}
-                      className="rounded-2xl border bg-muted/20 p-4"
+                      className="rounded-2xl border border-border/60 bg-muted/20 p-4"
                     >
                       <div className="mb-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                         <p className="text-sm font-medium">{note.author}</p>
@@ -754,9 +792,7 @@ export default function ContactDetailsPage() {
                           {formatDate(note.createdAt)}
                         </span>
                       </div>
-                      <p className="text-sm text-foreground/90">
-                        {note.content}
-                      </p>
+                      <p className="text-sm text-foreground/90">{note.content}</p>
                     </div>
                   ))}
                 </div>
