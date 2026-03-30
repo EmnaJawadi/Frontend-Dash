@@ -48,7 +48,7 @@ const knowledgeBaseMock: KnowledgeArticle[] = [
     title: "Comment suivre une commande",
     category: "commandes",
     status: "published",
-    author: "Emna",
+    author: "Mariem et Emna",
     updatedAt: "2026-03-15T09:00:00.000Z",
   },
   {
