@@ -48,7 +48,7 @@ const knowledgeBaseMock: KnowledgeArticle[] = [
     title: "Comment suivre une commande",
     category: "commandes",
     status: "published",
-    author: "Mariem et Emna",
+    author: "Emna",
     updatedAt: "2026-03-15T09:00:00.000Z",
   },
   {
@@ -64,7 +64,7 @@ const knowledgeBaseMock: KnowledgeArticle[] = [
     title: "FAQ Livraison",
     category: "livraison",
     status: "draft",
-    author: "Ahmed",
+    author: "Emna",
     updatedAt: "2026-03-13T11:10:00.000Z",
   },
   {
@@ -72,7 +72,7 @@ const knowledgeBaseMock: KnowledgeArticle[] = [
     title: "Procédure de retour produit",
     category: "retours",
     status: "published",
-    author: "Sarra",
+    author: "Mariem",
     updatedAt: "2026-03-11T16:30:00.000Z",
   },
   {
@@ -80,7 +80,7 @@ const knowledgeBaseMock: KnowledgeArticle[] = [
     title: "Réponses générales du support",
     category: "general",
     status: "draft",
-    author: "Nour",
+    author: "Emna",
     updatedAt: "2026-03-10T10:45:00.000Z",
   },
 ];
