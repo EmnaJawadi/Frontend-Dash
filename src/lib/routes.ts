@@ -1,114 +1,111 @@
-export const USER_ROLES = {
-  ADMIN: "admin",
-  SUPERVISOR: "supervisor",
-  AGENT: "agent",
-  VIEWER: "viewer",
+import type { UserRole } from "@/src/types/role";
+
+export const AUTH_ROUTES = {
+  LOGIN: "/login",
+  REGISTER: "/register",
+  FORGOT_PASSWORD: "/forgot-password",
 } as const;
 
-export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
-
-export const PERMISSIONS = {
-  VIEW_DASHBOARD: "view_dashboard",
-  VIEW_CONVERSATIONS: "view_conversations",
-  MANAGE_CONVERSATIONS: "manage_conversations",
-  ASSIGN_CONVERSATIONS: "assign_conversations",
-  HANDOFF_CONVERSATIONS: "handoff_conversations",
-  REACTIVATE_BOT: "reactivate_bot",
-  VIEW_CONTACTS: "view_contacts",
-  MANAGE_CONTACTS: "manage_contacts",
-  VIEW_KNOWLEDGE_BASE: "view_knowledge_base",
-  MANAGE_KNOWLEDGE_BASE: "manage_knowledge_base",
-  VIEW_ANALYTICS: "view_analytics",
-  EXPORT_ANALYTICS: "export_analytics",
-  VIEW_SETTINGS: "view_settings",
-  MANAGE_SETTINGS: "manage_settings",
+export const ONBOARDING_ROUTES = {
+  COMPANY_INFO: "/company-info",
+  TEAM: "/team",
+  SETUP: "/setup",
 } as const;
 
-export type Permission =
-  (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+export const APP_ROUTES = {
+  DASHBOARD: "/dashboard",
+  CONVERSATIONS: "/conversations",
+  CONTACTS: "/contacts",
+  KNOWLEDGE_BASE: "/knowledge-base",
+  ANALYTICS: "/analytics",
+  SETTINGS: "/settings",
+} as const;
 
-export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  [USER_ROLES.ADMIN]: [
-    PERMISSIONS.VIEW_DASHBOARD,
-    PERMISSIONS.VIEW_CONVERSATIONS,
-    PERMISSIONS.MANAGE_CONVERSATIONS,
-    PERMISSIONS.ASSIGN_CONVERSATIONS,
-    PERMISSIONS.HANDOFF_CONVERSATIONS,
-    PERMISSIONS.REACTIVATE_BOT,
-    PERMISSIONS.VIEW_CONTACTS,
-    PERMISSIONS.MANAGE_CONTACTS,
-    PERMISSIONS.VIEW_KNOWLEDGE_BASE,
-    PERMISSIONS.MANAGE_KNOWLEDGE_BASE,
-    PERMISSIONS.VIEW_ANALYTICS,
-    PERMISSIONS.EXPORT_ANALYTICS,
-    PERMISSIONS.VIEW_SETTINGS,
-    PERMISSIONS.MANAGE_SETTINGS,
-  ],
+export const ADMIN_ROUTES = {
+  DASHBOARD: "/admin/dashboard",
+  COMPANIES: "/admin/companies",
+  USERS: "/admin/users",
+  SUBSCRIPTIONS: "/admin/subscriptions",
+  SETTINGS: "/admin/settings",
+} as const;
 
-  [USER_ROLES.SUPERVISOR]: [
-    PERMISSIONS.VIEW_DASHBOARD,
-    PERMISSIONS.VIEW_CONVERSATIONS,
-    PERMISSIONS.MANAGE_CONVERSATIONS,
-    PERMISSIONS.ASSIGN_CONVERSATIONS,
-    PERMISSIONS.HANDOFF_CONVERSATIONS,
-    PERMISSIONS.REACTIVATE_BOT,
-    PERMISSIONS.VIEW_CONTACTS,
-    PERMISSIONS.MANAGE_CONTACTS,
-    PERMISSIONS.VIEW_KNOWLEDGE_BASE,
-    PERMISSIONS.MANAGE_KNOWLEDGE_BASE,
-    PERMISSIONS.VIEW_ANALYTICS,
-    PERMISSIONS.EXPORT_ANALYTICS,
-    PERMISSIONS.VIEW_SETTINGS,
-  ],
+export const PUBLIC_ROUTES: string[] = [
+  AUTH_ROUTES.LOGIN,
+  AUTH_ROUTES.REGISTER,
+  AUTH_ROUTES.FORGOT_PASSWORD,
+];
 
-  [USER_ROLES.AGENT]: [
-    PERMISSIONS.VIEW_DASHBOARD,
-    PERMISSIONS.VIEW_CONVERSATIONS,
-    PERMISSIONS.MANAGE_CONVERSATIONS,
-    PERMISSIONS.HANDOFF_CONVERSATIONS,
-    PERMISSIONS.REACTIVATE_BOT,
-    PERMISSIONS.VIEW_CONTACTS,
-    PERMISSIONS.VIEW_KNOWLEDGE_BASE,
-  ],
+export const OWNER_ROUTES: string[] = [
+  APP_ROUTES.DASHBOARD,
+  APP_ROUTES.CONVERSATIONS,
+  APP_ROUTES.CONTACTS,
+  APP_ROUTES.KNOWLEDGE_BASE,
+  APP_ROUTES.ANALYTICS,
+  APP_ROUTES.SETTINGS,
+  ONBOARDING_ROUTES.COMPANY_INFO,
+  ONBOARDING_ROUTES.TEAM,
+  ONBOARDING_ROUTES.SETUP,
+];
 
-  [USER_ROLES.VIEWER]: [
-    PERMISSIONS.VIEW_DASHBOARD,
-    PERMISSIONS.VIEW_CONVERSATIONS,
-    PERMISSIONS.VIEW_CONTACTS,
-    PERMISSIONS.VIEW_KNOWLEDGE_BASE,
-    PERMISSIONS.VIEW_ANALYTICS,
-  ],
+export const AGENT_ROUTES: string[] = [
+  APP_ROUTES.DASHBOARD,
+  APP_ROUTES.CONVERSATIONS,
+  APP_ROUTES.CONTACTS,
+  APP_ROUTES.KNOWLEDGE_BASE,
+];
+
+export const SUPER_ADMIN_ROUTES: string[] = [
+  ADMIN_ROUTES.DASHBOARD,
+  ADMIN_ROUTES.COMPANIES,
+  ADMIN_ROUTES.USERS,
+  ADMIN_ROUTES.SUBSCRIPTIONS,
+  ADMIN_ROUTES.SETTINGS,
+];
+
+export const DEFAULT_ROUTE_BY_ROLE: Record<UserRole, string> = {
+  OWNER: APP_ROUTES.DASHBOARD,
+  AGENT: APP_ROUTES.DASHBOARD,
+  SUPER_ADMIN: ADMIN_ROUTES.DASHBOARD,
 };
 
-export function getPermissionsByRole(role: UserRole): Permission[] {
-  return ROLE_PERMISSIONS[role] ?? [];
+export function getAllowedRoutes(role: UserRole): string[] {
+  switch (role) {
+    case "OWNER":
+      return OWNER_ROUTES;
+    case "AGENT":
+      return AGENT_ROUTES;
+    case "SUPER_ADMIN":
+      return SUPER_ADMIN_ROUTES;
+    default:
+      return [];
+  }
 }
 
-export function hasPermission(
-  role: UserRole,
-  permission: Permission
-): boolean {
-  return getPermissionsByRole(role).includes(permission);
+export function getDefaultRouteByRole(role: UserRole): string {
+  return DEFAULT_ROUTE_BY_ROLE[role];
 }
 
-export function hasAnyPermission(
-  role: UserRole,
-  permissions: Permission[]
-): boolean {
-  const rolePermissions = getPermissionsByRole(role);
+export function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTES.includes(pathname);
+}
 
-  return permissions.some((permission) =>
-    rolePermissions.includes(permission)
+export function isAdminRoute(pathname: string): boolean {
+  return pathname.startsWith("/admin");
+}
+
+export function isOnboardingRoute(pathname: string): boolean {
+  return (
+    pathname === ONBOARDING_ROUTES.COMPANY_INFO ||
+    pathname === ONBOARDING_ROUTES.TEAM ||
+    pathname === ONBOARDING_ROUTES.SETUP ||
+    pathname.startsWith("/company-info/") ||
+    pathname.startsWith("/team/") ||
+    pathname.startsWith("/setup/")
   );
 }
 
-export function hasAllPermissions(
-  role: UserRole,
-  permissions: Permission[]
-): boolean {
-  const rolePermissions = getPermissionsByRole(role);
-
-  return permissions.every((permission) =>
-    rolePermissions.includes(permission)
+export function matchesAllowedRoute(pathname: string, routes: string[]): boolean {
+  return routes.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 }

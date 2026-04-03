@@ -11,11 +11,24 @@ const pageTitles: Record<string, string> = {
   "/knowledge-base": "Base de connaissances",
   "/analytics": "Analyses",
   "/settings": "Paramètres",
+  "/admin/dashboard": "Dashboard Admin",
+  "/admin/companies": "Entreprises",
+  "/admin/users": "Utilisateurs",
+  "/admin/subscriptions": "Abonnements",
+  "/admin/settings": "Paramètres Admin",
 };
 
 function getPageTitle(pathname: string) {
   if (pathname.startsWith("/conversations/")) {
     return "Détails de la conversation";
+  }
+
+  if (pathname.startsWith("/contacts/")) {
+    return "Détails du contact";
+  }
+
+  if (pathname.startsWith("/knowledge-base/")) {
+    return "Base de connaissances";
   }
 
   return pageTitles[pathname] ?? "Tableau de bord";

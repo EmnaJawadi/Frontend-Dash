@@ -1,29 +1,22 @@
-// src/app/(dashboard)/layout.tsx
-
 import type { ReactNode } from "react";
-import { Sidebar } from  "@/src/components/layout/app-sidebar";
+import RoleGuard from "@/src/components/layout/role-guard";
+import AppSidebar from "@/src/components/layout/app-sidebar";
 import { Header } from "@/src/components/layout/app-header";
 
 type DashboardLayoutProps = {
   children: ReactNode;
 };
 
-export default function DashboardLayout({
-  children,
-}: DashboardLayoutProps) {
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="flex min-h-screen">
-        <Sidebar />
-
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Header />
-
-          <main className="flex-1 p-4 md:p-6 lg:p-8">
-            <div className="mx-auto w-full max-w-7xl">{children}</div>
-          </main>
+    <RoleGuard allowedRoles={["OWNER", "AGENT"]}>
+      <div className="min-h-screen bg-muted/20">
+        <Header />
+        <div className="flex">
+          <AppSidebar />
+          <main className="min-w-0 flex-1">{children}</main>
         </div>
       </div>
-    </div>
+    </RoleGuard>
   );
 }

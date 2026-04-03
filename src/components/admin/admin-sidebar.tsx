@@ -1,29 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getUserRole } from "@/src/lib/auth";
-import { getNavigationByRole } from "@/src/config/navigation";
-import type { UserRole } from "@/src/types/role";
+import { adminNavigation } from "@/src/config/navigation";
 
-export default function AppSidebar() {
+export default function AdminSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [role, setRole] = useState<UserRole | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-    setRole(getUserRole());
-  }, []);
-
-  const items = useMemo(() => {
-    if (!role || role === "SUPER_ADMIN") return [];
-    return getNavigationByRole(role);
-  }, [role]);
+  const items = useMemo(() => adminNavigation, []);
 
   const isActive = (href: string, matchStartsWith?: boolean) => {
     if (matchStartsWith) {
@@ -31,28 +19,6 @@ export default function AppSidebar() {
     }
     return pathname === href;
   };
-
-  if (!mounted) {
-    return (
-      <aside className="sticky top-0 hidden h-screen w-[260px] shrink-0 border-r border-border bg-background md:flex md:flex-col">
-        <div className="flex h-16 items-center border-b border-border px-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary font-bold text-primary-foreground">
-              WA
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-foreground">
-                Support OS
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                Chargement...
-              </p>
-            </div>
-          </div>
-        </div>
-      </aside>
-    );
-  }
 
   return (
     <aside
@@ -64,16 +30,16 @@ export default function AppSidebar() {
       <div className="flex h-16 items-center justify-between border-b border-border px-4">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary font-bold text-primary-foreground">
-            WA
+            AD
           </div>
 
           {!collapsed && (
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-foreground">
-                Support OS
+                Admin Platform
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                Tableau de bord WhatsApp
+                Maintenance de l’application
               </p>
             </div>
           )}
@@ -131,14 +97,14 @@ export default function AppSidebar() {
           {!collapsed ? (
             <>
               <p className="text-sm font-semibold text-foreground">
-                {role === "OWNER" ? "Espace propriétaire" : "Espace agent"}
+                Espace administrateur
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Gérez les conversations, les contacts et l’activité du support.
+                Surveillez les entreprises, utilisateurs et abonnements.
               </p>
             </>
           ) : (
-            <MessageSquare className="h-5 w-5 text-muted-foreground" />
+            <Shield className="h-5 w-5 text-muted-foreground" />
           )}
         </div>
       </div>

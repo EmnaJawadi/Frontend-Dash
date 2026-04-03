@@ -1,55 +1,97 @@
-import type { ComponentType } from "react";
+import type { UserRole } from "@/src/types/role";
 import {
-  BarChart3,
-  BookOpen,
-  Contact2,
   LayoutDashboard,
   MessageSquare,
+  Users,
+  BookOpen,
+  BarChart3,
   Settings,
+  Building2,
+  CreditCard,
+  Shield,
 } from "lucide-react";
 
 export type NavigationItem = {
-  title: string;
+  label: string;
   href: string;
-  icon: ComponentType<{ className?: string }>;
-  description?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  matchStartsWith?: boolean;
 };
 
-export const navigationItems: NavigationItem[] = [
+export const appNavigation: NavigationItem[] = [
   {
-    title: "Tableau de bord",
+    label: "Tableau de bord",
     href: "/dashboard",
     icon: LayoutDashboard,
-    description: "Vue globale des performances et indicateurs",
   },
   {
-    title: "Conversations",
+    label: "Conversations",
     href: "/conversations",
     icon: MessageSquare,
-    description: "Gestion des conversations WhatsApp",
+    matchStartsWith: true,
   },
   {
-    title: "Contacts",
+    label: "Contacts",
     href: "/contacts",
-    icon: Contact2,
-    description: "Liste et suivi des contacts clients",
+    icon: Users,
+    matchStartsWith: true,
   },
   {
-    title: "Base de connaissances",
+    label: "Base de connaissances",
     href: "/knowledge-base",
     icon: BookOpen,
-    description: "Articles et réponses du bot",
+    matchStartsWith: true,
   },
   {
-    title: "Analyses",
+    label: "Analyses",
     href: "/analytics",
     icon: BarChart3,
-    description: "Rapports et statistiques détaillés",
   },
   {
-    title: "Paramètres",
+    label: "Paramètres",
     href: "/settings",
     icon: Settings,
-    description: "Configuration de la plateforme",
   },
 ];
+
+export const adminNavigation: NavigationItem[] = [
+  {
+    label: "Dashboard",
+    href: "/admin/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "Entreprises",
+    href: "/admin/companies",
+    icon: Building2,
+  },
+  {
+    label: "Utilisateurs",
+    href: "/admin/users",
+    icon: Users,
+  },
+  {
+    label: "Abonnements",
+    href: "/admin/subscriptions",
+    icon: CreditCard,
+  },
+  {
+    label: "Paramètres",
+    href: "/admin/settings",
+    icon: Shield,
+  },
+];
+
+export function getNavigationByRole(role: UserRole): NavigationItem[] {
+  if (role === "SUPER_ADMIN") {
+    return adminNavigation;
+  }
+
+  if (role === "OWNER") {
+    return appNavigation;
+  }
+
+  return appNavigation.filter(
+    (item) => item.href !== "/analytics" && item.href !== "/settings"
+  );
+}
