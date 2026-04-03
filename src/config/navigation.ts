@@ -28,7 +28,12 @@ const OWNER_NAVIGATION: NavigationItem[] = [
     icon: MessageSquare,
     matchStartsWith: true,
   },
-  { label: "Contacts", href: "/contacts", icon: Users, matchStartsWith: true },
+  {
+    label: "Contacts",
+    href: "/contacts",
+    icon: Users,
+    matchStartsWith: true,
+  },
   {
     label: "Base de connaissances",
     href: "/knowledge-base",
@@ -75,7 +80,12 @@ const AGENT_NAVIGATION: NavigationItem[] = [
     icon: MessageSquare,
     matchStartsWith: true,
   },
-  { label: "Contacts", href: "/contacts", icon: Users, matchStartsWith: true },
+  {
+    label: "Contacts",
+    href: "/contacts",
+    icon: Users,
+    matchStartsWith: true,
+  },
   {
     label: "Base de connaissances",
     href: "/knowledge-base",
@@ -104,6 +114,8 @@ const SUPER_ADMIN_NAVIGATION: NavigationItem[] = [
     matchStartsWith: true,
   },
 ];
+
+export const adminNavigation: NavigationItem[] = SUPER_ADMIN_NAVIGATION;
 
 export function getNavigationByRole(role: UserRole): NavigationItem[] {
   switch (role) {
