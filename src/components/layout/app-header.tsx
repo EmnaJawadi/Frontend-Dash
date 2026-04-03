@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Bell, Search } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/src/components/theme-toggle";
+import { getCurrentUser } from "@/src/lib/auth";
+import { ROLE_LABELS } from "@/src/types/role";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Tableau de bord",
@@ -11,6 +14,7 @@ const pageTitles: Record<string, string> = {
   "/knowledge-base": "Base de connaissances",
   "/analytics": "Analyses",
   "/settings": "Paramètres",
+  "/settings/profile": "Mon profil",
   "/admin/dashboard": "Dashboard Admin",
   "/admin/companies": "Entreprises",
   "/admin/users": "Utilisateurs",
@@ -34,9 +38,39 @@ function getPageTitle(pathname: string) {
   return pageTitles[pathname] ?? "Tableau de bord";
 }
 
+function getInitials(firstName?: string, lastName?: string) {
+  const first = firstName?.charAt(0)?.toUpperCase() || "";
+  const last = lastName?.charAt(0)?.toUpperCase() || "";
+
+  if (first || last) {
+    return `${first}${last}` || "U";
+  }
+
+  return "U";
+}
+
 export function Header() {
   const pathname = usePathname();
   const title = getPageTitle(pathname);
+
+  const [userName, setUserName] = useState("Utilisateur");
+  const [userRole, setUserRole] = useState("Compte connecté");
+  const [avatarInitials, setAvatarInitials] = useState("U");
+
+  useEffect(() => {
+    const currentUser = getCurrentUser();
+
+    if (currentUser) {
+      const fullName =
+        `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim();
+
+      setUserName(fullName || "Utilisateur");
+      setUserRole(ROLE_LABELS[currentUser.role] || "Compte connecté");
+      setAvatarInitials(
+        getInitials(currentUser.firstName, currentUser.lastName),
+      );
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -72,12 +106,12 @@ export function Header() {
 
           <div className="flex items-center gap-3 rounded-xl border border-border bg-background px-3 py-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-              MA
+              {avatarInitials}
             </div>
 
             <div className="hidden text-left md:block">
-              <p className="text-sm font-medium text-foreground">Majdi Abbes</p>
-              <p className="text-xs text-muted-foreground">Agent de support</p>
+              <p className="text-sm font-medium text-foreground">{userName}</p>
+              <p className="text-xs text-muted-foreground">{userRole}</p>
             </div>
           </div>
         </div>

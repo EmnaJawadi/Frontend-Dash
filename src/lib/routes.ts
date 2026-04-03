@@ -19,6 +19,7 @@ export const APP_ROUTES = {
   KNOWLEDGE_BASE: "/knowledge-base",
   ANALYTICS: "/analytics",
   SETTINGS: "/settings",
+  PROFILE_SETTINGS: "/settings/profile",
 } as const;
 
 export const ADMIN_ROUTES = {
@@ -27,6 +28,7 @@ export const ADMIN_ROUTES = {
   USERS: "/admin/users",
   SUBSCRIPTIONS: "/admin/subscriptions",
   SETTINGS: "/admin/settings",
+  PROFILE_SETTINGS: "/settings/profile",
 } as const;
 
 export const PUBLIC_ROUTES: string[] = [
@@ -42,6 +44,7 @@ export const OWNER_ROUTES: string[] = [
   APP_ROUTES.KNOWLEDGE_BASE,
   APP_ROUTES.ANALYTICS,
   APP_ROUTES.SETTINGS,
+  APP_ROUTES.PROFILE_SETTINGS,
   ONBOARDING_ROUTES.COMPANY_INFO,
   ONBOARDING_ROUTES.TEAM,
   ONBOARDING_ROUTES.SETUP,
@@ -52,6 +55,8 @@ export const AGENT_ROUTES: string[] = [
   APP_ROUTES.CONVERSATIONS,
   APP_ROUTES.CONTACTS,
   APP_ROUTES.KNOWLEDGE_BASE,
+  APP_ROUTES.SETTINGS,
+  APP_ROUTES.PROFILE_SETTINGS,
 ];
 
 export const SUPER_ADMIN_ROUTES: string[] = [
@@ -60,6 +65,7 @@ export const SUPER_ADMIN_ROUTES: string[] = [
   ADMIN_ROUTES.USERS,
   ADMIN_ROUTES.SUBSCRIPTIONS,
   ADMIN_ROUTES.SETTINGS,
+  ADMIN_ROUTES.PROFILE_SETTINGS,
 ];
 
 export const DEFAULT_ROUTE_BY_ROLE: Record<UserRole, string> = {
@@ -106,6 +112,6 @@ export function isOnboardingRoute(pathname: string): boolean {
 
 export function matchesAllowedRoute(pathname: string, routes: string[]): boolean {
   return routes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 }

@@ -21,23 +21,14 @@ export type NavigationItem = {
 };
 
 const OWNER_NAVIGATION: NavigationItem[] = [
-  {
-    label: "Tableau de bord",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
+  { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
   {
     label: "Conversations",
     href: "/conversations",
     icon: MessageSquare,
     matchStartsWith: true,
   },
-  {
-    label: "Contacts",
-    href: "/contacts",
-    icon: Users,
-    matchStartsWith: true,
-  },
+  { label: "Contacts", href: "/contacts", icon: Users, matchStartsWith: true },
   {
     label: "Base de connaissances",
     href: "/knowledge-base",
@@ -77,23 +68,14 @@ const OWNER_NAVIGATION: NavigationItem[] = [
 ];
 
 const AGENT_NAVIGATION: NavigationItem[] = [
-  {
-    label: "Tableau de bord",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
+  { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
   {
     label: "Conversations",
     href: "/conversations",
     icon: MessageSquare,
     matchStartsWith: true,
   },
-  {
-    label: "Contacts",
-    href: "/contacts",
-    icon: Users,
-    matchStartsWith: true,
-  },
+  { label: "Contacts", href: "/contacts", icon: Users, matchStartsWith: true },
   {
     label: "Base de connaissances",
     href: "/knowledge-base",
@@ -116,8 +98,8 @@ const SUPER_ADMIN_NAVIGATION: NavigationItem[] = [
     matchStartsWith: true,
   },
   {
-    label: "Paramètres",
-    href: "/settings",
+    label: "Paramètres admin",
+    href: "/admin/settings",
     icon: Settings,
     matchStartsWith: true,
   },
