@@ -30,7 +30,7 @@ export default function LoginForm() {
 
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: value as UserRole,
     }));
   }
 
@@ -53,11 +53,14 @@ export default function LoginForm() {
       });
 
       const redirectPath = getDefaultRedirectByRole(user.role);
-
       router.push(redirectPath);
       router.refresh();
-    } catch {
-      setError("Impossible de se connecter. Veuillez réessayer.");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Impossible de se connecter. Veuillez réessayer."
+      );
     } finally {
       setIsSubmitting(false);
     }

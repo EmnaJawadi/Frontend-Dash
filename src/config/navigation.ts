@@ -1,4 +1,3 @@
-import type { UserRole } from "@/src/types/role";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -7,18 +6,21 @@ import {
   BarChart3,
   Settings,
   Building2,
-  CreditCard,
+  UserRoundPlus,
+  Wrench,
   Shield,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { UserRole } from "@/src/types/role";
 
 export type NavigationItem = {
   label: string;
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   matchStartsWith?: boolean;
 };
 
-export const appNavigation: NavigationItem[] = [
+const OWNER_NAVIGATION: NavigationItem[] = [
   {
     label: "Tableau de bord",
     href: "/dashboard",
@@ -46,52 +48,90 @@ export const appNavigation: NavigationItem[] = [
     label: "Analyses",
     href: "/analytics",
     icon: BarChart3,
+    matchStartsWith: true,
   },
   {
     label: "Paramètres",
     href: "/settings",
     icon: Settings,
+    matchStartsWith: true,
+  },
+  {
+    label: "Informations société",
+    href: "/company-info",
+    icon: Building2,
+    matchStartsWith: true,
+  },
+  {
+    label: "Équipe",
+    href: "/team",
+    icon: UserRoundPlus,
+    matchStartsWith: true,
+  },
+  {
+    label: "Configuration",
+    href: "/setup",
+    icon: Wrench,
+    matchStartsWith: true,
   },
 ];
 
-export const adminNavigation: NavigationItem[] = [
+const AGENT_NAVIGATION: NavigationItem[] = [
   {
-    label: "Dashboard",
-    href: "/admin/dashboard",
+    label: "Tableau de bord",
+    href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
-    label: "Entreprises",
-    href: "/admin/companies",
-    icon: Building2,
+    label: "Conversations",
+    href: "/conversations",
+    icon: MessageSquare,
+    matchStartsWith: true,
   },
   {
-    label: "Utilisateurs",
-    href: "/admin/users",
+    label: "Contacts",
+    href: "/contacts",
     icon: Users,
+    matchStartsWith: true,
   },
   {
-    label: "Abonnements",
-    href: "/admin/subscriptions",
-    icon: CreditCard,
+    label: "Base de connaissances",
+    href: "/knowledge-base",
+    icon: BookOpen,
+    matchStartsWith: true,
   },
   {
     label: "Paramètres",
-    href: "/admin/settings",
+    href: "/settings",
+    icon: Settings,
+    matchStartsWith: true,
+  },
+];
+
+const SUPER_ADMIN_NAVIGATION: NavigationItem[] = [
+  {
+    label: "Dashboard admin",
+    href: "/admin/dashboard",
     icon: Shield,
+    matchStartsWith: true,
+  },
+  {
+    label: "Paramètres",
+    href: "/settings",
+    icon: Settings,
+    matchStartsWith: true,
   },
 ];
 
 export function getNavigationByRole(role: UserRole): NavigationItem[] {
-  if (role === "SUPER_ADMIN") {
-    return adminNavigation;
+  switch (role) {
+    case "OWNER":
+      return OWNER_NAVIGATION;
+    case "AGENT":
+      return AGENT_NAVIGATION;
+    case "SUPER_ADMIN":
+      return SUPER_ADMIN_NAVIGATION;
+    default:
+      return [];
   }
-
-  if (role === "OWNER") {
-    return appNavigation;
-  }
-
-  return appNavigation.filter(
-    (item) => item.href !== "/analytics" && item.href !== "/settings"
-  );
 }

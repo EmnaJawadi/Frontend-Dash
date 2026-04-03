@@ -9,6 +9,7 @@ const OWNER_ROUTES = [
   "/knowledge-base",
   "/analytics",
   "/settings",
+  "/settings/account",
   "/company-info",
   "/team",
   "/setup",
@@ -19,6 +20,8 @@ const AGENT_ROUTES = [
   "/conversations",
   "/contacts",
   "/knowledge-base",
+  "/settings",
+  "/settings/account",
 ];
 
 const SUPER_ADMIN_ROUTES = [
@@ -27,10 +30,24 @@ const SUPER_ADMIN_ROUTES = [
   "/admin/users",
   "/admin/subscriptions",
   "/admin/settings",
+  "/settings",
+  "/settings/account",
 ];
 
+type AppRole = "OWNER" | "AGENT" | "SUPER_ADMIN";
+
+function isIgnoredRoute(pathname: string): boolean {
+  return (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname === "/favicon.ico"
+  );
+}
+
 function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.includes(pathname);
+  return PUBLIC_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
 }
 
 function matchesRoute(pathname: string, routes: string[]): boolean {
@@ -39,14 +56,30 @@ function matchesRoute(pathname: string, routes: string[]): boolean {
   );
 }
 
+function isValidRole(role: string | undefined): role is AppRole {
+  return role === "OWNER" || role === "AGENT" || role === "SUPER_ADMIN";
+}
+
+function getDefaultRouteByRole(role: AppRole): string {
+  switch (role) {
+    case "SUPER_ADMIN":
+      return "/admin/dashboard";
+    case "OWNER":
+    case "AGENT":
+      return "/dashboard";
+    default:
+      return "/login";
+  }
+}
+
+function redirectTo(request: NextRequest, path: string) {
+  return NextResponse.redirect(new URL(path, request.url));
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
-    pathname === "/favicon.ico"
-  ) {
+  if (isIgnoredRoute(pathname)) {
     return NextResponse.next();
   }
 
@@ -54,58 +87,47 @@ export function middleware(request: NextRequest) {
   const roleCookie = request.cookies.get("user_role")?.value;
 
   const isAuthenticated = authCookie === "true";
-  const userRole = roleCookie;
+  const userRole = isValidRole(roleCookie) ? roleCookie : null;
 
   if (pathname === "/") {
     if (!isAuthenticated || !userRole) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return redirectTo(request, "/login");
     }
 
-    if (userRole === "SUPER_ADMIN") {
-      return NextResponse.redirect(new URL("/admin/dashboard", request.url));
-    }
-
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return redirectTo(request, getDefaultRouteByRole(userRole));
   }
 
   if (isPublicRoute(pathname)) {
     if (isAuthenticated && userRole) {
-      if (userRole === "SUPER_ADMIN") {
-        return NextResponse.redirect(new URL("/admin/dashboard", request.url));
-      }
-
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return redirectTo(request, getDefaultRouteByRole(userRole));
     }
 
     return NextResponse.next();
   }
 
   if (!isAuthenticated || !userRole) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return redirectTo(request, "/login");
   }
 
-  if (userRole === "OWNER") {
-    if (!matchesRoute(pathname, OWNER_ROUTES)) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-    return NextResponse.next();
-  }
+  switch (userRole) {
+    case "OWNER":
+      return matchesRoute(pathname, OWNER_ROUTES)
+        ? NextResponse.next()
+        : redirectTo(request, "/dashboard");
 
-  if (userRole === "AGENT") {
-    if (!matchesRoute(pathname, AGENT_ROUTES)) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-    return NextResponse.next();
-  }
+    case "AGENT":
+      return matchesRoute(pathname, AGENT_ROUTES)
+        ? NextResponse.next()
+        : redirectTo(request, "/dashboard");
 
-  if (userRole === "SUPER_ADMIN") {
-    if (!matchesRoute(pathname, SUPER_ADMIN_ROUTES)) {
-      return NextResponse.redirect(new URL("/admin/dashboard", request.url));
-    }
-    return NextResponse.next();
-  }
+    case "SUPER_ADMIN":
+      return matchesRoute(pathname, SUPER_ADMIN_ROUTES)
+        ? NextResponse.next()
+        : redirectTo(request, "/admin/dashboard");
 
-  return NextResponse.redirect(new URL("/login", request.url));
+    default:
+      return redirectTo(request, "/login");
+  }
 }
 
 export const config = {
