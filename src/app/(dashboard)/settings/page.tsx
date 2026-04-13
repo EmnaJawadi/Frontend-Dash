@@ -1,447 +1,235 @@
 "use client";
 
 import * as React from "react";
-import {
-  Settings,
-  Clock3,
-  MessageCircleMore,
-  Bot,
-  Save,
-  Bell,
-  ShieldCheck,
-  Workflow,
-  PlugZap,
-  RefreshCw,
-  CheckCircle2,
-} from "lucide-react";
-
+import { Bot, Clock3, MessageCircleMore, RefreshCw, Save, Settings, Workflow } from "lucide-react";
+import { useSettings } from "@/src/features/settings/hooks/use-settings";
+import type { BusinessHoursDay, SettingsData } from "@/src/features/settings/types/settings.types";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
-function SectionHeader({
-  title,
-  description,
-  icon,
-  action,
-}: {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="mb-4 flex items-start justify-between gap-3">
-      <div className="flex items-start gap-3">
-        <div className="rounded-xl bg-muted p-2 text-muted-foreground">
-          {icon}
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold">{title}</h2>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-      </div>
+const WEEKDAYS = new Set(["monday", "tuesday", "wednesday", "thursday", "friday"]);
 
-      {action ? <div>{action}</div> : null}
-    </div>
-  );
+function cloneSettings(value: SettingsData): SettingsData {
+  return JSON.parse(JSON.stringify(value)) as SettingsData;
 }
 
-function SettingToggle({
-  label,
-  description,
-  checked,
-  onCheckedChange,
-}: {
-  label: string;
-  description: string;
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between rounded-xl border border-border/60 p-4">
-      <div className="pr-4">
-        <Label className="text-sm font-medium">{label}</Label>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} />
-    </div>
-  );
+function getRangeFromDays(days: BusinessHoursDay[], predicate: (day: string) => boolean) {
+  const first = days.find((item) => predicate(item.day));
+  return first ? `${first.start} - ${first.end}` : "";
+}
+
+function parseRange(input: string, fallbackStart: string, fallbackEnd: string) {
+  const parts = input.split("-").map((item) => item.trim());
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return { start: fallbackStart, end: fallbackEnd };
+  }
+  return { start: parts[0], end: parts[1] };
+}
+
+function applyHourRanges(days: BusinessHoursDay[], weekdaysRange: string, saturdayRange: string): BusinessHoursDay[] {
+  return days.map((item) => {
+    if (WEEKDAYS.has(item.day)) {
+      const parsed = parseRange(weekdaysRange, item.start, item.end);
+      return { ...item, active: true, start: parsed.start, end: parsed.end };
+    }
+    if (item.day === "saturday") {
+      if (!saturdayRange.trim()) return { ...item, active: false };
+      const parsed = parseRange(saturdayRange, item.start, item.end);
+      return { ...item, active: true, start: parsed.start, end: parsed.end };
+    }
+    return item;
+  });
 }
 
 export default function SettingsPage() {
-  const [businessHoursEnabled, setBusinessHoursEnabled] = React.useState(true);
-  const [autoReplyOutsideHours, setAutoReplyOutsideHours] = React.useState(true);
-  const [whatsappNotifications, setWhatsappNotifications] = React.useState(true);
-  const [botEnabled, setBotEnabled] = React.useState(true);
-  const [humanHandoffEnabled, setHumanHandoffEnabled] = React.useState(true);
-  const [workflowEnabled, setWorkflowEnabled] = React.useState(true);
-  const [emailNotifications, setEmailNotifications] = React.useState(true);
-  const [secureMode, setSecureMode] = React.useState(true);
+  const { data, isLoading, isSaving, error, saveError, refetch, saveSettings } = useSettings();
+  const [form, setForm] = React.useState<SettingsData | null>(null);
+  const [weekdaysHours, setWeekdaysHours] = React.useState("");
+  const [saturdayHours, setSaturdayHours] = React.useState("");
   const [saveMessage, setSaveMessage] = React.useState("");
   const [connectionMessage, setConnectionMessage] = React.useState("");
 
-  const handleSave = () => {
-    setSaveMessage("Paramètres enregistrés avec succès.");
-    setTimeout(() => setSaveMessage(""), 2500);
+  React.useEffect(() => {
+    if (!data) return;
+    const cloned = cloneSettings(data);
+    setForm(cloned);
+    setWeekdaysHours(getRangeFromDays(cloned.businessHours.days, (day) => WEEKDAYS.has(day)));
+    setSaturdayHours(getRangeFromDays(cloned.businessHours.days, (day) => day === "saturday"));
+  }, [data]);
+
+  const resetForm = () => {
+    if (!data) return;
+    const cloned = cloneSettings(data);
+    setForm(cloned);
+    setWeekdaysHours(getRangeFromDays(cloned.businessHours.days, (day) => WEEKDAYS.has(day)));
+    setSaturdayHours(getRangeFromDays(cloned.businessHours.days, (day) => day === "saturday"));
+    setSaveMessage("");
+    setConnectionMessage("");
   };
 
-  const handleTestConnection = () => {
-    setConnectionMessage("Connexion WhatsApp testée avec succès.");
-    setTimeout(() => setConnectionMessage(""), 2500);
+  const onSave = async () => {
+    if (!form) return;
+    try {
+      const saved = await saveSettings({
+        businessHours: {
+          ...form.businessHours,
+          days: applyHourRanges(form.businessHours.days, weekdaysHours, saturdayHours),
+        },
+        aiPolicy: form.aiPolicy,
+        whatsappPolicy: form.whatsappPolicy,
+        workflow: form.workflow,
+        general: form.general,
+      });
+      const cloned = cloneSettings(saved);
+      setForm(cloned);
+      setWeekdaysHours(getRangeFromDays(cloned.businessHours.days, (day) => WEEKDAYS.has(day)));
+      setSaturdayHours(getRangeFromDays(cloned.businessHours.days, (day) => day === "saturday"));
+      setSaveMessage("Parametres enregistres avec succes.");
+      setTimeout(() => setSaveMessage(""), 2500);
+    } catch {
+      setSaveMessage("");
+    }
   };
+
+  const onTestConnection = async () => {
+    try {
+      await refetch();
+      setConnectionMessage("Connexion backend OK.");
+      setTimeout(() => setConnectionMessage(""), 2500);
+    } catch {
+      setConnectionMessage("Connexion backend echouee.");
+      setTimeout(() => setConnectionMessage(""), 2500);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-4 md:p-6">
+        <h1 className="text-3xl font-semibold tracking-tight">Parametres</h1>
+        <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">Chargement...</CardContent></Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6 p-4 md:p-6">
+        <h1 className="text-3xl font-semibold tracking-tight">Parametres</h1>
+        <Card>
+          <CardContent className="space-y-3 p-6">
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <Button onClick={refetch}>Reessayer</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!form) {
+    return null;
+  }
 
   return (
     <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Paramètres</h1>
-          <p className="text-sm text-muted-foreground">
-            Configure WhatsApp, l’assistant IA, les workflows automatiques et les préférences globales.
-          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">Parametres</h1>
+          <p className="text-sm text-muted-foreground">Configuration connectee au backend.</p>
         </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" className="rounded-xl">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Réinitialiser
-          </Button>
-
-          <Button
-            onClick={handleSave}
-            className="rounded-xl bg-slate-950 text-white hover:bg-slate-800"
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Enregistrer
-          </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={resetForm}><RefreshCw className="mr-2 h-4 w-4" />Reinitialiser</Button>
+          <Button onClick={onSave} disabled={isSaving}><Save className="mr-2 h-4 w-4" />{isSaving ? "Enregistrement..." : "Enregistrer"}</Button>
         </div>
       </div>
 
-      {saveMessage ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {saveMessage}
-        </div>
-      ) : null}
+      {saveMessage ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{saveMessage}</div> : null}
+      {saveError ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{saveError}</div> : null}
+      {connectionMessage ? <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">{connectionMessage}</div> : null}
 
-      {connectionMessage ? (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-          {connectionMessage}
-        </div>
-      ) : null}
+      <Card className="rounded-2xl">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2"><MessageCircleMore className="h-5 w-5" /><h2 className="text-lg font-semibold">Configuration WhatsApp</h2></div>
+          <Badge>{form.whatsappPolicy.connectionStatus === "connected" ? "Connecte" : "Deconnecte"}</Badge>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2"><Label>Numero WhatsApp Business</Label><Input value={form.whatsappPolicy.businessPhoneNumber} onChange={(e) => setForm((p) => p ? ({ ...p, whatsappPolicy: { ...p.whatsappPolicy, businessPhoneNumber: e.target.value } }) : p)} /></div>
+          <div className="space-y-2"><Label>Nom affiche</Label><Input value={form.whatsappPolicy.displayName} onChange={(e) => setForm((p) => p ? ({ ...p, whatsappPolicy: { ...p.whatsappPolicy, displayName: e.target.value } }) : p)} /></div>
+          <div className="space-y-2"><Label>Webhook URL</Label><Input value={form.whatsappPolicy.webhookUrl} onChange={(e) => setForm((p) => p ? ({ ...p, whatsappPolicy: { ...p.whatsappPolicy, webhookUrl: e.target.value } }) : p)} /></div>
+          <div className="space-y-2"><Label>Verify token</Label><Input value={form.whatsappPolicy.verifyToken} onChange={(e) => setForm((p) => p ? ({ ...p, whatsappPolicy: { ...p.whatsappPolicy, verifyToken: e.target.value } }) : p)} /></div>
+          <div className="space-y-2"><Label>Phone Number ID</Label><Input value={form.whatsappPolicy.phoneNumberId} onChange={(e) => setForm((p) => p ? ({ ...p, whatsappPolicy: { ...p.whatsappPolicy, phoneNumberId: e.target.value } }) : p)} /></div>
+          <div className="space-y-2"><Label>Business Account ID</Label><Input value={form.whatsappPolicy.businessAccountId} onChange={(e) => setForm((p) => p ? ({ ...p, whatsappPolicy: { ...p.whatsappPolicy, businessAccountId: e.target.value } }) : p)} /></div>
+          <div className="md:col-span-2 flex items-center justify-between rounded-xl border p-4">
+            <div><p className="font-medium">Notifications WhatsApp</p><p className="text-sm text-muted-foreground">Activer les alertes.</p></div>
+            <Switch checked={form.whatsappPolicy.notificationsEnabled} onCheckedChange={(checked) => setForm((p) => p ? ({ ...p, whatsappPolicy: { ...p.whatsappPolicy, notificationsEnabled: checked } }) : p)} />
+          </div>
+          <div className="md:col-span-2"><Button variant="outline" onClick={onTestConnection}>Tester la connexion</Button></div>
+        </CardContent>
+      </Card>
 
-      <div className="grid gap-6">
-        <Card className="rounded-3xl border-border/60 shadow-sm">
-          <CardHeader>
-            <SectionHeader
-              title="Configuration WhatsApp"
-              description="Paramètres liés au numéro Business, au webhook et à l’état de connexion."
-              icon={<MessageCircleMore className="h-5 w-5" />}
-              action={
-                <Badge className="rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-                  <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                  Connecté
-                </Badge>
-              }
-            />
-          </CardHeader>
+      <Card className="rounded-2xl">
+        <CardHeader className="flex flex-row items-center gap-2"><Clock3 className="h-5 w-5" /><h2 className="text-lg font-semibold">Horaires de support</h2></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-xl border p-4"><div><p className="font-medium">Activer les horaires</p></div><Switch checked={form.businessHours.enabled} onCheckedChange={(checked) => setForm((p) => p ? ({ ...p, businessHours: { ...p.businessHours, enabled: checked } }) : p)} /></div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Lundi - Vendredi</Label><Input value={weekdaysHours} onChange={(e) => setWeekdaysHours(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Samedi</Label><Input value={saturdayHours} onChange={(e) => setSaturdayHours(e.target.value)} /></div>
+          </div>
+          <div className="space-y-2"><Label>Fuseau horaire</Label><Input value={form.businessHours.timezone} onChange={(e) => setForm((p) => p ? ({ ...p, businessHours: { ...p.businessHours, timezone: e.target.value } }) : p)} /></div>
+          <div className="flex items-center justify-between rounded-xl border p-4"><div><p className="font-medium">Reponse auto hors horaires</p></div><Switch checked={form.businessHours.autoReplyOutsideHours} onCheckedChange={(checked) => setForm((p) => p ? ({ ...p, businessHours: { ...p.businessHours, autoReplyOutsideHours: checked } }) : p)} /></div>
+          <div className="space-y-2"><Label>Message hors horaires</Label><Textarea value={form.businessHours.outOfHoursMessage} onChange={(e) => setForm((p) => p ? ({ ...p, businessHours: { ...p.businessHours, outOfHoursMessage: e.target.value } }) : p)} /></div>
+        </CardContent>
+      </Card>
 
-          <CardContent className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Numéro WhatsApp Business</Label>
-                <Input defaultValue="+216 70 000 000" className="rounded-xl" />
-              </div>
+      <Card className="rounded-2xl">
+        <CardHeader className="flex flex-row items-center gap-2"><Bot className="h-5 w-5" /><h2 className="text-lg font-semibold">Assistant IA</h2></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-xl border p-4"><p className="font-medium">Activer le bot</p><Switch checked={form.aiPolicy.enabled} onCheckedChange={(checked) => setForm((p) => p ? ({ ...p, aiPolicy: { ...p.aiPolicy, enabled: checked } }) : p)} /></div>
+          <div className="flex items-center justify-between rounded-xl border p-4"><p className="font-medium">Activer handoff humain</p><Switch checked={form.aiPolicy.handoffEnabled} onCheckedChange={(checked) => setForm((p) => p ? ({ ...p, aiPolicy: { ...p.aiPolicy, handoffEnabled: checked, handoffThreshold: checked ? (p.aiPolicy.handoffThreshold || 0.45) : 0 } }) : p)} /></div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Confiance minimale (%)</Label><Input value={String(Math.round(form.aiPolicy.confidenceThreshold * 100))} onChange={(e) => { const n = Number(e.target.value); if (!Number.isFinite(n)) return; setForm((p) => p ? ({ ...p, aiPolicy: { ...p.aiPolicy, confidenceThreshold: Math.max(0, Math.min(100, n)) / 100 } }) : p); }} /></div>
+            <div className="space-y-2"><Label>Delai max avant escalade (min)</Label><Input value={String(form.aiPolicy.escalationDelayMinutes)} onChange={(e) => { const n = Number(e.target.value); if (!Number.isFinite(n)) return; setForm((p) => p ? ({ ...p, aiPolicy: { ...p.aiPolicy, escalationDelayMinutes: Math.max(0, Math.trunc(n)) } }) : p); }} /></div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Ton de reponse</Label><Input value={form.aiPolicy.responseTone} onChange={(e) => setForm((p) => p ? ({ ...p, aiPolicy: { ...p.aiPolicy, responseTone: e.target.value } }) : p)} /></div>
+            <div className="space-y-2"><Label>Langue par defaut</Label><Input value={form.aiPolicy.language} onChange={(e) => setForm((p) => p ? ({ ...p, aiPolicy: { ...p.aiPolicy, language: e.target.value } }) : p)} /></div>
+          </div>
+          <div className="space-y-2"><Label>Instruction systeme</Label><Textarea value={form.aiPolicy.systemInstruction} onChange={(e) => setForm((p) => p ? ({ ...p, aiPolicy: { ...p.aiPolicy, systemInstruction: e.target.value } }) : p)} /></div>
+        </CardContent>
+      </Card>
 
-              <div className="space-y-2">
-                <Label>Nom affiché</Label>
-                <Input defaultValue="Support Brand" className="rounded-xl" />
-              </div>
-            </div>
+      <Card className="rounded-2xl">
+        <CardHeader className="flex flex-row items-center gap-2"><Workflow className="h-5 w-5" /><h2 className="text-lg font-semibold">Workflow automatique</h2></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-xl border p-4"><p className="font-medium">Activer workflow</p><Switch checked={form.workflow.enabled} onCheckedChange={(checked) => setForm((p) => p ? ({ ...p, workflow: { ...p.workflow, enabled: checked } }) : p)} /></div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Tag principal</Label><Input value={form.workflow.primaryTag} onChange={(e) => setForm((p) => p ? ({ ...p, workflow: { ...p.workflow, primaryTag: e.target.value } }) : p)} /></div>
+            <div className="space-y-2"><Label>Agent par defaut</Label><Input value={form.workflow.defaultAgent} onChange={(e) => setForm((p) => p ? ({ ...p, workflow: { ...p.workflow, defaultAgent: e.target.value } }) : p)} /></div>
+          </div>
+          <div className="space-y-2"><Label>Message d'accueil</Label><Textarea value={form.workflow.welcomeMessage} onChange={(e) => setForm((p) => p ? ({ ...p, workflow: { ...p.workflow, welcomeMessage: e.target.value } }) : p)} /></div>
+          <div className="space-y-2"><Label>Message avant handoff</Label><Textarea value={form.workflow.preHandoffMessage} onChange={(e) => setForm((p) => p ? ({ ...p, workflow: { ...p.workflow, preHandoffMessage: e.target.value } }) : p)} /></div>
+        </CardContent>
+      </Card>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Webhook URL</Label>
-                <Input
-                  defaultValue="https://api.my-platform.com/webhooks/whatsapp"
-                  className="rounded-xl"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Verify token</Label>
-                <Input defaultValue="support-whatsapp-token" className="rounded-xl" />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Phone Number ID</Label>
-                <Input defaultValue="572001245879001" className="rounded-xl" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Business Account ID</Label>
-                <Input defaultValue="104550889210022" className="rounded-xl" />
-              </div>
-            </div>
-
-            <SettingToggle
-              label="Notifications WhatsApp"
-              description="Active les alertes lors de nouveaux messages ou événements importants."
-              checked={whatsappNotifications}
-              onCheckedChange={setWhatsappNotifications}
-            />
-
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" className="rounded-xl" onClick={handleTestConnection}>
-                <PlugZap className="mr-2 h-4 w-4" />
-                Tester la connexion
-              </Button>
-
-              <Button variant="outline" className="rounded-xl">
-                Copier le webhook
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border-border/60 shadow-sm">
-          <CardHeader>
-            <SectionHeader
-              title="Horaires de support"
-              description="Définis les heures de disponibilité du service client et la réponse hors horaires."
-              icon={<Clock3 className="h-5 w-5" />}
-            />
-          </CardHeader>
-
-          <CardContent className="space-y-5">
-            <SettingToggle
-              label="Activer les horaires d’ouverture"
-              description="Le système prendra en compte les plages horaires définies."
-              checked={businessHoursEnabled}
-              onCheckedChange={setBusinessHoursEnabled}
-            />
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Lundi - Vendredi</Label>
-                <Input defaultValue="08:00 - 18:00" className="rounded-xl" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Samedi</Label>
-                <Input defaultValue="09:00 - 13:00" className="rounded-xl" />
-              </div>
-            </div>
-
-            <SettingToggle
-              label="Réponse automatique hors horaires"
-              description="Envoie un message automatique si un client écrit en dehors des heures."
-              checked={autoReplyOutsideHours}
-              onCheckedChange={setAutoReplyOutsideHours}
-            />
-
-            <div className="space-y-2">
-              <Label>Message hors horaires</Label>
-              <Textarea
-                defaultValue="Merci pour votre message. Notre équipe vous répondra dès la prochaine ouverture."
-                className="min-h-[100px] rounded-xl"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border-border/60 shadow-sm">
-          <CardHeader>
-            <SectionHeader
-              title="Assistant IA"
-              description="Configure le comportement du bot, le handoff humain et les règles d’escalade."
-              icon={<Bot className="h-5 w-5" />}
-            />
-          </CardHeader>
-
-          <CardContent className="space-y-5">
-            <SettingToggle
-              label="Activer le bot"
-              description="L’assistant IA répond automatiquement aux conversations entrantes."
-              checked={botEnabled}
-              onCheckedChange={setBotEnabled}
-            />
-
-            <SettingToggle
-              label="Activer handoff humain"
-              description="Permet le transfert vers un agent humain selon les règles définies."
-              checked={humanHandoffEnabled}
-              onCheckedChange={setHumanHandoffEnabled}
-            />
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Confiance minimale du bot (%)</Label>
-                <Input defaultValue="75" className="rounded-xl" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Délai max avant escalade (min)</Label>
-                <Input defaultValue="5" className="rounded-xl" />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Ton de réponse</Label>
-                <Input defaultValue="Professionnel" className="rounded-xl" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Langue par défaut du bot</Label>
-                <Input defaultValue="Français" className="rounded-xl" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Instruction système principale</Label>
-              <Textarea
-                defaultValue="Réponds de manière claire, concise et professionnelle. Si la demande est complexe, propose un transfert vers un agent humain."
-                className="min-h-[120px] rounded-xl"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" className="rounded-xl">
-                Tester l’assistant
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border-border/60 shadow-sm">
-          <CardHeader>
-            <SectionHeader
-              title="Workflow automatique"
-              description="Définis comment les messages sont traités, tagués et escaladés automatiquement."
-              icon={<Workflow className="h-5 w-5" />}
-            />
-          </CardHeader>
-
-          <CardContent className="space-y-5">
-            <SettingToggle
-              label="Activer le workflow automatique"
-              description="Le système applique automatiquement les règles de traitement et de routage."
-              checked={workflowEnabled}
-              onCheckedChange={setWorkflowEnabled}
-            />
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Tag automatique principal</Label>
-                <Input defaultValue="SupportWhatsApp" className="rounded-xl" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Agent par défaut</Label>
-                <Input defaultValue="Equipe Support" className="rounded-xl" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Message d’accueil automatique</Label>
-              <Textarea
-                defaultValue="Bonjour 👋 Merci de nous avoir contactés sur WhatsApp. Notre assistant analyse votre demande et vous répond immédiatement."
-                className="min-h-[100px] rounded-xl"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Message avant transfert à un agent</Label>
-              <Textarea
-                defaultValue="Votre demande nécessite une vérification complémentaire. Un agent humain va prendre le relais."
-                className="min-h-[100px] rounded-xl"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border-border/60 shadow-sm">
-          <CardHeader>
-            <SectionHeader
-              title="Préférences générales"
-              description="Préférences globales de la plateforme, notifications et sécurité."
-              icon={<Settings className="h-5 w-5" />}
-            />
-          </CardHeader>
-
-          <CardContent className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Nom de l’entreprise</Label>
-                <Input defaultValue="My Support Company" className="rounded-xl" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Email support</Label>
-                <Input defaultValue="support@company.com" className="rounded-xl" />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Langue par défaut</Label>
-                <Input defaultValue="Français" className="rounded-xl" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Fuseau horaire</Label>
-                <Input defaultValue="Africa/Tunis" className="rounded-xl" />
-              </div>
-            </div>
-
-            <SettingToggle
-              label="Notifications email"
-              description="Reçois les notifications système par email."
-              checked={emailNotifications}
-              onCheckedChange={setEmailNotifications}
-            />
-
-            <SettingToggle
-              label="Mode sécurisé"
-              description="Renforce certaines validations et protections internes."
-              checked={secureMode}
-              onCheckedChange={setSecureMode}
-            />
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card className="rounded-2xl border-border/60 shadow-none">
-                <CardContent className="p-5">
-                  <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-                    <Bell className="h-4 w-4" />
-                    Notifications
-                  </div>
-                  <p className="text-sm">
-                    Les alertes WhatsApp et les notifications email peuvent être ajustées ici.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="rounded-2xl border-border/60 shadow-none">
-                <CardContent className="p-5">
-                  <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-                    <ShieldCheck className="h-4 w-4" />
-                    Sécurité
-                  </div>
-                  <p className="text-sm">
-                    Vérifie régulièrement les paramètres sensibles et l’accès aux intégrations.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="rounded-2xl">
+        <CardHeader className="flex flex-row items-center gap-2"><Settings className="h-5 w-5" /><h2 className="text-lg font-semibold">Preferences generales</h2></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Nom entreprise</Label><Input value={form.general.companyName} onChange={(e) => setForm((p) => p ? ({ ...p, general: { ...p.general, companyName: e.target.value } }) : p)} /></div>
+            <div className="space-y-2"><Label>Email support</Label><Input value={form.general.supportEmail} onChange={(e) => setForm((p) => p ? ({ ...p, general: { ...p.general, supportEmail: e.target.value } }) : p)} /></div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Langue par defaut</Label><Input value={form.general.defaultLanguage} onChange={(e) => setForm((p) => p ? ({ ...p, general: { ...p.general, defaultLanguage: e.target.value } }) : p)} /></div>
+            <div className="space-y-2"><Label>Fuseau horaire</Label><Input value={form.general.timezone} onChange={(e) => setForm((p) => p ? ({ ...p, general: { ...p.general, timezone: e.target.value } }) : p)} /></div>
+          </div>
+          <div className="flex items-center justify-between rounded-xl border p-4"><p className="font-medium">Notifications email</p><Switch checked={form.general.emailNotifications} onCheckedChange={(checked) => setForm((p) => p ? ({ ...p, general: { ...p.general, emailNotifications: checked } }) : p)} /></div>
+          <div className="flex items-center justify-between rounded-xl border p-4"><p className="font-medium">Mode securise</p><Switch checked={form.general.secureMode} onCheckedChange={(checked) => setForm((p) => p ? ({ ...p, general: { ...p.general, secureMode: checked } }) : p)} /></div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

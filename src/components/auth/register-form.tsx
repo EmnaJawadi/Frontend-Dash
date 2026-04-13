@@ -103,7 +103,7 @@ export default function RegisterForm() {
             type="text"
             value={formData.firstName}
             onChange={handleChange}
-            placeholder="Amine"
+            placeholder="Prenom"
             className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
           />
         </div>
@@ -118,7 +118,7 @@ export default function RegisterForm() {
             type="text"
             value={formData.lastName}
             onChange={handleChange}
-            placeholder="Ben Ali"
+            placeholder="Nom"
             className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
           />
         </div>

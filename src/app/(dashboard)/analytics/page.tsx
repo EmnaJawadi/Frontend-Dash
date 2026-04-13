@@ -2,20 +2,20 @@
 
 import * as React from "react";
 import {
+  AlertTriangle,
   BarChart3,
   Bot,
-  Users,
-  MessageSquare,
-  TrendingUp,
   Clock3,
-  AlertTriangle,
+  MessageSquare,
   Search,
+  TrendingUp,
+  Users,
   X,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -23,70 +23,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-type PeriodFilter = "7d" | "30d" | "90d";
-type ChannelFilter = "all" | "whatsapp";
-type TeamFilter = "all" | "bot" | "human";
-
-type AnalyticsDay = {
-  day: string;
-  totalMessages: number;
-  botMessages: number;
-  humanMessages: number;
-  escalations: number;
-};
-
-const analyticsData: AnalyticsDay[] = [
-  {
-    day: "Lun",
-    totalMessages: 120,
-    botMessages: 80,
-    humanMessages: 40,
-    escalations: 8,
-  },
-  {
-    day: "Mar",
-    totalMessages: 150,
-    botMessages: 110,
-    humanMessages: 40,
-    escalations: 10,
-  },
-  {
-    day: "Mer",
-    totalMessages: 170,
-    botMessages: 120,
-    humanMessages: 50,
-    escalations: 14,
-  },
-  {
-    day: "Jeu",
-    totalMessages: 140,
-    botMessages: 90,
-    humanMessages: 50,
-    escalations: 11,
-  },
-  {
-    day: "Ven",
-    totalMessages: 190,
-    botMessages: 140,
-    humanMessages: 50,
-    escalations: 16,
-  },
-  {
-    day: "Sam",
-    totalMessages: 130,
-    botMessages: 95,
-    humanMessages: 35,
-    escalations: 7,
-  },
-  {
-    day: "Dim",
-    totalMessages: 110,
-    botMessages: 75,
-    humanMessages: 35,
-    escalations: 5,
-  },
-];
+import { useAnalytics } from "@/src/features/analytics/hooks/use-analytics";
+import type {
+  AnalyticsDay,
+  ChannelFilter,
+  PeriodFilter,
+  TeamFilter,
+} from "@/src/features/analytics/types/analytics.types";
 
 function SearchInput({
   value,
@@ -100,8 +43,8 @@ function SearchInput({
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Rechercher une métrique ou un segment..."
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="Rechercher une metrique ou un segment..."
         className="h-11 rounded-xl pl-10 pr-10"
       />
       {value ? (
@@ -135,9 +78,7 @@ function StatCard({
       <CardContent className="p-5">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-sm text-muted-foreground">{title}</span>
-          <div className="rounded-xl bg-muted p-2 text-muted-foreground">
-            {icon}
-          </div>
+          <div className="rounded-xl bg-muted p-2 text-muted-foreground">{icon}</div>
         </div>
         <div className="text-2xl font-semibold tracking-tight">{value}</div>
         <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
@@ -163,9 +104,7 @@ function MiniBarChart({
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h3 className="font-semibold">{label}</h3>
-            <p className="text-sm text-muted-foreground">
-              Vue hebdomadaire simplifiée
-            </p>
+            <p className="text-sm text-muted-foreground">Vue simplifiee</p>
           </div>
           <BarChart3 className="h-5 w-5 text-muted-foreground" />
         </div>
@@ -176,7 +115,7 @@ function MiniBarChart({
             const height = `${Math.max((value / maxValue) * 100, 8)}%`;
 
             return (
-              <div key={item.day} className="flex flex-1 flex-col items-center gap-2">
+              <div key={`${item.key}-${valueKey}`} className="flex flex-1 flex-col items-center gap-2">
                 <div className="flex h-full w-full items-end">
                   <div
                     className="w-full rounded-t-xl bg-primary/80"
@@ -194,68 +133,134 @@ function MiniBarChart({
   );
 }
 
+function applyTeamFilter(items: AnalyticsDay[], team: TeamFilter): AnalyticsDay[] {
+  if (team === "bot") {
+    return items.map((item) => ({
+      ...item,
+      totalMessages: item.botMessages,
+      humanMessages: 0,
+    }));
+  }
+
+  if (team === "human") {
+    return items.map((item) => ({
+      ...item,
+      totalMessages: item.humanMessages,
+      botMessages: 0,
+    }));
+  }
+
+  return items;
+}
+
 export default function AnalyticsPage() {
   const [search, setSearch] = React.useState("");
   const [period, setPeriod] = React.useState<PeriodFilter>("7d");
   const [channel, setChannel] = React.useState<ChannelFilter>("all");
   const [team, setTeam] = React.useState<TeamFilter>("all");
 
+  const requestFilters = React.useMemo(
+    () => ({ period, channel }),
+    [period, channel],
+  );
+  const { data, isLoading, error, refetch } = useAnalytics(requestFilters);
+
   const filteredData = React.useMemo(() => {
-    let data = [...analyticsData];
+    let items = applyTeamFilter(data?.timeline ?? [], team);
 
-    if (search.trim()) {
-      const query = search.trim().toLowerCase();
-
-      data = data.filter(
-        (item) =>
-          item.day.toLowerCase().includes(query) ||
-          "messages".includes(query) ||
-          "bot".includes(query) ||
-          "human".includes(query) ||
-          "escalations".includes(query)
-      );
+    if (!search.trim()) {
+      return items;
     }
 
-    return data;
-  }, [search, period, channel, team]);
+    const query = search.trim().toLowerCase();
+    items = items.filter(
+      (item) =>
+        item.day.toLowerCase().includes(query) ||
+        "messages".includes(query) ||
+        "bot".includes(query) ||
+        "humain".includes(query) ||
+        "escalades".includes(query),
+    );
+
+    return items;
+  }, [data, search, team]);
 
   const totals = React.useMemo(() => {
-    const totalMessages = filteredData.reduce(
-      (sum, item) => sum + item.totalMessages,
-      0
-    );
-    const botMessages = filteredData.reduce(
-      (sum, item) => sum + item.botMessages,
-      0
-    );
-    const humanMessages = filteredData.reduce(
-      (sum, item) => sum + item.humanMessages,
-      0
-    );
-    const escalations = filteredData.reduce(
-      (sum, item) => sum + item.escalations,
-      0
+    const aggregate = filteredData.reduce(
+      (acc, item) => {
+        acc.totalMessages += item.totalMessages;
+        acc.botMessages += item.botMessages;
+        acc.humanMessages += item.humanMessages;
+        acc.escalations += item.escalations;
+        return acc;
+      },
+      {
+        totalMessages: 0,
+        botMessages: 0,
+        humanMessages: 0,
+        escalations: 0,
+      },
     );
 
     const botRate =
-      totalMessages > 0 ? ((botMessages / totalMessages) * 100).toFixed(1) : "0";
-
-    const avgResponseTime = "2m 14s";
+      aggregate.totalMessages > 0
+        ? ((aggregate.botMessages / aggregate.totalMessages) * 100).toFixed(1)
+        : "0.0";
 
     return {
-      totalMessages,
-      botMessages,
-      humanMessages,
-      escalations,
+      ...aggregate,
       botRate,
-      avgResponseTime,
+      avgResponseTime: data?.totals.avgResponseTimeLabel ?? "N/A",
     };
-  }, [filteredData]);
+  }, [data, filteredData]);
 
   const maxMessages = Math.max(...filteredData.map((item) => item.totalMessages), 1);
   const maxBot = Math.max(...filteredData.map((item) => item.botMessages), 1);
   const maxHuman = Math.max(...filteredData.map((item) => item.humanMessages), 1);
   const maxEscalations = Math.max(...filteredData.map((item) => item.escalations), 1);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-4 md:p-6">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Analytics</h1>
+          <p className="text-sm text-muted-foreground">Chargement des donnees...</p>
+        </div>
+        <Card className="rounded-2xl border shadow-sm">
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
+            Recuperation des statistiques en cours...
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="space-y-6 p-4 md:p-6">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Analytics</h1>
+          <p className="text-sm text-muted-foreground">
+            Suivez le volume des messages, la performance du bot et les escalades.
+          </p>
+        </div>
+
+        <Card className="rounded-2xl border shadow-sm">
+          <CardContent className="flex flex-col items-start gap-4 p-6">
+            <div>
+              <h2 className="text-lg font-semibold">Impossible de charger les donnees</h2>
+              <p className="text-sm text-muted-foreground">
+                {error ?? "Une erreur est survenue lors du chargement."}
+              </p>
+            </div>
+            <Button type="button" onClick={refetch}>
+              Reessayer
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -276,13 +281,13 @@ export default function AnalyticsPage() {
           icon={<MessageSquare className="h-4 w-4" />}
         />
         <StatCard
-          title="Réponses bot"
+          title="Reponses bot"
           value={String(totals.botMessages)}
           subtitle={`${totals.botRate}% du total`}
           icon={<Bot className="h-4 w-4" />}
         />
         <StatCard
-          title="Réponses humaines"
+          title="Reponses humaines"
           value={String(totals.humanMessages)}
           subtitle="Interventions agents"
           icon={<Users className="h-4 w-4" />}
@@ -299,11 +304,11 @@ export default function AnalyticsPage() {
         <StatCard
           title="Taux bot"
           value={`${totals.botRate}%`}
-          subtitle="Part des réponses automatisées"
+          subtitle="Part des reponses automatisees"
           icon={<TrendingUp className="h-4 w-4" />}
         />
         <StatCard
-          title="Temps de réponse moyen"
+          title="Temps de reponse moyen"
           value={totals.avgResponseTime}
           subtitle="Estimation actuelle"
           icon={<Clock3 className="h-4 w-4" />}
@@ -318,12 +323,9 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <Select
-                value={period}
-                onValueChange={(value) => setPeriod(value as PeriodFilter)}
-              >
+              <Select value={period} onValueChange={(value) => setPeriod(value as PeriodFilter)}>
                 <SelectTrigger className="h-11 w-full rounded-xl xl:w-[160px]">
-                  <SelectValue placeholder="Période" />
+                  <SelectValue placeholder="Periode" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="7d">7 jours</SelectItem>
@@ -332,10 +334,7 @@ export default function AnalyticsPage() {
                 </SelectContent>
               </Select>
 
-              <Select
-                value={channel}
-                onValueChange={(value) => setChannel(value as ChannelFilter)}
-              >
+              <Select value={channel} onValueChange={(value) => setChannel(value as ChannelFilter)}>
                 <SelectTrigger className="h-11 w-full rounded-xl xl:w-[160px]">
                   <SelectValue placeholder="Canal" />
                 </SelectTrigger>
@@ -345,10 +344,7 @@ export default function AnalyticsPage() {
                 </SelectContent>
               </Select>
 
-              <Select
-                value={team}
-                onValueChange={(value) => setTeam(value as TeamFilter)}
-              >
+              <Select value={team} onValueChange={(value) => setTeam(value as TeamFilter)}>
                 <SelectTrigger className="h-11 w-full rounded-xl xl:w-[160px]">
                   <SelectValue placeholder="Equipe" />
                 </SelectTrigger>
@@ -369,10 +365,9 @@ export default function AnalyticsPage() {
             <div className="mb-3 rounded-full bg-muted p-3">
               <BarChart3 className="h-5 w-5 text-muted-foreground" />
             </div>
-            <h3 className="mb-1 text-lg font-semibold">Aucune donnée trouvée</h3>
+            <h3 className="mb-1 text-lg font-semibold">Aucune donnee trouvee</h3>
             <p className="max-w-md text-sm text-muted-foreground">
-              Essaie de modifier les filtres ou la recherche pour afficher plus
-              de résultats.
+              Modifiez les filtres ou la recherche pour afficher plus de resultats.
             </p>
           </CardContent>
         </Card>
@@ -384,21 +379,18 @@ export default function AnalyticsPage() {
             maxValue={maxMessages}
             label="Volume total des messages"
           />
-
           <MiniBarChart
             data={filteredData}
             valueKey="botMessages"
             maxValue={maxBot}
-            label="Messages traités par le bot"
+            label="Messages traites par le bot"
           />
-
           <MiniBarChart
             data={filteredData}
             valueKey="humanMessages"
             maxValue={maxHuman}
-            label="Messages traités par humain"
+            label="Messages traites par humain"
           />
-
           <MiniBarChart
             data={filteredData}
             valueKey="escalations"

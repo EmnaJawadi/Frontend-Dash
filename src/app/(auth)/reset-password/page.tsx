@@ -1,0 +1,25 @@
+import Link from "next/link";
+import ResetPasswordForm from "@/src/components/auth/reset-password-form";
+
+export default function ResetPasswordPage() {
+  return (
+    <main className="flex min-h-screen items-center justify-center px-4 py-8 md:px-6">
+      <div className="w-full max-w-md rounded-3xl border border-border/70 bg-card/95 p-6 shadow-xl md:p-8 fade-up">
+        <div className="mb-6 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Securite</p>
+          <h1 className="text-2xl font-bold text-foreground">Nouveau mot de passe</h1>
+          <p className="text-sm text-muted-foreground">Entrez votre nouveau mot de passe pour terminer la reinitialisation.</p>
+        </div>
+
+        <ResetPasswordForm />
+
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Retour a{" "}
+          <Link href="/login" className="font-medium underline underline-offset-4">
+            la connexion
+          </Link>
+        </p>
+      </div>
+    </main>
+  );
+}

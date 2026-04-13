@@ -1,15 +1,40 @@
 "use client";
 
 import { useState } from "react";
+import { authService } from "@/src/services/auth.service";
+import { isApiError } from "@/src/lib/api-error";
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!email.trim()) return;
-    setIsSubmitted(true);
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      await authService.forgotPassword(email.trim());
+      setIsSubmitted(true);
+    } catch (error) {
+      if (isApiError(error)) {
+        const details = error.details as { message?: string } | string | undefined;
+        const backendMessage =
+          typeof details === "object" && details && typeof details.message === "string"
+            ? details.message
+            : error.message;
+
+        setError(backendMessage || "Impossible d'envoyer l'email pour le moment. Veuillez reessayer.");
+      } else {
+        setError("Impossible d'envoyer l'email pour le moment. Veuillez reessayer.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   if (isSubmitted) {
@@ -22,6 +47,8 @@ export default function ForgotPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {error ? <div className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
+
       <div className="space-y-1">
         <label className="block text-sm font-medium">Email</label>
         <input
@@ -36,9 +63,10 @@ export default function ForgotPasswordForm() {
 
       <button
         type="submit"
+        disabled={isSubmitting}
         className="w-full rounded-xl bg-primary px-4 py-2.5 font-medium text-primary-foreground transition hover:opacity-90"
       >
-        Envoyer le lien
+        {isSubmitting ? "Envoi..." : "Envoyer le lien"}
       </button>
     </form>
   );
