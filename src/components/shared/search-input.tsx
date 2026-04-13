@@ -1,5 +1,3 @@
-// src/components/shared/search-input.tsx
-
 "use client";
 
 import { Search } from "lucide-react";
@@ -18,7 +16,7 @@ export function SearchInput({
   disabled = false,
 }: SearchInputProps) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border bg-background px-4 py-3">
+    <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background px-4 py-3 shadow-sm transition focus-within:ring-2 focus-within:ring-primary/25">
       <Search className="h-5 w-5 text-muted-foreground" />
 
       <input

@@ -22,15 +22,6 @@ export const APP_ROUTES = {
   PROFILE_SETTINGS: "/settings/profile",
 } as const;
 
-export const ADMIN_ROUTES = {
-  DASHBOARD: "/admin/dashboard",
-  COMPANIES: "/admin/companies",
-  USERS: "/admin/users",
-  SUBSCRIPTIONS: "/admin/subscriptions",
-  SETTINGS: "/admin/settings",
-  PROFILE_SETTINGS: "/settings/profile",
-} as const;
-
 export const PUBLIC_ROUTES: string[] = [
   AUTH_ROUTES.LOGIN,
   AUTH_ROUTES.REGISTER,
@@ -59,19 +50,9 @@ export const AGENT_ROUTES: string[] = [
   APP_ROUTES.PROFILE_SETTINGS,
 ];
 
-export const SUPER_ADMIN_ROUTES: string[] = [
-  ADMIN_ROUTES.DASHBOARD,
-  ADMIN_ROUTES.COMPANIES,
-  ADMIN_ROUTES.USERS,
-  ADMIN_ROUTES.SUBSCRIPTIONS,
-  ADMIN_ROUTES.SETTINGS,
-  ADMIN_ROUTES.PROFILE_SETTINGS,
-];
-
 export const DEFAULT_ROUTE_BY_ROLE: Record<UserRole, string> = {
   OWNER: APP_ROUTES.DASHBOARD,
   AGENT: APP_ROUTES.DASHBOARD,
-  SUPER_ADMIN: ADMIN_ROUTES.DASHBOARD,
 };
 
 export function getAllowedRoutes(role: UserRole): string[] {
@@ -80,8 +61,6 @@ export function getAllowedRoutes(role: UserRole): string[] {
       return OWNER_ROUTES;
     case "AGENT":
       return AGENT_ROUTES;
-    case "SUPER_ADMIN":
-      return SUPER_ADMIN_ROUTES;
     default:
       return [];
   }
@@ -95,8 +74,8 @@ export function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.includes(pathname);
 }
 
-export function isAdminRoute(pathname: string): boolean {
-  return pathname.startsWith("/admin");
+export function isAdminRoute(_pathname: string): boolean {
+  return false;
 }
 
 export function isOnboardingRoute(pathname: string): boolean {

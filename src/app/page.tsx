@@ -10,9 +10,5 @@ export default async function HomePage() {
     redirect("/login");
   }
 
-  if (role === "SUPER_ADMIN") {
-    redirect("/admin/dashboard");
-  }
-
   redirect("/dashboard");
 }

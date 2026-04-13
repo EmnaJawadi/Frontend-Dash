@@ -22,15 +22,9 @@ export default function CompanyInfoForm() {
     address: "",
   });
 
-  function handleChange(
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) {
+  function handleChange(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = event.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -41,41 +35,35 @@ export default function CompanyInfoForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-1">
-        <label htmlFor="companyName" className="block text-sm font-medium">
-          Nom de l’entreprise
-        </label>
+        <label htmlFor="companyName" className="block text-sm font-medium">Nom de l'entreprise</label>
         <input
           id="companyName"
           name="companyName"
           type="text"
           value={formData.companyName}
           onChange={handleChange}
-          placeholder="Support OS"
-          className="w-full rounded-lg border px-3 py-2 outline-none transition focus:ring-2 focus:ring-primary/20"
+          placeholder="Support Vision"
+          className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
           required
         />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1">
-          <label htmlFor="industry" className="block text-sm font-medium">
-            Secteur
-          </label>
+          <label htmlFor="industry" className="block text-sm font-medium">Secteur d'activite</label>
           <input
             id="industry"
             name="industry"
             type="text"
             value={formData.industry}
             onChange={handleChange}
-            placeholder="Customer Support"
-            className="w-full rounded-lg border px-3 py-2 outline-none transition focus:ring-2 focus:ring-primary/20"
+            placeholder="Service client"
+            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
           />
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="size" className="block text-sm font-medium">
-            Taille de l’équipe
-          </label>
+          <label htmlFor="size" className="block text-sm font-medium">Taille de l'equipe</label>
           <input
             id="size"
             name="size"
@@ -83,45 +71,38 @@ export default function CompanyInfoForm() {
             value={formData.size}
             onChange={handleChange}
             placeholder="10"
-            className="w-full rounded-lg border px-3 py-2 outline-none transition focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
           />
         </div>
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="website" className="block text-sm font-medium">
-          Site web
-        </label>
+        <label htmlFor="website" className="block text-sm font-medium">Site web</label>
         <input
           id="website"
           name="website"
           type="text"
           value={formData.website}
           onChange={handleChange}
-          placeholder="https://company.com"
-          className="w-full rounded-lg border px-3 py-2 outline-none transition focus:ring-2 focus:ring-primary/20"
+          placeholder="https://entreprise.com"
+          className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="address" className="block text-sm font-medium">
-          Adresse
-        </label>
+        <label htmlFor="address" className="block text-sm font-medium">Adresse</label>
         <textarea
           id="address"
           name="address"
           value={formData.address}
           onChange={handleChange}
-          placeholder="Adresse de l’entreprise"
-          className="min-h-[120px] w-full rounded-lg border px-3 py-2 outline-none transition focus:ring-2 focus:ring-primary/20"
+          placeholder="Adresse de l'entreprise"
+          className="min-h-[120px] w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
         />
       </div>
 
       <div className="flex justify-end">
-        <button
-          type="submit"
-          className="rounded-lg border px-5 py-2 font-medium transition hover:bg-muted"
-        >
+        <button type="submit" className="rounded-xl bg-primary px-5 py-2.5 font-medium text-primary-foreground transition hover:opacity-90">
           Continuer
         </button>
       </div>

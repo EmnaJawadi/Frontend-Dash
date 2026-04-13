@@ -81,7 +81,7 @@ export function getStoredRole(): UserRole | null {
   const role =
     getCookie(STORAGE_KEYS.ROLE) ?? localStorage.getItem(STORAGE_KEYS.ROLE);
 
-  if (role === "OWNER" || role === "AGENT" || role === "SUPER_ADMIN") {
+  if (role === "OWNER" || role === "AGENT") {
     return role;
   }
 

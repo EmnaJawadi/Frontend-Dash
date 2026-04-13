@@ -1,75 +1,54 @@
 @import "tailwindcss";
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-
+  --background: 210 40% 99%;
+  --foreground: 222.2 47.4% 11.2%;
   --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
-
+  --card-foreground: 222.2 47.4% 11.2%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-
-  --primary: 221.2 83.2% 53.3%;
+  --popover-foreground: 222.2 47.4% 11.2%;
+  --primary: 212 88% 48%;
   --primary-foreground: 210 40% 98%;
-
-  --secondary: 210 40% 96.1%;
+  --secondary: 210 38% 96%;
   --secondary-foreground: 222.2 47.4% 11.2%;
-
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-
-  --accent: 210 40% 96.1%;
+  --muted: 210 30% 95%;
+  --muted-foreground: 215 16% 40%;
+  --accent: 199 92% 95%;
   --accent-foreground: 222.2 47.4% 11.2%;
-
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
-
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
-
+  --border: 214 28% 88%;
+  --input: 214 28% 88%;
+  --ring: 212 88% 48%;
   --success: 142 76% 36%;
   --success-foreground: 210 40% 98%;
-
   --warning: 38 92% 50%;
   --warning-foreground: 222.2 47.4% 11.2%;
-
   --radius: 1rem;
 }
 
 .dark {
-  --background: 222.2 84% 4.9%;
+  --background: 222 45% 7%;
   --foreground: 210 40% 98%;
-
-  --card: 222.2 84% 6.5%;
+  --card: 222 35% 10%;
   --card-foreground: 210 40% 98%;
-
-  --popover: 222.2 84% 6.5%;
+  --popover: 222 35% 10%;
   --popover-foreground: 210 40% 98%;
-
-  --primary: 217.2 91.2% 59.8%;
+  --primary: 212 92% 60%;
   --primary-foreground: 222.2 47.4% 11.2%;
-
-  --secondary: 217.2 32.6% 17.5%;
+  --secondary: 220 26% 18%;
   --secondary-foreground: 210 40% 98%;
-
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-
-  --accent: 217.2 32.6% 17.5%;
+  --muted: 220 26% 18%;
+  --muted-foreground: 215 20% 72%;
+  --accent: 220 26% 18%;
   --accent-foreground: 210 40% 98%;
-
-  --destructive: 0 62.8% 30.6%;
+  --destructive: 0 62.8% 38%;
   --destructive-foreground: 210 40% 98%;
-
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 224.3 76.3% 48%;
-
-  --success: 142 70% 40%;
+  --border: 220 20% 22%;
+  --input: 220 20% 22%;
+  --ring: 212 92% 60%;
+  --success: 142 70% 42%;
   --success-foreground: 210 40% 98%;
-
   --warning: 38 92% 50%;
   --warning-foreground: 222.2 47.4% 11.2%;
 }
@@ -85,8 +64,13 @@ html {
 
 body {
   margin: 0;
-  background-color: hsl(var(--background));
+  min-height: 100vh;
+  background:
+    radial-gradient(60rem 40rem at -10% -10%, hsl(199 92% 90% / 0.45), transparent 60%),
+    radial-gradient(60rem 40rem at 110% 0%, hsl(212 88% 88% / 0.45), transparent 62%),
+    hsl(var(--background));
   color: hsl(var(--foreground));
+  font-family: Manrope, "Segoe UI", "Helvetica Neue", sans-serif;
   font-feature-settings: "rlig" 1, "calt" 1;
 }
 
@@ -107,17 +91,19 @@ select {
 
 .page-container {
   width: 100%;
-  max-width: 80rem;
+  max-width: 84rem;
   margin-left: auto;
   margin-right: auto;
 }
 
 .section-card {
   border: 1px solid hsl(var(--border));
-  border-radius: 1rem;
-  background-color: hsl(var(--card));
+  border-radius: 1.25rem;
+  background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.92) 100%);
   color: hsl(var(--card-foreground));
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.03),
+    0 10px 28px rgb(15 23 42 / 0.06);
 }
 
 .section-card-content {
@@ -128,6 +114,29 @@ select {
   .section-card-content {
     padding: 1.5rem;
   }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-up {
+  animation: fade-up 0.4s ease-out both;
+}
+
+.fade-up-delay-1 {
+  animation: fade-up 0.45s ease-out 0.06s both;
+}
+
+.fade-up-delay-2 {
+  animation: fade-up 0.5s ease-out 0.12s both;
 }
 
 .status-success {
@@ -176,7 +185,7 @@ select {
   color: hsl(var(--card-foreground));
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
 }
 
 .message-bubble-outgoing {
@@ -187,7 +196,7 @@ select {
   color: hsl(var(--primary-foreground));
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
 }
 
 .message-meta {
@@ -196,7 +205,6 @@ select {
   opacity: 0.7;
 }
 
-/* Global scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

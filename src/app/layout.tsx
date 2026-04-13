@@ -6,8 +6,8 @@ import { QueryProvider } from "@/src/providers/query-provider";
 import { ThemeProvider } from "@/src/providers/theme-provider";
 
 export const metadata: Metadata = {
-  title: "WhatsApp Support Dashboard",
-  description: "Dashboard support WhatsApp avec agent IA",
+  title: "Centre de Support WhatsApp",
+  description: "Interface de support client WhatsApp avec suivi des conversations et performances des agents.",
 };
 
 type RootLayoutProps = {
@@ -17,7 +17,7 @@ type RootLayoutProps = {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="fr" suppressHydrationWarning>
-      <body>
+      <body className="antialiased">
         <ThemeProvider defaultTheme="light">
           <QueryProvider>{children}</QueryProvider>
         </ThemeProvider>

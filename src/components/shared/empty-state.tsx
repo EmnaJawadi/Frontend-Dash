@@ -16,10 +16,10 @@ export function EmptyState({
   icon,
 }: EmptyStateProps) {
   return (
-    <div className="section-card">
+    <div className="section-card fade-up-delay-1">
       <div className="section-card-content flex flex-col items-center justify-center py-10 text-center">
         {icon ? (
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
             {icon}
           </div>
         ) : null}

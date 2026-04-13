@@ -1,60 +1,23 @@
-"use client";
-
-import { useState } from "react";
+import Link from "next/link";
+import ForgotPasswordForm from "@/src/components/auth/forgot-password-form";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
-  const [isSubmitted, setIsSubmitted] = useState(false);
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!email) return;
-
-    setIsSubmitted(true);
-  }
-
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-10">
-      <div className="w-full max-w-md rounded-2xl border bg-white p-6 shadow-sm">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">Mot de passe oublié</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Entrez votre adresse email pour recevoir un lien de réinitialisation.
-          </p>
+    <main className="flex min-h-screen items-center justify-center px-4 py-8 md:px-6">
+      <div className="w-full max-w-md rounded-3xl border border-border/70 bg-card/95 p-6 shadow-xl md:p-8 fade-up">
+        <div className="mb-6 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Recuperation</p>
+          <h1 className="text-2xl font-bold text-foreground">Mot de passe oublie</h1>
+          <p className="text-sm text-muted-foreground">Entrez votre email pour recevoir un lien de reinitialisation.</p>
         </div>
 
-        {isSubmitted ? (
-          <div className="rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-700">
-            Un lien de réinitialisation a été envoyé à <strong>{email}</strong>.
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium">Email</label>
-              <input
-                type="email"
-                placeholder="email@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border px-3 py-2 outline-none"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full rounded-lg border px-4 py-2 font-medium transition hover:bg-muted"
-            >
-              Envoyer le lien
-            </button>
-          </form>
-        )}
+        <ForgotPasswordForm />
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Retour à{" "}
-          <a href="/login" className="font-medium underline">
+          Retour a{" "}
+          <Link href="/login" className="font-medium underline underline-offset-4">
             la connexion
-          </a>
+          </Link>
         </p>
       </div>
     </main>

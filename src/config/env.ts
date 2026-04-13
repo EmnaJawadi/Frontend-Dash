@@ -8,7 +8,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_NAME: z
     .string()
     .min(1)
-    .default("WhatsApp Support Dashboard"),
+    .default("Centre de Support WhatsApp"),
 
   NEXT_PUBLIC_APP_URL: z
     .string()

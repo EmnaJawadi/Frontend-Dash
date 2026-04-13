@@ -1,154 +1,225 @@
-// src/features/dashboard/services/dashboard.service.ts
-
+import { apiClient } from "@/src/lib/api-client";
 import type { DashboardData } from "@/src/features/dashboard/types/dashboard.types";
 
-const dashboardMock: DashboardData = {
-  stats: [
-    {
-      key: "totalConversations",
-      title: "Total des conversations",
-      value: 1284,
-      change: 12.4,
-      trend: "up",
-      subtitle: "par rapport aux 7 derniers jours",
-    },
-    {
-      key: "activeConversations",
-      title: "Conversations actives",
-      value: 86,
-      change: 4.2,
-      trend: "up",
-      subtitle: "actuellement ouvertes",
-    },
-    {
-      key: "automationRate",
-      title: "Taux d’automatisation",
-      value: "78%",
-      change: 3.1,
-      trend: "up",
-      subtitle: "résolues par le bot",
-    },
-    {
-      key: "escalationsToday",
-      title: "Escalades aujourd’hui",
-      value: 19,
-      change: -6.8,
-      trend: "down",
-      subtitle: "transférées aux agents",
-    },
-    {
-      key: "avgFirstResponseTime",
-      title: "Temps moyen de première réponse",
-      value: "1m 42s",
-      change: -9.5,
-      trend: "down",
-      subtitle: "bot + humain",
-    },
-  ],
-  chart: [
-    { date: "Lun", conversations: 142, resolvedByBot: 105, escalated: 18 },
-    { date: "Mar", conversations: 167, resolvedByBot: 121, escalated: 22 },
-    { date: "Mer", conversations: 151, resolvedByBot: 112, escalated: 19 },
-    { date: "Jeu", conversations: 189, resolvedByBot: 141, escalated: 26 },
-    { date: "Ven", conversations: 173, resolvedByBot: 129, escalated: 21 },
-    { date: "Sam", conversations: 118, resolvedByBot: 92, escalated: 11 },
-    { date: "Dim", conversations: 96, resolvedByBot: 77, escalated: 8 },
-  ],
-  botPerformance: {
-    automationRate: 78,
-    averageConfidence: 91,
-    averageResponseTime: "12s",
-    fallbackRate: 9,
-    metrics: [
-      {
-        label: "Résolues par le bot",
-        value: "78%",
-        hint: "sans intervention humaine",
-      },
-      {
-        label: "Confiance moyenne",
-        value: "91%",
-        hint: "niveau de confiance de correspondance d’intention",
-      },
-      {
-        label: "Temps de réponse moyen",
-        value: "12s",
-        hint: "temps jusqu’à la première réponse automatisée",
-      },
-      {
-        label: "Taux de bascule",
-        value: "9%",
-        hint: "requêtes redirigées vers le flux de secours",
-      },
-    ],
-  },
-  recentConversations: [
-    {
-      id: "conv_001",
-      contactName: "Sarah Ben Ali",
-      phone: "+216 20 123 456",
-      lastMessage: "Je n’ai toujours pas reçu ma confirmation de commande.",
-      updatedAt: "il y a 5 min",
-      status: "human_assigned",
-      priority: "high",
-      unreadCount: 2,
-      assignedAgent: "Emna Jawadi",
-    },
-    {
-      id: "conv_002",
-      contactName: "Omar Khaled",
-      phone: "+216 55 987 321",
-      lastMessage: "Puis-je modifier mon adresse de livraison ?",
-      updatedAt: "il y a 12 min",
-      status: "bot_active",
-      priority: "medium",
-      unreadCount: 0,
-      assignedAgent: null,
-    },
-    {
-      id: "conv_003",
-      contactName: "Nour Haddad",
-      phone: "+216 29 444 210",
-      lastMessage: "Merci, cela a résolu mon problème.",
-      updatedAt: "il y a 28 min",
-      status: "closed",
-      priority: "low",
-      unreadCount: 0,
-      assignedAgent: null,
-    },
-    {
-      id: "conv_004",
-      contactName: "Karim Trabelsi",
-      phone: "+216 98 765 100",
-      lastMessage: "J’ai besoin de parler à une vraie personne, s’il vous plaît.",
-      updatedAt: "il y a 34 min",
-      status: "waiting_customer",
-      priority: "high",
-      unreadCount: 1,
-      assignedAgent: "Sarra Mnif",
-    },
-  ],
-  escalationSummary: {
-    total: 56,
-    pending: 14,
-    resolved: 42,
-    averageHandlingTime: "6m 18s",
-    reasons: [
-      { label: "Faible confiance", count: 18 },
-      { label: "Le client a demandé un agent", count: 15 },
-      { label: "Problème de commande", count: 13 },
-      { label: "Problème de paiement", count: 10 },
-    ],
-  },
+type BackendConversation = {
+  id?: string;
+  status?: string | null;
+  priority?: string | null;
+  assignedTo?: string | null;
+  botPaused?: boolean | null;
+  unreadCount?: number | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+  lastMessage?: string | null;
+  participant?: {
+    contactName?: string | null;
+    phoneNumber?: string | null;
+  };
 };
 
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+type BackendListResponse = {
+  data?: unknown[];
+  meta?: {
+    total?: number;
+  };
+};
+
+function toDateLabel(input: string): string {
+  return new Intl.DateTimeFormat("fr-FR", { weekday: "short" }).format(new Date(input));
+}
+
+function toRelative(input: string): string {
+  const date = new Date(input).getTime();
+  const diffMinutes = Math.max(0, Math.floor((Date.now() - date) / 60000));
+
+  if (diffMinutes < 1) return "maintenant";
+  if (diffMinutes < 60) return `il y a ${diffMinutes} min`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `il y a ${diffHours} h`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `il y a ${diffDays} j`;
+}
+
+function normalizeStatus(status: string | null | undefined, botPaused: boolean | null | undefined) {
+  if (status === "closed") return "closed" as const;
+  if (status === "human_assigned") return "human_assigned" as const;
+  if (status === "waiting_customer") return "waiting_customer" as const;
+  if (status === "pending") return "waiting_customer" as const;
+  if (status === "human_handoff") return "human_assigned" as const;
+  if (status === "bot_active") return "bot_active" as const;
+  return botPaused ? "human_assigned" : "bot_active";
+}
+
+function normalizePriority(
+  priority: string | null | undefined,
+): "low" | "medium" | "high" {
+  if (priority === "low" || priority === "high") return priority;
+  return "medium";
 }
 
 export const dashboardService = {
   async getDashboardData(): Promise<DashboardData> {
-    await wait(400);
-    return dashboardMock;
+    const [conversationsRes, contactsRes] = await Promise.all([
+      apiClient.get<BackendListResponse>("/conversations?page=1&limit=100"),
+      apiClient.get<BackendListResponse>("/contacts?page=1&limit=100"),
+    ]);
+
+    const conversations = (conversationsRes.data ?? []) as BackendConversation[];
+    const totalConversations = conversationsRes.meta?.total ?? conversations.length;
+    const totalContacts = contactsRes.meta?.total ?? 0;
+
+    const activeConversations = conversations.filter(
+      (item) => item.status !== "closed",
+    ).length;
+    const botActiveCount = conversations.filter((item) => !(item.botPaused ?? false)).length;
+    const escalatedCount = conversations.filter(
+      (item) => item.status === "human_handoff" || !!item.assignedTo,
+    ).length;
+    const unreadTotal = conversations.reduce((acc, item) => acc + Number(item.unreadCount ?? 0), 0);
+
+    const automationRate =
+      totalConversations > 0
+        ? Math.round((botActiveCount / totalConversations) * 100)
+        : 0;
+
+    const last7Days = Array.from({ length: 7 }, (_, index) => {
+      const day = new Date();
+      day.setDate(day.getDate() - (6 - index));
+      day.setHours(0, 0, 0, 0);
+      return day;
+    });
+
+    const chart = last7Days.map((day) => {
+      const start = day.getTime();
+      const end = start + 24 * 60 * 60 * 1000;
+
+      const dayConversations = conversations.filter((conversation) => {
+        const source = conversation.updatedAt ?? conversation.createdAt;
+        if (!source) return false;
+        const ts = new Date(source).getTime();
+        return ts >= start && ts < end;
+      });
+
+      const resolvedByBot = dayConversations.filter(
+        (conversation) => !(conversation.botPaused ?? false),
+      ).length;
+      const escalated = dayConversations.filter(
+        (conversation) =>
+          conversation.status === "human_handoff" || !!conversation.assignedTo,
+      ).length;
+
+      return {
+        date: toDateLabel(day.toISOString()),
+        conversations: dayConversations.length,
+        resolvedByBot,
+        escalated,
+      };
+    });
+
+    const recentConversations = conversations
+      .slice()
+      .sort((a, b) => {
+        const aDate = new Date(a.updatedAt ?? a.createdAt ?? 0).getTime();
+        const bDate = new Date(b.updatedAt ?? b.createdAt ?? 0).getTime();
+        return bDate - aDate;
+      })
+      .slice(0, 6)
+      .map((item) => {
+        const updatedAt = item.updatedAt ?? item.createdAt ?? new Date().toISOString();
+        return {
+          id: item.id ?? "",
+          contactName: item.participant?.contactName ?? "Contact inconnu",
+          phone: item.participant?.phoneNumber ?? "N/A",
+          lastMessage: item.lastMessage ?? "Aucun message",
+          updatedAt: toRelative(updatedAt),
+          status: normalizeStatus(item.status, item.botPaused),
+          priority: normalizePriority(item.priority),
+          unreadCount: Number(item.unreadCount ?? 0),
+          assignedAgent: item.assignedTo ?? null,
+        };
+      });
+
+    return {
+      stats: [
+        {
+          key: "totalConversations",
+          title: "Total des conversations",
+          value: totalConversations,
+          subtitle: "volume global",
+        },
+        {
+          key: "activeConversations",
+          title: "Conversations actives",
+          value: activeConversations,
+          subtitle: "ouvertes ou en attente",
+        },
+        {
+          key: "automationRate",
+          title: "Taux d'automatisation",
+          value: `${automationRate}%`,
+          subtitle: "prises en charge par le bot",
+        },
+        {
+          key: "escalationsToday",
+          title: "Escalades",
+          value: escalatedCount,
+          subtitle: "transferts vers agent",
+        },
+        {
+          key: "avgFirstResponseTime",
+          title: "Messages non lus",
+          value: unreadTotal,
+          subtitle: "a traiter",
+        },
+      ],
+      chart,
+      botPerformance: {
+        automationRate,
+        averageConfidence: 90,
+        averageResponseTime: "12s",
+        fallbackRate: Math.max(0, 100 - automationRate),
+        metrics: [
+          {
+            label: "Contacts",
+            value: totalContacts,
+            hint: "nombre total de contacts",
+          },
+          {
+            label: "Conversations bot",
+            value: botActiveCount,
+            hint: "avec bot actif",
+          },
+          {
+            label: "Conversations escaladees",
+            value: escalatedCount,
+            hint: "transfert humain",
+          },
+          {
+            label: "Conversations fermees",
+            value: conversations.filter((item) => item.status === "closed").length,
+            hint: "cloturees",
+          },
+        ],
+      },
+      recentConversations,
+      escalationSummary: {
+        total: escalatedCount,
+        pending: conversations.filter((item) => item.status === "pending").length,
+        resolved: conversations.filter((item) => item.status === "closed").length,
+        averageHandlingTime: "N/A",
+        reasons: [
+          {
+            label: "Handoff manuel",
+            count: conversations.filter((item) => item.status === "human_handoff").length,
+          },
+          {
+            label: "Assignee a un agent",
+            count: conversations.filter((item) => !!item.assignedTo).length,
+          },
+        ],
+      },
+    };
   },
 };

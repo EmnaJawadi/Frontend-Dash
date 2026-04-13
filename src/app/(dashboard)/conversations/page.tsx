@@ -28,16 +28,11 @@ export default function ConversationsPage() {
       <div className="space-y-8">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Conversations</h1>
-          <p className="text-sm text-muted-foreground">
-            Consultez, filtrez et gérez les conversations client.
-          </p>
+          <p className="text-sm text-muted-foreground">Consultez, filtrez et gerez les conversations client.</p>
         </div>
 
         <SectionCard contentClassName="py-14">
-          <LoadingSpinner
-            size="lg"
-            label="Chargement des conversations..."
-          />
+          <LoadingSpinner size="lg" label="Chargement des conversations..." />
         </SectionCard>
       </div>
     );
@@ -47,9 +42,7 @@ export default function ConversationsPage() {
     return (
       <SectionCard contentClassName="flex flex-col items-start gap-4">
         <div>
-          <h2 className="text-xl font-semibold">
-            Impossible de charger les conversations
-          </h2>
+          <h2 className="text-xl font-semibold">Impossible de charger les conversations</h2>
           <p className="text-sm text-muted-foreground">{error}</p>
         </div>
 
@@ -58,7 +51,7 @@ export default function ConversationsPage() {
           onClick={refetch}
           className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
-          Réessayer
+          Reessayer
         </button>
       </SectionCard>
     );
@@ -66,17 +59,14 @@ export default function ConversationsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between fade-up">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight">Conversations</h1>
-          <p className="text-sm text-muted-foreground">
-            Consultez, filtrez et gérez les conversations client.
-          </p>
+          <p className="text-sm text-muted-foreground">Consultez, filtrez et gerez les conversations client.</p>
         </div>
 
         <div className="text-sm text-muted-foreground">
-          {total} conversation{total !== 1 ? "s" : ""} trouvée
-          {total !== 1 ? "s" : ""}
+          {total} conversation{total !== 1 ? "s" : ""} trouvee{total !== 1 ? "s" : ""}
         </div>
       </div>
 
@@ -92,7 +82,7 @@ export default function ConversationsPage() {
         onReset={resetFilters}
       />
 
-      <div className="hidden lg:block">
+      <div className="hidden lg:block fade-up-delay-1">
         <ConversationTable
           conversations={conversations}
           onDeleteConversation={async (conversationId) => {
@@ -102,31 +92,29 @@ export default function ConversationsPage() {
         />
       </div>
 
-      <div className="lg:hidden">
+      <div className="lg:hidden fade-up-delay-1">
         <ConversationList conversations={conversations} />
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between rounded-2xl border bg-background px-5 py-4">
-          <p className="text-sm text-muted-foreground">
-            Page {page} sur {totalPages}
-          </p>
+        <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-background px-5 py-4">
+          <p className="text-sm text-muted-foreground">Page {page} sur {totalPages}</p>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
-              className="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center rounded-xl border border-border/70 px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Précédent
+              Precedent
             </button>
 
             <button
               type="button"
               onClick={() => setPage(Math.min(totalPages, page + 1))}
               disabled={page === totalPages}
-              className="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center rounded-xl border border-border/70 px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
               Suivant
             </button>

@@ -10,6 +10,8 @@ type ConversationDetailsProps = {
   conversation: ConversationDetailsType;
   onHandoff: () => Promise<boolean> | boolean;
   onReactivateBot: () => Promise<boolean> | boolean;
+  onCreateArticleFromReply?: () => void;
+  canCreateArticleFromReply?: boolean;
   isHandoffLoading?: boolean;
   isReactivatingBot?: boolean;
 };
@@ -94,6 +96,8 @@ export function ConversationDetails({
   conversation,
   onHandoff,
   onReactivateBot,
+  onCreateArticleFromReply,
+  canCreateArticleFromReply = false,
   isHandoffLoading = false,
   isReactivatingBot = false,
 }: ConversationDetailsProps) {
@@ -223,6 +227,15 @@ export function ConversationDetails({
         <p className="mb-4 text-sm font-semibold">Actions</p>
 
         <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={onCreateArticleFromReply}
+            disabled={!canCreateArticleFromReply}
+            className="inline-flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Transformer la reponse humaine en article
+          </button>
+
           <HandoffButton
             onHandoff={onHandoff}
             isLoading={isHandoffLoading}

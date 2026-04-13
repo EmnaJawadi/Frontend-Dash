@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { ConversationDetails } from "@/src/components/conversations/conversation-details";
@@ -13,14 +13,17 @@ import { conversationsService } from "@/src/features/conversations/services/conv
 import type { ConversationDetails as ConversationDetailsType } from "@/src/features/conversations/types/conversations.types";
 
 export default function ConversationDetailsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const params = useParams();
   const id = params?.id as string;
 
-  const [conversation, setConversation] =
-    useState<ConversationDetailsType | null>(null);
+  const [conversation, setConversation] = useState<ConversationDetailsType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isActing, setIsActing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const shouldSuggestArticle = searchParams.get("suggestArticle") === "1";
 
   const loadConversation = useCallback(async () => {
     if (!id) {
@@ -45,14 +48,14 @@ export default function ConversationDetailsPage() {
       setConversation(data);
     } catch {
       setConversation(null);
-      setError("Impossible de charger les détails de la conversation.");
+      setError("Impossible de charger les details de la conversation.");
     } finally {
       setIsLoading(false);
     }
   }, [id]);
 
   useEffect(() => {
-    loadConversation();
+    void loadConversation();
   }, [loadConversation]);
 
   const handleHandoff = useCallback(async (): Promise<boolean> => {
@@ -65,7 +68,7 @@ export default function ConversationDetailsPage() {
       await loadConversation();
       return true;
     } catch {
-      setError("Impossible de transférer la conversation.");
+      setError("Impossible de transferer la conversation.");
       return false;
     } finally {
       setIsActing(false);
@@ -82,12 +85,44 @@ export default function ConversationDetailsPage() {
       await loadConversation();
       return true;
     } catch {
-      setError("Impossible de réactiver le bot.");
+      setError("Impossible de reactiver le bot.");
       return false;
     } finally {
       setIsActing(false);
     }
   }, [conversation, loadConversation]);
+
+  const latestAgentMessage = conversation?.messages
+    ?.slice()
+    .reverse()
+    .find(
+      (message) =>
+        message.senderType === "agent" ||
+        (message.direction === "outbound" && message.senderType !== "bot"),
+    );
+
+  const handleCreateArticleFromReply = useCallback(() => {
+    if (!conversation) return;
+
+    const fallback = conversation.messages.at(-1)?.content ?? "";
+    const extractedContent = (latestAgentMessage?.content || fallback).trim();
+
+    const content =
+      extractedContent.length >= 20
+        ? extractedContent
+        : `${extractedContent}\n\nContexte: reponse humaine issue de la conversation ${conversation.id}.`;
+
+    const title = `Reponse support - ${conversation.contact.name}`;
+
+    const query = new URLSearchParams({
+      sourceConversationId: conversation.id,
+      title,
+      content,
+      category: "general",
+    });
+
+    router.push(`/knowledge-base/new?${query.toString()}`);
+  }, [conversation, latestAgentMessage, router]);
 
   if (isLoading) {
     return (
@@ -95,15 +130,12 @@ export default function ConversationDetailsPage() {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Conversation</h1>
           <p className="text-sm text-muted-foreground">
-            Chargement des détails de la conversation...
+            Chargement des details de la conversation...
           </p>
         </div>
 
         <SectionCard contentClassName="py-14">
-          <LoadingSpinner
-            size="lg"
-            label="Chargement des détails de la conversation..."
-          />
+          <LoadingSpinner size="lg" label="Chargement des details de la conversation..." />
         </SectionCard>
       </div>
     );
@@ -130,10 +162,10 @@ export default function ConversationDetailsPage() {
 
           <button
             type="button"
-            onClick={loadConversation}
+            onClick={() => void loadConversation()}
             className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
           >
-            Réessayer
+            Reessayer
           </button>
         </SectionCard>
       </div>
@@ -152,11 +184,15 @@ export default function ConversationDetailsPage() {
         </Link>
 
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Détails de la conversation
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">Details de la conversation</h1>
           <p className="text-sm text-muted-foreground">ID : {conversation.id}</p>
         </div>
+
+        {shouldSuggestArticle ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Alerte apprentissage: ajoutez la reponse humaine en article pour que le bot l'utilise la prochaine fois.
+          </div>
+        ) : null}
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </div>
@@ -166,9 +202,7 @@ export default function ConversationDetailsPage() {
           <div className="space-y-4">
             <div>
               <h2 className="text-lg font-semibold">Messages</h2>
-              <p className="text-sm text-muted-foreground">
-                Historique complet de la conversation.
-              </p>
+              <p className="text-sm text-muted-foreground">Historique complet de la conversation.</p>
             </div>
 
             <ConversationMessages messages={conversation.messages} />
@@ -178,22 +212,20 @@ export default function ConversationDetailsPage() {
         <SectionCard>
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">Détails</h2>
-              <p className="text-sm text-muted-foreground">
-                Informations générales et statut actuel.
-              </p>
+              <h2 className="text-lg font-semibold">Details</h2>
+              <p className="text-sm text-muted-foreground">Informations generales et statut actuel.</p>
             </div>
 
             <ConversationDetails
               conversation={conversation}
               onHandoff={handleHandoff}
               onReactivateBot={handleReactivateBot}
+              onCreateArticleFromReply={handleCreateArticleFromReply}
+              canCreateArticleFromReply={conversation.messages.length > 0}
             />
 
             {isActing ? (
-              <p className="text-sm text-muted-foreground">
-                Mise à jour de la conversation...
-              </p>
+              <p className="text-sm text-muted-foreground">Mise a jour de la conversation...</p>
             ) : null}
           </div>
         </SectionCard>

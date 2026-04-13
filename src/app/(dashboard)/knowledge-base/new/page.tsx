@@ -1,36 +1,21 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Save,
-  FileText,
-  Tags,
-  UserRound,
-  Eye,
-} from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, FileText, Loader2, Save, Tags, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { isApiError } from "@/src/lib/api-error";
+import { knowledgeBaseService } from "@/src/services/knowledge-base.service";
 
-type ArticleCategory =
-  | "commandes"
-  | "paiements"
-  | "livraison"
-  | "retours"
-  | "general";
+type ArticleCategory = "commandes" | "paiements" | "livraison" | "retours" | "general";
 
 function categoryLabel(category: ArticleCategory) {
   switch (category) {
@@ -43,23 +28,114 @@ function categoryLabel(category: ArticleCategory) {
     case "retours":
       return "Retours";
     case "general":
-      return "Général";
+      return "General";
     default:
       return category;
   }
 }
 
+function getErrorMessage(error: unknown): string {
+  if (isApiError(error)) {
+    if (error.details && typeof error.details === "object") {
+      const details = error.details as { message?: unknown };
+      if (Array.isArray(details.message)) {
+        return details.message.map((item) => String(item)).join(" ");
+      }
+      if (typeof details.message === "string") {
+        return details.message;
+      }
+    }
+
+    return error.message || "Impossible d'enregistrer l'article.";
+  }
+
+  return "Impossible d'enregistrer l'article.";
+}
+
 export default function NewArticlePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [title, setTitle] = React.useState("");
   const [content, setContent] = React.useState("");
   const [category, setCategory] = React.useState<ArticleCategory>("commandes");
   const [author, setAuthor] = React.useState("Emna");
-  const [saveMessage, setSaveMessage] = React.useState("");
+  const [sourceConversationId, setSourceConversationId] = React.useState<string | null>(null);
+  const [sourceApplied, setSourceApplied] = React.useState(false);
 
-  const handleSave = () => {
-    setSaveMessage("Article enregistré avec succès.");
-    setTimeout(() => setSaveMessage(""), 2500);
-  };
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [saveMessage, setSaveMessage] = React.useState("");
+  const [error, setError] = React.useState("");
+
+  React.useEffect(() => {
+    if (sourceApplied) return;
+
+    const sourceId = searchParams.get("sourceConversationId");
+    const sourceTitle = searchParams.get("title");
+    const sourceContent = searchParams.get("content");
+    const sourceCategory = searchParams.get("category");
+
+    if (sourceId) {
+      setSourceConversationId(sourceId);
+    }
+
+    if (sourceTitle) {
+      setTitle(sourceTitle);
+    }
+
+    if (sourceContent) {
+      setContent(sourceContent);
+    }
+
+    if (
+      sourceCategory === "commandes" ||
+      sourceCategory === "paiements" ||
+      sourceCategory === "livraison" ||
+      sourceCategory === "retours" ||
+      sourceCategory === "general"
+    ) {
+      setCategory(sourceCategory);
+    }
+
+    setSourceApplied(true);
+  }, [searchParams, sourceApplied]);
+
+  async function handleSave(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    if (!title.trim()) {
+      setError("Le titre est obligatoire.");
+      return;
+    }
+
+    if (content.trim().length < 20) {
+      setError("Le contenu doit contenir au moins 20 caracteres.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError("");
+
+      await knowledgeBaseService.create({
+        title: title.trim(),
+        content: content.trim(),
+        summary: category,
+        language: "fr",
+      });
+
+      setSaveMessage("Article enregistre en base avec succes.");
+      setTimeout(() => {
+        router.push("/knowledge-base");
+        router.refresh();
+      }, 500);
+    } catch (err) {
+      console.error("Failed to create article", err);
+      setError(getErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -67,16 +143,8 @@ export default function NewArticlePage() {
         <Button asChild variant="outline" className="w-fit rounded-xl">
           <Link href="/knowledge-base">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Retour à la base
+            Retour a la base
           </Link>
-        </Button>
-
-        <Button
-          onClick={handleSave}
-          className="rounded-xl bg-slate-950 text-white hover:bg-slate-800"
-        >
-          <Save className="mr-2 h-4 w-4" />
-          Enregistrer
         </Button>
       </div>
 
@@ -89,16 +157,29 @@ export default function NewArticlePage() {
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Nouvel article</h1>
         <p className="text-sm text-muted-foreground">
-          Ajoutez un contenu qui pourra être utilisé par le bot pour répondre
-          aux clients.
+          Ajoutez un contenu qui sera utilise par le bot pour repondre aux clients.
         </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      {sourceConversationId ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Suggestion depuis une conversation humaine.
+          {" "}
+          <Link className="font-medium underline" href={`/conversations/${sourceConversationId}?suggestArticle=1`}>
+            Ouvrir la conversation source
+          </Link>
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      ) : null}
+
+      <form onSubmit={handleSave} className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <Card className="rounded-3xl border-border/60 shadow-sm">
             <CardHeader>
-              <CardTitle>Contenu de l’article</CardTitle>
+              <CardTitle>Contenu de l'article</CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-6">
@@ -109,7 +190,7 @@ export default function NewArticlePage() {
                   <Input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Titre de l’article"
+                    placeholder="Titre de l'article"
                     className="h-11 rounded-xl pl-10"
                   />
                 </div>
@@ -117,22 +198,17 @@ export default function NewArticlePage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Catégorie</Label>
-                  <Select
-                    value={category}
-                    onValueChange={(value) =>
-                      setCategory(value as ArticleCategory)
-                    }
-                  >
+                  <Label>Categorie</Label>
+                  <Select value={category} onValueChange={(value) => setCategory(value as ArticleCategory)}>
                     <SelectTrigger className="h-11 rounded-xl">
-                      <SelectValue placeholder="Choisir une catégorie" />
+                      <SelectValue placeholder="Choisir une categorie" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="commandes">Commandes</SelectItem>
                       <SelectItem value="paiements">Paiements</SelectItem>
                       <SelectItem value="livraison">Livraison</SelectItem>
                       <SelectItem value="retours">Retours</SelectItem>
-                      <SelectItem value="general">Général</SelectItem>
+                      <SelectItem value="general">General</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -145,7 +221,7 @@ export default function NewArticlePage() {
                       value={author}
                       onChange={(e) => setAuthor(e.target.value)}
                       className="h-11 rounded-xl pl-10"
-                      placeholder="Nom de l’auteur"
+                      placeholder="Nom de l'auteur"
                     />
                   </div>
                 </div>
@@ -156,7 +232,7 @@ export default function NewArticlePage() {
                 <Textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Rédigez ici le contenu de l’article..."
+                  placeholder="Redigez ici le contenu de l'article..."
                   className="min-h-[220px] rounded-xl"
                 />
               </div>
@@ -167,17 +243,13 @@ export default function NewArticlePage() {
         <div className="space-y-6">
           <Card className="rounded-3xl border-border/60 shadow-sm">
             <CardHeader>
-              <CardTitle>Aperçu rapide</CardTitle>
+              <CardTitle>Apercu rapide</CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-4">
               <div>
-                <p className="text-lg font-semibold">
-                  {title || "Titre de l’article"}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Auteur: {author || "Non défini"}
-                </p>
+                <p className="text-lg font-semibold">{title || "Titre de l'article"}</p>
+                <p className="mt-1 text-sm text-muted-foreground">Auteur: {author || "Non defini"}</p>
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -190,9 +262,7 @@ export default function NewArticlePage() {
               </div>
 
               <div className="rounded-2xl border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
-                {content
-                  ? content.slice(0, 220) + (content.length > 220 ? "..." : "")
-                  : "Aucun contenu saisi pour le moment."}
+                {content ? content.slice(0, 220) + (content.length > 220 ? "..." : "") : "Aucun contenu saisi pour le moment."}
               </div>
             </CardContent>
           </Card>
@@ -204,20 +274,24 @@ export default function NewArticlePage() {
                 Conseils
               </div>
               <p className="text-sm text-muted-foreground">
-                Utilisez des réponses courtes, claires et faciles à réutiliser
-                par le bot dans les conversations clients.
+                Utilisez des reponses courtes, claires et faciles a reutiliser par le bot dans les conversations clients.
               </p>
 
               <div className="mt-4">
-                <Button variant="outline" className="w-full rounded-xl">
-                  <Eye className="mr-2 h-4 w-4" />
-                  Prévisualiser
+                <Button
+                  type="submit"
+                  className="w-full rounded-xl bg-slate-950 text-white hover:bg-slate-800"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  {isSubmitting ? "Enregistrement..." : "Enregistrer"}
                 </Button>
               </div>
             </CardContent>
           </Card>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
+

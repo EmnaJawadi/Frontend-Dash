@@ -1,5 +1,3 @@
-// src/components/shared/custom-select.tsx
-
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -26,7 +24,7 @@ export function CustomSelect({
   value,
   options,
   onChange,
-  placeholder = "Sélectionner...",
+  placeholder = "Selectionner...",
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -35,10 +33,7 @@ export function CustomSelect({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(event.target as Node)
-      ) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setOpen(false);
       }
     }
@@ -51,46 +46,31 @@ export function CustomSelect({
 
   return (
     <div ref={wrapperRef} className="relative">
-      {label ? (
-        <label className="mb-2 block text-sm font-semibold">{label}</label>
-      ) : null}
+      {label ? <label className="mb-2 block text-sm font-semibold text-foreground">{label}</label> : null}
 
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "flex h-12 w-full items-center justify-between rounded-xl border bg-background px-4 text-left text-sm transition",
-          open && "border-primary"
+          "flex h-12 w-full items-center justify-between rounded-xl border border-border/70 bg-background px-4 text-left text-sm transition",
+          open && "border-primary ring-2 ring-primary/20",
         )}
       >
         <div className="flex min-w-0 items-center gap-3">
           {selectedOption?.icon ? (
-            <span
-              className={cn(
-                "shrink-0 text-muted-foreground",
-                selectedOption.colorClass
-              )}
-            >
+            <span className={cn("shrink-0 text-muted-foreground", selectedOption.colorClass)}>
               {selectedOption.icon}
             </span>
           ) : null}
-
-          <span className={cn("truncate", selectedOption?.colorClass)}>
-            {selectedOption?.label ?? placeholder}
-          </span>
+          <span className={cn("truncate", selectedOption?.colorClass)}>{selectedOption?.label ?? placeholder}</span>
         </div>
 
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
-            open && "rotate-180"
-          )}
-        />
+        <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
       </button>
 
       {open ? (
-        <div className="absolute z-50 mt-1.5 w-full overflow-hidden rounded-xl border bg-background shadow-lg">
-          <div className="py-1.5">
+        <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border border-border/70 bg-background shadow-xl">
+          <div className="max-h-64 overflow-auto py-1.5">
             {options.map((option) => {
               const isSelected = option.value === value;
 
@@ -104,8 +84,7 @@ export function CustomSelect({
                   }}
                   className={cn(
                     "flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition hover:bg-muted",
-                    isSelected &&
-                      "bg-primary text-primary-foreground hover:bg-primary"
+                    isSelected && "bg-primary text-primary-foreground hover:bg-primary",
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -113,18 +92,13 @@ export function CustomSelect({
                       <span
                         className={cn(
                           "shrink-0",
-                          isSelected
-                            ? "text-primary-foreground"
-                            : option.colorClass ?? "text-muted-foreground"
+                          isSelected ? "text-primary-foreground" : option.colorClass ?? "text-muted-foreground",
                         )}
                       >
                         {option.icon}
                       </span>
                     ) : null}
-
-                    <span className={cn(!isSelected && option.colorClass)}>
-                      {option.label}
-                    </span>
+                    <span className={cn(!isSelected && option.colorClass)}>{option.label}</span>
                   </div>
 
                   {isSelected ? <Check className="h-4 w-4" /> : null}

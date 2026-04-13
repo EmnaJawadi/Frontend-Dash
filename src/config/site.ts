@@ -3,7 +3,7 @@ import { env } from "@/src/config/env";
 export const siteConfig = {
   name: env.NEXT_PUBLIC_APP_NAME,
   description:
-    "Dashboard support client WhatsApp avec suivi des conversations, analytics et gestion des agents.",
+    "Interface support client WhatsApp avec suivi des conversations, analytique et gestion des agents.",
   url: env.NEXT_PUBLIC_APP_URL,
   ogImage: "/og-image.png",
   defaultLocale: "fr",

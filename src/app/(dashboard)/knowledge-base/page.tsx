@@ -3,14 +3,16 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  FileText,
-  Plus,
-  Search,
-  X,
   BookOpen,
   CheckCircle2,
   FilePenLine,
+  FileText,
+  Loader2,
+  Plus,
   RefreshCw,
+  Search,
+  Trash2,
+  X,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -24,8 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { knowledgeBaseService } from "@/src/services/knowledge-base.service";
 
-type ArticleStatus = "published" | "draft";
+type ArticleStatus = "published" | "draft" | "archived";
 type ArticleCategory =
   | "commandes"
   | "paiements"
@@ -42,48 +45,24 @@ type KnowledgeArticle = {
   updatedAt: string;
 };
 
-const knowledgeBaseMock: KnowledgeArticle[] = [
-  {
-    id: "kb_001",
-    title: "Comment suivre une commande",
-    category: "commandes",
-    status: "published",
-    author: "Emna",
-    updatedAt: "2026-03-15T09:00:00.000Z",
-  },
-  {
-    id: "kb_002",
-    title: "Politique de remboursement",
-    category: "paiements",
-    status: "published",
-    author: "Mariem",
-    updatedAt: "2026-03-14T14:20:00.000Z",
-  },
-  {
-    id: "kb_003",
-    title: "FAQ Livraison",
-    category: "livraison",
-    status: "draft",
-    author: "Emna",
-    updatedAt: "2026-03-13T11:10:00.000Z",
-  },
-  {
-    id: "kb_004",
-    title: "Procédure de retour produit",
-    category: "retours",
-    status: "published",
-    author: "Mariem",
-    updatedAt: "2026-03-11T16:30:00.000Z",
-  },
-  {
-    id: "kb_005",
-    title: "Réponses générales du support",
-    category: "general",
-    status: "draft",
-    author: "Emna",
-    updatedAt: "2026-03-10T10:45:00.000Z",
-  },
-];
+type ListResponse = {
+  items: Array<{
+    id: string;
+    title: string;
+    summary?: string | null;
+    status: ArticleStatus;
+    updatedAt: string;
+  }>;
+};
+
+function normalizeCategory(value?: string | null): ArticleCategory {
+  const lower = (value ?? "").toLowerCase().trim();
+  if (lower === "commandes") return "commandes";
+  if (lower === "paiements") return "paiements";
+  if (lower === "livraison") return "livraison";
+  if (lower === "retours") return "retours";
+  return "general";
+}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("fr-FR", {
@@ -103,7 +82,7 @@ function categoryLabel(category: ArticleCategory) {
     case "retours":
       return "Retours";
     case "general":
-      return "Général";
+      return "General";
     default:
       return category;
   }
@@ -112,9 +91,11 @@ function categoryLabel(category: ArticleCategory) {
 function statusLabel(status: ArticleStatus) {
   switch (status) {
     case "published":
-      return "Publié";
+      return "Publie";
     case "draft":
       return "Brouillon";
+    case "archived":
+      return "Archive";
     default:
       return status;
   }
@@ -124,6 +105,8 @@ function StatusBadge({ status }: { status: ArticleStatus }) {
   const classes =
     status === "published"
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : status === "archived"
+      ? "border-slate-300 bg-slate-100 text-slate-700"
       : "border-amber-200 bg-amber-50 text-amber-700";
 
   return (
@@ -173,7 +156,7 @@ function SearchInput({
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Rechercher par titre, auteur ou catégorie..."
+        placeholder="Rechercher par titre..."
         className="h-11 rounded-xl border-border/60 pl-10 pr-10"
       />
       {value ? (
@@ -195,15 +178,52 @@ export default function KnowledgeBasePage() {
   const [search, setSearch] = React.useState("");
   const [status, setStatus] = React.useState<ArticleStatus | "all">("all");
   const [category, setCategory] = React.useState<ArticleCategory | "all">("all");
+  const [items, setItems] = React.useState<KnowledgeArticle[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [deletingArticleId, setDeletingArticleId] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<string | null>(null);
+
+  const loadArticles = React.useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      setSuccess(null);
+      const response = (await knowledgeBaseService.list({
+        page: 1,
+        limit: 100,
+      })) as ListResponse;
+
+      setItems(
+        (response.items ?? []).map((article) => ({
+          id: article.id,
+          title: article.title,
+          category: normalizeCategory(article.summary),
+          status: article.status ?? "draft",
+          author: "Equipe",
+          updatedAt: article.updatedAt,
+        })),
+      );
+    } catch (e) {
+      console.error("Failed to load knowledge base", e);
+      setItems([]);
+      setError("Impossible de charger les articles.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void loadArticles();
+  }, [loadArticles]);
 
   const filteredArticles = React.useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return knowledgeBaseMock.filter((article) => {
+    return items.filter((article) => {
       const matchesSearch =
         !query ||
         article.title.toLowerCase().includes(query) ||
-        article.author.toLowerCase().includes(query) ||
         categoryLabel(article.category).toLowerCase().includes(query);
 
       const matchesStatus = status === "all" || article.status === status;
@@ -211,16 +231,16 @@ export default function KnowledgeBasePage() {
 
       return matchesSearch && matchesStatus && matchesCategory;
     });
-  }, [search, status, category]);
+  }, [items, search, status, category]);
 
   const stats = React.useMemo(() => {
     return {
-      total: knowledgeBaseMock.length,
-      published: knowledgeBaseMock.filter((a) => a.status === "published").length,
-      draft: knowledgeBaseMock.filter((a) => a.status === "draft").length,
-      categories: new Set(knowledgeBaseMock.map((a) => a.category)).size,
+      total: items.length,
+      published: items.filter((a) => a.status === "published").length,
+      draft: items.filter((a) => a.status === "draft").length,
+      categories: new Set(items.map((a) => a.category)).size,
     };
-  }, []);
+  }, [items]);
 
   function resetFilters() {
     setSearch("");
@@ -228,8 +248,24 @@ export default function KnowledgeBasePage() {
     setCategory("all");
   }
 
-  const hasActiveFilters =
-    search.length > 0 || status !== "all" || category !== "all";
+  async function handleDeleteArticle(article: KnowledgeArticle) {
+    const confirmed = window.confirm(`Supprimer l'article "${article.title}" ?`);
+    if (!confirmed) return;
+
+    try {
+      setDeletingArticleId(article.id);
+      setError(null);
+      setSuccess(null);
+      await knowledgeBaseService.remove(article.id);
+      await loadArticles();
+      setSuccess("Article supprime avec succes.");
+    } catch (err) {
+      console.error("Failed to delete article", err);
+      setError("Impossible de supprimer l'article.");
+    } finally {
+      setDeletingArticleId(null);
+    }
+  }
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -239,8 +275,7 @@ export default function KnowledgeBasePage() {
             Base de connaissances
           </h1>
           <p className="text-sm text-muted-foreground">
-            Gérez les contenus utilisés par le bot pour répondre automatiquement
-            aux clients.
+            Articles reels charges depuis le backend.
           </p>
         </div>
 
@@ -256,25 +291,25 @@ export default function KnowledgeBasePage() {
         <StatCard
           title="Total articles"
           value={stats.total}
-          subtitle="Base de réponses disponible"
+          subtitle="Base de reponses"
           icon={<BookOpen className="h-4 w-4" />}
         />
         <StatCard
-          title="Publiés"
+          title="Publies"
           value={stats.published}
-          subtitle="Utilisables par le bot"
+          subtitle="Disponibles"
           icon={<CheckCircle2 className="h-4 w-4" />}
         />
         <StatCard
           title="Brouillons"
           value={stats.draft}
-          subtitle="En cours de préparation"
+          subtitle="En cours"
           icon={<FilePenLine className="h-4 w-4" />}
         />
         <StatCard
-          title="Catégories"
+          title="Categories"
           value={stats.categories}
-          subtitle="Organisation du contenu"
+          subtitle="Organisation"
           icon={<FileText className="h-4 w-4" />}
         />
       </div>
@@ -298,8 +333,9 @@ export default function KnowledgeBasePage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous statuts</SelectItem>
-                  <SelectItem value="published">Publié</SelectItem>
+                  <SelectItem value="published">Publie</SelectItem>
                   <SelectItem value="draft">Brouillon</SelectItem>
+                  <SelectItem value="archived">Archive</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -310,15 +346,15 @@ export default function KnowledgeBasePage() {
                 }
               >
                 <SelectTrigger className="h-11 rounded-xl xl:w-[180px]">
-                  <SelectValue placeholder="Catégorie" />
+                  <SelectValue placeholder="Categorie" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Toutes catégories</SelectItem>
+                  <SelectItem value="all">Toutes categories</SelectItem>
                   <SelectItem value="commandes">Commandes</SelectItem>
                   <SelectItem value="paiements">Paiements</SelectItem>
                   <SelectItem value="livraison">Livraison</SelectItem>
                   <SelectItem value="retours">Retours</SelectItem>
-                  <SelectItem value="general">Général</SelectItem>
+                  <SelectItem value="general">General</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -329,48 +365,27 @@ export default function KnowledgeBasePage() {
                 onClick={resetFilters}
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Réinitialiser
+                Reinitialiser
               </Button>
             </div>
           </div>
-
-          {hasActiveFilters ? (
-            <div className="mt-4 text-sm text-muted-foreground">
-              Filtres actifs appliqués
-            </div>
-          ) : null}
         </CardContent>
       </Card>
 
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {success ? <p className="text-sm text-emerald-700">{success}</p> : null}
+
       <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-        {filteredArticles.length} article(s) trouvé(s)
+        {isLoading ? "Chargement..." : `${filteredArticles.length} article(s) trouve(s)`}
       </div>
 
-      {filteredArticles.length === 0 ? (
+      {!isLoading && filteredArticles.length === 0 ? (
         <Card className="rounded-3xl border-border/60 shadow-sm">
           <CardContent className="flex min-h-[220px] flex-col items-center justify-center p-6 text-center">
             <div className="mb-3 rounded-full bg-muted p-3">
               <BookOpen className="h-5 w-5 text-muted-foreground" />
             </div>
-            <h3 className="mb-1 text-lg font-semibold">Aucun article trouvé</h3>
-            <p className="max-w-md text-sm text-muted-foreground">
-              Essaie de modifier la recherche ou les filtres pour afficher plus
-              de résultats.
-            </p>
-
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              <Button variant="outline" className="rounded-xl" onClick={resetFilters}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Réinitialiser
-              </Button>
-
-              <Button asChild className="rounded-xl bg-slate-950 text-white hover:bg-slate-800">
-                <Link href="/knowledge-base/new">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nouvel article
-                </Link>
-              </Button>
-            </div>
+            <h3 className="mb-1 text-lg font-semibold">Aucun article trouve</h3>
           </CardContent>
         </Card>
       ) : (
@@ -379,10 +394,10 @@ export default function KnowledgeBasePage() {
             <thead className="bg-muted/50 text-left text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 font-medium">Titre</th>
-                <th className="px-4 py-3 font-medium">Catégorie</th>
+                <th className="px-4 py-3 font-medium">Categorie</th>
                 <th className="px-4 py-3 font-medium">Statut</th>
                 <th className="px-4 py-3 font-medium">Auteur</th>
-                <th className="px-4 py-3 font-medium">Mis à jour</th>
+                <th className="px-4 py-3 font-medium">Mis a jour</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -419,11 +434,27 @@ export default function KnowledgeBasePage() {
                       <Button asChild variant="outline" className="rounded-xl">
                         <Link href={`/knowledge-base/${article.id}`}>Voir</Link>
                       </Button>
-
                       <Button asChild variant="outline" className="rounded-xl">
-                        <Link href={`/knowledge-base/${article.id}/edit`}>
-                          Modifier
-                        </Link>
+                        <Link href={`/knowledge-base/${article.id}/edit`}>Modifier</Link>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                        onClick={() => void handleDeleteArticle(article)}
+                        disabled={deletingArticleId === article.id}
+                      >
+                        {deletingArticleId === article.id ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Suppression...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Supprimer
+                          </>
+                        )}
                       </Button>
                     </div>
                   </td>

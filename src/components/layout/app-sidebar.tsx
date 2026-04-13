@@ -64,7 +64,7 @@ export default function AppSidebar() {
 
   if (!mounted) {
     return (
-      <aside className="flex h-screen w-[280px] flex-col border-r border-border bg-background px-4 py-4">
+      <aside className="hidden h-[calc(100vh-4.5rem)] w-[280px] border-r border-border bg-background/85 px-4 py-4 md:flex">
         <div className="text-sm text-muted-foreground">Chargement...</div>
       </aside>
     );
@@ -73,21 +73,20 @@ export default function AppSidebar() {
   return (
     <aside
       className={cn(
-        "flex h-screen flex-col border-r border-border/70 bg-background px-3 py-4 transition-all duration-300",
-        collapsed ? "w-[90px]" : "w-[280px]",
+        "sticky top-[4.5rem] hidden h-[calc(100vh-4.5rem)] flex-col border-r border-border/60 bg-background/70 px-3 py-4 backdrop-blur-xl transition-all duration-300 md:flex",
+        collapsed ? "w-[92px]" : "w-[282px]",
       )}
     >
-      <div className="mb-6 flex items-center justify-between gap-2">
+      <div className="mb-6 flex items-center justify-between gap-2 fade-up">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20">
             <LayoutGrid className="h-5 w-5" />
           </div>
 
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-base font-semibold text-foreground">
-                Support OS
-              </p>
+              <p className="truncate text-base font-semibold text-foreground">Centre Support</p>
+              <p className="text-xs text-muted-foreground">WhatsApp Entreprise</p>
             </div>
           )}
         </div>
@@ -96,40 +95,28 @@ export default function AppSidebar() {
           type="button"
           onClick={() => setCollapsed((prev) => !prev)}
           className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          aria-label={
-            collapsed
-              ? "Développer la barre latérale"
-              : "Réduire la barre latérale"
-          }
+          aria-label={collapsed ? "Developper la barre laterale" : "Reduire la barre laterale"}
         >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
+          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
       </div>
 
       {!collapsed && (
-        <div className="mb-6 rounded-3xl border border-border/60 bg-gradient-to-br from-muted/70 to-muted/30 p-4 shadow-sm">
+        <div className="mb-5 rounded-3xl border border-border/70 bg-gradient-to-br from-card via-card to-muted/50 p-4 shadow-sm fade-up-delay-1">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm">
               {avatarLetter}
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                Account
-              </p>
-              <p className="truncate text-sm font-semibold text-foreground">
-                {userRoleLabel || "Utilisateur"}
-              </p>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Compte</p>
+              <p className="truncate text-sm font-semibold text-foreground">{userRoleLabel || "Utilisateur"}</p>
             </div>
           </div>
         </div>
       )}
 
-      <nav className="flex-1 space-y-2 overflow-y-auto pr-1">
+      <nav className="flex-1 space-y-2 overflow-y-auto pr-1 fade-up-delay-2">
         {items.map((item) => {
           const active = isActive(item.href, item.matchStartsWith);
           const Icon = item.icon;
@@ -141,7 +128,7 @@ export default function AppSidebar() {
               className={cn(
                 "group relative flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all",
                 active
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary/12 text-primary shadow-sm ring-1 ring-primary/20"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 collapsed && "justify-center px-2",
               )}
@@ -150,13 +137,7 @@ export default function AppSidebar() {
                 <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-primary" />
               ) : null}
 
-              <Icon
-                className={cn(
-                  "h-4 w-4 shrink-0",
-                  !active && "transition-transform group-hover:scale-105",
-                )}
-              />
-
+              <Icon className={cn("h-4 w-4 shrink-0", !active && "transition-transform group-hover:scale-105")} />
               {!collapsed && <span className="truncate">{item.label}</span>}
             </Link>
           );
@@ -170,18 +151,12 @@ export default function AppSidebar() {
             className={cn(
               "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all",
               pathname.startsWith("/settings/profile")
-                ? "bg-primary/10 text-primary"
+                ? "bg-primary/12 text-primary shadow-sm ring-1 ring-primary/20"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
               collapsed && "justify-center px-2",
             )}
           >
-            <UserCog
-              className={cn(
-                "h-4 w-4 shrink-0",
-                !pathname.startsWith("/settings/profile") &&
-                  "transition-transform group-hover:scale-105",
-              )}
-            />
+            <UserCog className="h-4 w-4 shrink-0" />
             {!collapsed && <span className="truncate">Mon profil</span>}
           </Link>
 
@@ -189,12 +164,12 @@ export default function AppSidebar() {
             type="button"
             onClick={handleLogout}
             className={cn(
-              "group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-red-600 transition-all hover:bg-red-50",
+              "group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-red-600 transition-all hover:bg-red-50 dark:hover:bg-red-500/10",
               collapsed && "justify-center px-2",
             )}
           >
             <LogOut className="h-4 w-4 shrink-0 transition-transform group-hover:scale-105" />
-            {!collapsed && <span className="truncate">Déconnexion</span>}
+            {!collapsed && <span className="truncate">Deconnexion</span>}
           </button>
         </div>
       </div>

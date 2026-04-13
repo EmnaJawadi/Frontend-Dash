@@ -31,9 +31,7 @@ export default function RegisterForm() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleChange(
-    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) {
+  function handleChange(event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = event.target;
 
     setFormData((prev) => ({
@@ -46,18 +44,13 @@ export default function RegisterForm() {
     event.preventDefault();
     setError("");
 
-    if (
-      !formData.firstName.trim() ||
-      !formData.lastName.trim() ||
-      !formData.email.trim() ||
-      !formData.password.trim()
-    ) {
+    if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim() || !formData.password.trim()) {
       setError("Veuillez remplir tous les champs obligatoires.");
       return;
     }
 
     if (formData.password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères.");
+      setError("Le mot de passe doit contenir au moins 6 caracteres.");
       return;
     }
 
@@ -66,35 +59,28 @@ export default function RegisterForm() {
       return;
     }
 
-    if (formData.role !== "SUPER_ADMIN" && !formData.companyName.trim()) {
-      setError("Veuillez saisir le nom de l’entreprise.");
+    if (!formData.companyName.trim()) {
+      setError("Veuillez saisir le nom de l'entreprise.");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const user = register({
+      const user = await register({
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         email: formData.email.trim(),
         password: formData.password,
         role: formData.role,
-        companyName:
-          formData.role === "SUPER_ADMIN"
-            ? undefined
-            : formData.companyName.trim(),
+        companyName: formData.companyName.trim(),
       });
 
-      const redirectPath =
-        user.role === "SUPER_ADMIN"
-          ? getDefaultRedirectByRole(user.role)
-          : "/company-info";
-
+      const redirectPath = user.role === "OWNER" ? "/company-info" : getDefaultRedirectByRole(user.role);
       router.push(redirectPath);
       router.refresh();
     } catch {
-      setError("Impossible de créer le compte. Veuillez réessayer.");
+      setError("Impossible de creer le compte. Veuillez reessayer.");
     } finally {
       setIsSubmitting(false);
     }
@@ -103,15 +89,13 @@ export default function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-          {error}
-        </div>
+        <div className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1">
           <label htmlFor="firstName" className="block text-sm font-medium">
-            Prénom
+            Prenom
           </label>
           <input
             id="firstName"
@@ -119,8 +103,8 @@ export default function RegisterForm() {
             type="text"
             value={formData.firstName}
             onChange={handleChange}
-            placeholder="Emna"
-            className="w-full rounded-lg border px-3 py-2 outline-none transition focus:ring-2 focus:ring-primary/20"
+            placeholder="Amine"
+            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
           />
         </div>
 
@@ -134,8 +118,8 @@ export default function RegisterForm() {
             type="text"
             value={formData.lastName}
             onChange={handleChange}
-            placeholder="Jawadi"
-            className="w-full rounded-lg border px-3 py-2 outline-none transition focus:ring-2 focus:ring-primary/20"
+            placeholder="Ben Ali"
+            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
           />
         </div>
       </div>
@@ -150,8 +134,8 @@ export default function RegisterForm() {
           type="email"
           value={formData.email}
           onChange={handleChange}
-          placeholder="email@company.com"
-          className="w-full rounded-lg border px-3 py-2 outline-none transition focus:ring-2 focus:ring-primary/20"
+          placeholder="email@entreprise.com"
+          className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
         />
       </div>
 
@@ -167,15 +151,12 @@ export default function RegisterForm() {
             value={formData.password}
             onChange={handleChange}
             placeholder="******"
-            className="w-full rounded-lg border px-3 py-2 outline-none transition focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
           />
         </div>
 
         <div className="space-y-1">
-          <label
-            htmlFor="confirmPassword"
-            className="block text-sm font-medium"
-          >
+          <label htmlFor="confirmPassword" className="block text-sm font-medium">
             Confirmer le mot de passe
           </label>
           <input
@@ -185,7 +166,7 @@ export default function RegisterForm() {
             value={formData.confirmPassword}
             onChange={handleChange}
             placeholder="******"
-            className="w-full rounded-lg border px-3 py-2 outline-none transition focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
           />
         </div>
       </div>
@@ -199,37 +180,34 @@ export default function RegisterForm() {
           name="role"
           value={formData.role}
           onChange={handleChange}
-          className="w-full rounded-lg border px-3 py-2 outline-none transition focus:ring-2 focus:ring-primary/20"
+          className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
         >
-          <option value="OWNER">Propriétaire d’entreprise</option>
-          <option value="AGENT">Agent</option>
-          <option value="SUPER_ADMIN">Admin plateforme</option>
+          <option value="OWNER">Admin entreprise (owner)</option>
+          <option value="AGENT">Agent (employe)</option>
         </select>
       </div>
 
-      {formData.role !== "SUPER_ADMIN" ? (
-        <div className="space-y-1">
-          <label htmlFor="companyName" className="block text-sm font-medium">
-            Nom de l’entreprise
-          </label>
-          <input
-            id="companyName"
-            name="companyName"
-            type="text"
-            value={formData.companyName}
-            onChange={handleChange}
-            placeholder="Support OS"
-            className="w-full rounded-lg border px-3 py-2 outline-none transition focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
-      ) : null}
+      <div className="space-y-1">
+        <label htmlFor="companyName" className="block text-sm font-medium">
+          Nom de l'entreprise
+        </label>
+        <input
+          id="companyName"
+          name="companyName"
+          type="text"
+          value={formData.companyName}
+          onChange={handleChange}
+          placeholder="Support Vision"
+          className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
+        />
+      </div>
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full rounded-lg border px-4 py-2 font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-xl bg-primary px-4 py-2.5 font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
       >
-        {isSubmitting ? "Création..." : "Créer un compte"}
+        {isSubmitting ? "Creation..." : "Creer un compte"}
       </button>
     </form>
   );

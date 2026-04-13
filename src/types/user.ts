@@ -64,15 +64,6 @@ export const mockUsers: User[] = [
     companyName: "Support OS",
     createdAt: new Date().toISOString(),
   },
-  {
-    id: "3",
-    firstName: "Platform",
-    lastName: "Admin",
-    email: "admin@platform.com",
-    role: "SUPER_ADMIN",
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  },
 ];
 
 export function getFullName(user: Pick<User, "firstName" | "lastName">): string {

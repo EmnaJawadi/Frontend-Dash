@@ -2,833 +2,312 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  Search,
-  X,
-  Users,
-  UserCheck,
-  UserX,
-  ShieldAlert,
-  Mail,
-  MapPin,
-  MessageSquare,
-  StickyNote,
-  Phone,
-  Plus,
-  RefreshCw,
-  MoreHorizontal,
-  Pencil,
-  Eye,
-  ChevronRight,
-  Clock3,
-  SlidersHorizontal,
-} from "lucide-react";
+import { Loader2, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { contactsService } from "@/src/services/contacts.service";
 
-type ContactStatus = "active" | "inactive" | "blocked";
-type ContactSource = "whatsapp" | "manual" | "import";
-type ContactSegment = "vip" | "lead" | "customer" | "inactive";
-type SortOption = "recent" | "oldest" | "most-conversations" | "most-notes";
-
-type ContactTag = {
-  id: string;
-  label: string;
-};
-
-type Contact = {
+type BackendContact = {
   id: string;
   fullName: string;
-  phone: string;
+  firstName?: string;
+  lastName?: string | null;
+  phoneNumber: string;
   email?: string | null;
-  city?: string | null;
-  language?: "fr" | "ar" | "en";
-  status: ContactStatus;
-  source: ContactSource;
-  segment: ContactSegment;
-  tags: ContactTag[];
-  notesCount: number;
-  conversationsCount: number;
-  lastConversationAt?: string | null;
+  tags?: string[];
+  isBlocked: boolean;
   createdAt: string;
+  updatedAt: string;
 };
 
-const contactsMock: Contact[] = [
-  {
-    id: "contact_001",
-    fullName: "Ahmed Ben Ali",
-    phone: "+216 20 111 222",
-    email: "ahmed.benali@gmail.com",
-    city: "Tunis",
-    language: "fr",
-    status: "active",
-    source: "whatsapp",
-    segment: "vip",
-    tags: [
-      { id: "tag_1", label: "VIP" },
-      { id: "tag_2", label: "Livraison" },
-    ],
-    notesCount: 3,
-    conversationsCount: 18,
-    lastConversationAt: "2026-03-12T14:20:00.000Z",
-    createdAt: "2026-01-05T09:00:00.000Z",
-  },
-  {
-    id: "contact_002",
-    fullName: "Sarra Kefi",
-    phone: "+216 25 555 666",
-    email: "sarra.kefi@gmail.com",
-    city: "Sfax",
-    language: "ar",
-    status: "active",
-    source: "manual",
-    segment: "customer",
-    tags: [
-      { id: "tag_3", label: "Réclamation" },
-      { id: "tag_4", label: "SAV" },
-    ],
-    notesCount: 1,
-    conversationsCount: 7,
-    lastConversationAt: "2026-03-11T10:15:00.000Z",
-    createdAt: "2026-01-18T08:40:00.000Z",
-  },
-  {
-    id: "contact_003",
-    fullName: "Youssef Trabelsi",
-    phone: "+216 94 444 000",
-    email: null,
-    city: "Sousse",
-    language: "en",
-    status: "inactive",
-    source: "import",
-    segment: "lead",
-    tags: [{ id: "tag_5", label: "Prospect" }],
-    notesCount: 0,
-    conversationsCount: 2,
-    lastConversationAt: "2026-02-27T16:30:00.000Z",
-    createdAt: "2026-02-02T11:00:00.000Z",
-  },
-  {
-    id: "contact_004",
-    fullName: "Mariem Jaziri",
-    phone: "+216 50 123 456",
-    email: "mariem.jaziri@gmail.com",
-    city: "Nabeul",
-    language: "fr",
-    status: "blocked",
-    source: "whatsapp",
-    segment: "inactive",
-    tags: [{ id: "tag_6", label: "Blacklist" }],
-    notesCount: 4,
-    conversationsCount: 11,
-    lastConversationAt: "2026-03-01T12:00:00.000Z",
-    createdAt: "2025-12-21T07:45:00.000Z",
-  },
-  {
-    id: "contact_005",
-    fullName: "Amira Chaari",
-    phone: "+216 29 000 888",
-    email: "amira.chaari@gmail.com",
-    city: "Monastir",
-    language: "fr",
-    status: "active",
-    source: "whatsapp",
-    segment: "customer",
-    tags: [
-      { id: "tag_7", label: "Fidèle" },
-      { id: "tag_8", label: "Upsell" },
-    ],
-    notesCount: 2,
-    conversationsCount: 23,
-    lastConversationAt: "2026-03-13T08:10:00.000Z",
-    createdAt: "2026-01-10T10:10:00.000Z",
-  },
-  {
-    id: "contact_006",
-    fullName: "Nour Haddad",
-    phone: "+216 98 333 111",
-    email: "nour.haddad@gmail.com",
-    city: "Ariana",
-    language: "fr",
-    status: "active",
-    source: "whatsapp",
-    segment: "lead",
-    tags: [
-      { id: "tag_9", label: "Nouveau" },
-      { id: "tag_10", label: "Campagne" },
-    ],
-    notesCount: 1,
-    conversationsCount: 5,
-    lastConversationAt: "2026-03-10T17:45:00.000Z",
-    createdAt: "2026-02-14T12:20:00.000Z",
-  },
-];
+type ContactsResponse = {
+  data: BackendContact[];
+  meta: {
+    total: number;
+  };
+};
 
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function formatDate(value?: string | null) {
-  if (!value) return "—";
-
-  return new Intl.DateTimeFormat("fr-FR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
-function statusLabel(status: ContactStatus) {
-  switch (status) {
-    case "active":
-      return "Actif";
-    case "inactive":
-      return "Inactif";
-    case "blocked":
-      return "Bloqué";
-    default:
-      return status;
-  }
-}
-
-function segmentLabel(segment: ContactSegment) {
-  switch (segment) {
-    case "vip":
-      return "VIP";
-    case "lead":
-      return "Lead";
-    case "customer":
-      return "Client";
-    case "inactive":
-      return "Inactif";
-    default:
-      return segment;
-  }
-}
-
-function sourceLabel(source: ContactSource) {
-  switch (source) {
-    case "whatsapp":
-      return "WhatsApp";
-    case "manual":
-      return "Manuel";
-    case "import":
-      return "Import";
-    default:
-      return source;
-  }
-}
-
-function StatusBadge({ status }: { status: ContactStatus }) {
-  const classes =
-    status === "active"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-      : status === "inactive"
-      ? "border-amber-200 bg-amber-50 text-amber-700"
-      : "border-red-200 bg-red-50 text-red-700";
-
-  return (
-    <Badge variant="outline" className={`rounded-full ${classes}`}>
-      {statusLabel(status)}
-    </Badge>
-  );
-}
-
-function TagList({ tags }: { tags: ContactTag[] }) {
-  if (!tags.length) {
-    return <span className="text-xs text-muted-foreground">Aucun tag</span>;
-  }
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      {tags.map((tag) => (
-        <span
-          key={tag.id}
-          className="rounded-full border border-border/60 bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground"
-        >
-          {tag.label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function SearchInput({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="relative w-full">
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      <Input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Rechercher par nom, téléphone, email, ville ou tag..."
-        className="h-11 rounded-xl border-border/60 pl-10 pr-10"
-      />
-      {value ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full"
-          onClick={() => onChange("")}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-function StatCard({
-  title,
-  value,
-  subtitle,
-  icon,
-}: {
-  title: string;
-  value: number;
-  subtitle: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <Card className="rounded-3xl border-border/60 shadow-sm transition hover:shadow-md">
-      <CardContent className="p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">{title}</span>
-          <div className="rounded-2xl bg-muted p-2.5 text-muted-foreground">
-            {icon}
-          </div>
-        </div>
-        <div className="text-2xl font-semibold tracking-tight">{value}</div>
-        <p className="mt-2 text-xs text-muted-foreground">{subtitle}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ContactMobileCard({ contact }: { contact: Contact }) {
-  return (
-    <Card className="overflow-hidden rounded-3xl border-border/60 shadow-sm transition hover:shadow-md">
-      <CardContent className="p-4">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-11 w-11 border border-border/60">
-              <AvatarFallback>{getInitials(contact.fullName)}</AvatarFallback>
-            </Avatar>
-
-            <div>
-              <h3 className="font-semibold">{contact.fullName}</h3>
-              <p className="text-sm text-muted-foreground">{contact.phone}</p>
-            </div>
-          </div>
-
-          <StatusBadge status={contact.status} />
-        </div>
-
-        <div className="mb-4 flex flex-wrap gap-2">
-          <Badge variant="secondary" className="rounded-full">
-            {segmentLabel(contact.segment)}
-          </Badge>
-          <Badge variant="outline" className="rounded-full">
-            {sourceLabel(contact.source)}
-          </Badge>
-        </div>
-
-        <div className="mb-4 space-y-2 text-sm text-muted-foreground">
-          {contact.email ? (
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              <span className="truncate">{contact.email}</span>
-            </div>
-          ) : null}
-
-          {contact.city ? (
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              <span>{contact.city}</span>
-            </div>
-          ) : null}
-
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            <span>{contact.conversationsCount} conversation(s)</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <StickyNote className="h-4 w-4" />
-            <span>{contact.notesCount} note(s)</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Clock3 className="h-4 w-4" />
-            <span>{formatDate(contact.lastConversationAt)}</span>
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <TagList tags={contact.tags} />
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            asChild
-            className="flex-1 rounded-xl bg-slate-950 text-white hover:bg-slate-800"
-          >
-            <Link href={`/contacts/${contact.id}`}>
-              Voir détail
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-
-          <Button variant="outline" size="icon" className="rounded-xl">
-            <Phone className="h-4 w-4" />
-          </Button>
-
-          <Button variant="outline" size="icon" className="rounded-xl">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+function statusLabel(isBlocked: boolean) {
+  return isBlocked ? "Bloque" : "Actif";
 }
 
 export default function ContactsPage() {
+  const [contacts, setContacts] = React.useState<BackendContact[]>([]);
   const [search, setSearch] = React.useState("");
-  const [status, setStatus] = React.useState<ContactStatus | "all">("all");
-  const [segment, setSegment] = React.useState<ContactSegment | "all">("all");
-  const [source, setSource] = React.useState<ContactSource | "all">("all");
-  const [tag, setTag] = React.useState<string | "all">("all");
-  const [sortBy, setSortBy] = React.useState<SortOption>("recent");
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [deletingContactId, setDeletingContactId] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<string | null>(null);
 
-  const allTags = React.useMemo(() => {
-    return Array.from(
-      new Set(contactsMock.flatMap((contact) => contact.tags.map((t) => t.label)))
-    );
-  }, []);
+  const [firstName, setFirstName] = React.useState("");
+  const [lastName, setLastName] = React.useState("");
+  const [phoneNumber, setPhoneNumber] = React.useState("");
+  const [email, setEmail] = React.useState("");
 
-  const filteredContacts = React.useMemo(() => {
-    const query = search.trim().toLowerCase();
+  const loadContacts = React.useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-    return contactsMock
-      .filter((item) => {
-        const matchesSearch =
-          !query ||
-          item.fullName.toLowerCase().includes(query) ||
-          item.phone.toLowerCase().includes(query) ||
-          (item.email?.toLowerCase().includes(query) ?? false) ||
-          (item.city?.toLowerCase().includes(query) ?? false) ||
-          item.tags.some((t) => t.label.toLowerCase().includes(query));
+      const response = (await contactsService.list({
+        page: 1,
+        limit: 100,
+        search: search.trim() || undefined,
+      })) as ContactsResponse;
 
-        const matchesStatus = status === "all" || item.status === status;
-        const matchesSegment = segment === "all" || item.segment === segment;
-        const matchesSource = source === "all" || item.source === source;
-        const matchesTag =
-          tag === "all" || item.tags.some((t) => t.label === tag);
+      setContacts(response.data ?? []);
+    } catch (err) {
+      console.error("Failed to load contacts", err);
+      setError("Impossible de charger les contacts.");
+      setContacts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [search]);
 
-        return (
-          matchesSearch &&
-          matchesStatus &&
-          matchesSegment &&
-          matchesSource &&
-          matchesTag
-        );
-      })
-      .sort((a, b) => {
-        if (sortBy === "most-conversations") {
-          return b.conversationsCount - a.conversationsCount;
-        }
+  React.useEffect(() => {
+    void loadContacts();
+  }, [loadContacts]);
 
-        if (sortBy === "most-notes") {
-          return b.notesCount - a.notesCount;
-        }
+  async function handleCreateContact(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
 
-        const aDate = a.lastConversationAt
-          ? new Date(a.lastConversationAt).getTime()
-          : 0;
-        const bDate = b.lastConversationAt
-          ? new Date(b.lastConversationAt).getTime()
-          : 0;
+    if (!firstName.trim() || !phoneNumber.trim()) {
+      setError("Prenom et telephone sont obligatoires.");
+      return;
+    }
 
-        if (sortBy === "oldest") {
-          return aDate - bDate;
-        }
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      setSuccess(null);
 
-        return bDate - aDate;
+      await contactsService.create({
+        firstName: firstName.trim(),
+        lastName: lastName.trim() || null,
+        phoneNumber: phoneNumber.trim(),
+        email: email.trim() || null,
       });
-  }, [search, status, segment, source, tag, sortBy]);
 
-  const stats = React.useMemo(() => {
-    return {
-      total: filteredContacts.length,
-      active: filteredContacts.filter((item) => item.status === "active")
-        .length,
-      inactive: filteredContacts.filter((item) => item.status === "inactive")
-        .length,
-      blocked: filteredContacts.filter((item) => item.status === "blocked")
-        .length,
-    };
-  }, [filteredContacts]);
-
-  function resetFilters() {
-    setSearch("");
-    setStatus("all");
-    setSegment("all");
-    setSource("all");
-    setTag("all");
-    setSortBy("recent");
+      setFirstName("");
+      setLastName("");
+      setPhoneNumber("");
+      setEmail("");
+      await loadContacts();
+      setSuccess("Contact ajoute avec succes.");
+    } catch (err) {
+      console.error("Failed to create contact", err);
+      setError("Impossible de creer le contact.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  const hasActiveFilters =
-    search.length > 0 ||
-    status !== "all" ||
-    segment !== "all" ||
-    source !== "all" ||
-    tag !== "all" ||
-    sortBy !== "recent";
+  async function handleDeleteContact(contact: BackendContact) {
+    const contactName =
+      contact.fullName || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim() || "ce contact";
+
+    const confirmed = window.confirm(`Supprimer ${contactName} ?`);
+    if (!confirmed) return;
+
+    try {
+      setDeletingContactId(contact.id);
+      setError(null);
+      setSuccess(null);
+      await contactsService.remove(contact.id);
+      await loadContacts();
+      setSuccess("Contact supprime avec succes.");
+    } catch (err) {
+      console.error("Failed to delete contact", err);
+      setError("Impossible de supprimer le contact.");
+    } finally {
+      setDeletingContactId(null);
+    }
+  }
+
+  const stats = React.useMemo(() => {
+    const blocked = contacts.filter((item) => item.isBlocked).length;
+    return {
+      total: contacts.length,
+      active: contacts.length - blocked,
+      blocked,
+    };
+  }, [contacts]);
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Contacts</h1>
-          <p className="text-sm text-muted-foreground">
-            Gérez vos contacts, segmentez-les et retrouvez rapidement leur
-            activité.
-          </p>
-        </div>
-
-        <Button className="rounded-xl bg-slate-950 text-white hover:bg-slate-800">
-          <Plus className="mr-2 h-4 w-4" />
-          Nouveau contact
-        </Button>
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight">Contacts</h1>
+        <p className="text-sm text-muted-foreground">
+          Donnees dynamiques chargees depuis le backend.
+        </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          title="Total contacts"
-          value={stats.total}
-          subtitle="Base client totale"
-          icon={<Users className="h-4 w-4" />}
-        />
-        <StatCard
-          title="Actifs"
-          value={stats.active}
-          subtitle="Interactions récentes"
-          icon={<UserCheck className="h-4 w-4" />}
-        />
-        <StatCard
-          title="Inactifs"
-          value={stats.inactive}
-          subtitle="À relancer"
-          icon={<UserX className="h-4 w-4" />}
-        />
-        <StatCard
-          title="Bloqués"
-          value={stats.blocked}
-          subtitle="Contacts sensibles"
-          icon={<ShieldAlert className="h-4 w-4" />}
-        />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Total</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">{stats.total}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Actifs</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">{stats.active}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Bloques</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">{stats.blocked}</CardContent>
+        </Card>
       </div>
 
-      <Card className="rounded-3xl border-border/60 shadow-sm">
-        <CardContent className="p-4">
-          <div className="mb-4 flex items-center gap-2">
-            <div className="rounded-xl bg-muted p-2 text-muted-foreground">
-              <SlidersHorizontal className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="font-medium">Filtres et recherche</p>
-              <p className="text-sm text-muted-foreground">
-                Filtrez vos contacts par état, segment, source ou tag.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-            <div className="w-full xl:flex-1">
-              <SearchInput value={search} onChange={setSearch} />
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
-              <Select
-                value={status}
-                onValueChange={(value) =>
-                  setStatus(value as ContactStatus | "all")
-                }
-              >
-                <SelectTrigger className="h-11 w-full rounded-xl xl:w-[160px]">
-                  <SelectValue placeholder="Statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous statuts</SelectItem>
-                  <SelectItem value="active">Actif</SelectItem>
-                  <SelectItem value="inactive">Inactif</SelectItem>
-                  <SelectItem value="blocked">Bloqué</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={segment}
-                onValueChange={(value) =>
-                  setSegment(value as ContactSegment | "all")
-                }
-              >
-                <SelectTrigger className="h-11 w-full rounded-xl xl:w-[160px]">
-                  <SelectValue placeholder="Segment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous segments</SelectItem>
-                  <SelectItem value="vip">VIP</SelectItem>
-                  <SelectItem value="lead">Lead</SelectItem>
-                  <SelectItem value="customer">Client</SelectItem>
-                  <SelectItem value="inactive">Inactif</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={source}
-                onValueChange={(value) =>
-                  setSource(value as ContactSource | "all")
-                }
-              >
-                <SelectTrigger className="h-11 w-full rounded-xl xl:w-[160px]">
-                  <SelectValue placeholder="Source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes sources</SelectItem>
-                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                  <SelectItem value="manual">Manuel</SelectItem>
-                  <SelectItem value="import">Import</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={tag} onValueChange={setTag}>
-                <SelectTrigger className="h-11 w-full rounded-xl xl:w-[160px]">
-                  <SelectValue placeholder="Tag" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous tags</SelectItem>
-                  {allTags.map((currentTag) => (
-                    <SelectItem key={currentTag} value={currentTag}>
-                      {currentTag}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={sortBy}
-                onValueChange={(value) => setSortBy(value as SortOption)}
-              >
-                <SelectTrigger className="h-11 w-full rounded-xl xl:w-[180px]">
-                  <SelectValue placeholder="Tri" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recent">Dernière activité</SelectItem>
-                  <SelectItem value="oldest">Plus ancienne activité</SelectItem>
-                  <SelectItem value="most-conversations">
-                    Plus de conversations
-                  </SelectItem>
-                  <SelectItem value="most-notes">Plus de notes</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 rounded-xl"
-                onClick={resetFilters}
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Réinitialiser
-              </Button>
-            </div>
-          </div>
-
-          {hasActiveFilters ? (
-            <div className="mt-4 text-sm text-muted-foreground">
-              Filtres actifs appliqués
-            </div>
-          ) : null}
+      <Card>
+        <CardHeader>
+          <CardTitle>Ajouter un contact</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleCreateContact} className="grid gap-3 md:grid-cols-5">
+            <Input
+              placeholder="Prenom *"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+            />
+            <Input
+              placeholder="Nom"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+            />
+            <Input
+              placeholder="Telephone *"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+            />
+            <Input
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              Ajouter
+            </Button>
+          </form>
         </CardContent>
       </Card>
 
-      <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-        {filteredContacts.length} contact(s) trouvé(s)
-      </div>
-
-      {filteredContacts.length === 0 ? (
-        <Card className="rounded-3xl border-border/60 shadow-sm">
-          <CardContent className="flex min-h-[220px] flex-col items-center justify-center p-6 text-center">
-            <div className="mb-3 rounded-full bg-muted p-3">
-              <Users className="h-5 w-5 text-muted-foreground" />
+      <Card>
+        <CardHeader>
+          <CardTitle>Liste des contacts</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3 md:flex-row">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="pl-10"
+                placeholder="Rechercher par nom, telephone ou email"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
-            <h3 className="mb-1 text-lg font-semibold">Aucun contact trouvé</h3>
-            <p className="max-w-md text-sm text-muted-foreground">
-              Essaie de modifier les filtres ou la recherche pour afficher plus
-              de résultats.
-            </p>
+            <Button type="button" variant="outline" onClick={() => void loadContacts()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Actualiser
+            </Button>
+          </div>
 
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              <Button variant="outline" className="rounded-xl" onClick={resetFilters}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Réinitialiser
-              </Button>
-              <Button className="rounded-xl bg-slate-950 text-white hover:bg-slate-800">
-                <Plus className="mr-2 h-4 w-4" />
-                Nouveau contact
-              </Button>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {success ? <p className="text-sm text-emerald-700">{success}</p> : null}
+
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Chargement...
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div className="hidden overflow-hidden rounded-3xl border border-border/60 bg-background shadow-sm lg:block">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Contact</th>
-                  <th className="px-4 py-3 font-medium">Coordonnées</th>
-                  <th className="px-4 py-3 font-medium">Segment</th>
-                  <th className="px-4 py-3 font-medium">Tags</th>
-                  <th className="px-4 py-3 font-medium">Activité</th>
-                  <th className="px-4 py-3 font-medium">Statut</th>
-                  <th className="px-4 py-3 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredContacts.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="border-t border-border/60 align-top transition hover:bg-muted/20"
-                  >
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border border-border/60">
-                          <AvatarFallback>
-                            {getInitials(item.fullName)}
-                          </AvatarFallback>
-                        </Avatar>
-
-                        <div>
-                          <p className="font-medium">{item.fullName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {item.phone}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-4">
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        {item.email ? (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4" />
-                            <span>{item.email}</span>
-                          </div>
-                        ) : (
-                          <span>—</span>
-                        )}
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          <span>{item.city ?? "—"}</span>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-4">
-                      <div className="flex flex-col gap-2">
-                        <Badge variant="secondary" className="w-fit rounded-full">
-                          {segmentLabel(item.segment)}
-                        </Badge>
-                        <Badge variant="outline" className="w-fit rounded-full">
-                          {sourceLabel(item.source)}
-                        </Badge>
-                      </div>
-                    </td>
-
-                    <td className="max-w-[220px] px-4 py-4">
-                      <TagList tags={item.tags} />
-                    </td>
-
-                    <td className="px-4 py-4">
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4" />
-                          <span>{item.conversationsCount} conversation(s)</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <StickyNote className="h-4 w-4" />
-                          <span>{item.notesCount} note(s)</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock3 className="h-4 w-4" />
-                          <span>{formatDate(item.lastConversationAt)}</span>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-4">
-                      <StatusBadge status={item.status} />
-                    </td>
-
-                    <td className="px-4 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="icon" className="rounded-xl">
-                          <Phone className="h-4 w-4" />
-                        </Button>
-
-                        <Button variant="outline" size="icon" className="rounded-xl">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-
-                        <Button asChild variant="outline" className="rounded-xl">
-                          <Link href={`/contacts/${item.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Voir détail
-                          </Link>
-                        </Button>
-
-                        <Button variant="outline" size="icon" className="rounded-xl">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
+          ) : contacts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucun contact trouve.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead className="bg-muted/40">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">Nom</th>
+                    <th className="px-4 py-3 text-left font-medium">Telephone</th>
+                    <th className="px-4 py-3 text-left font-medium">Email</th>
+                    <th className="px-4 py-3 text-left font-medium">Tags</th>
+                    <th className="px-4 py-3 text-left font-medium">Statut</th>
+                    <th className="px-4 py-3 text-right font-medium">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="grid gap-4 lg:hidden">
-            {filteredContacts.map((contact) => (
-              <ContactMobileCard key={contact.id} contact={contact} />
-            ))}
-          </div>
-        </>
-      )}
+                </thead>
+                <tbody>
+                  {contacts.map((contact) => (
+                    <tr key={contact.id} className="border-t">
+                      <td className="px-4 py-3">{contact.fullName || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim()}</td>
+                      <td className="px-4 py-3">{contact.phoneNumber}</td>
+                      <td className="px-4 py-3">{contact.email || "-"}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {(contact.tags ?? []).length ? (
+                            (contact.tags ?? []).map((tag) => (
+                              <Badge key={`${contact.id}-${tag}`} variant="outline">
+                                {tag}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={contact.isBlocked ? "destructive" : "secondary"}>
+                          {statusLabel(contact.isBlocked)}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <Button asChild variant="outline" size="sm">
+                            <Link href={`/contacts/${contact.id}`}>Voir</Link>
+                          </Button>
+                          <Button asChild size="sm">
+                            <Link href={`/contacts/${contact.id}/edit`}>Modifier</Link>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => void handleDeleteContact(contact)}
+                            disabled={deletingContactId === contact.id}
+                          >
+                            {deletingContactId === contact.id ? (
+                              <>
+                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                                Suppression...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="mr-1 h-4 w-4" />
+                                Supprimer
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

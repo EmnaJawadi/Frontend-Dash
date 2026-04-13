@@ -24,17 +24,7 @@ const AGENT_ROUTES = [
   "/settings/account",
 ];
 
-const SUPER_ADMIN_ROUTES = [
-  "/admin/dashboard",
-  "/admin/companies",
-  "/admin/users",
-  "/admin/subscriptions",
-  "/admin/settings",
-  "/settings",
-  "/settings/account",
-];
-
-type AppRole = "OWNER" | "AGENT" | "SUPER_ADMIN";
+type AppRole = "OWNER" | "AGENT";
 
 function isIgnoredRoute(pathname: string): boolean {
   return (
@@ -57,13 +47,11 @@ function matchesRoute(pathname: string, routes: string[]): boolean {
 }
 
 function isValidRole(role: string | undefined): role is AppRole {
-  return role === "OWNER" || role === "AGENT" || role === "SUPER_ADMIN";
+  return role === "OWNER" || role === "AGENT";
 }
 
 function getDefaultRouteByRole(role: AppRole): string {
   switch (role) {
-    case "SUPER_ADMIN":
-      return "/admin/dashboard";
     case "OWNER":
     case "AGENT":
       return "/dashboard";
@@ -119,11 +107,6 @@ export function middleware(request: NextRequest) {
       return matchesRoute(pathname, AGENT_ROUTES)
         ? NextResponse.next()
         : redirectTo(request, "/dashboard");
-
-    case "SUPER_ADMIN":
-      return matchesRoute(pathname, SUPER_ADMIN_ROUTES)
-        ? NextResponse.next()
-        : redirectTo(request, "/admin/dashboard");
 
     default:
       return redirectTo(request, "/login");

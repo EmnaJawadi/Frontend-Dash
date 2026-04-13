@@ -25,7 +25,10 @@ async function parseResponse(response: Response): Promise<unknown> {
   return response.text();
 }
 
-async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+async function request<T>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<T> {
   if (!API_URL) {
     throw new Error("NEXT_PUBLIC_API_URL is not defined");
   }
@@ -41,21 +44,16 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
       ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,
-    credentials: "include",
   });
 
   const data = await parseResponse(response);
 
   if (!response.ok) {
-    const message =
-      typeof data === "object" &&
-      data !== null &&
-      "message" in data &&
-      typeof (data as { message?: unknown }).message === "string"
-        ? (data as { message: string }).message
-        : "Request failed";
-
-    throw new ApiError(message, response.status, data);
+    throw new ApiError(
+      typeof data === "string" ? data : "Request failed",
+      response.status,
+      data
+    );
   }
 
   return data as T;

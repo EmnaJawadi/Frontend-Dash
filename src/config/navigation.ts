@@ -8,7 +8,6 @@ import {
   Building2,
   UserRoundPlus,
   Wrench,
-  Shield,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { UserRole } from "@/src/types/role";
@@ -47,19 +46,19 @@ const OWNER_NAVIGATION: NavigationItem[] = [
     matchStartsWith: true,
   },
   {
-    label: "Paramètres",
+    label: "Parametres",
     href: "/settings",
     icon: Settings,
     matchStartsWith: true,
   },
   {
-    label: "Informations société",
+    label: "Informations societe",
     href: "/company-info",
     icon: Building2,
     matchStartsWith: true,
   },
   {
-    label: "Équipe",
+    label: "Equipe",
     href: "/team",
     icon: UserRoundPlus,
     matchStartsWith: true,
@@ -93,29 +92,12 @@ const AGENT_NAVIGATION: NavigationItem[] = [
     matchStartsWith: true,
   },
   {
-    label: "Paramètres",
+    label: "Parametres",
     href: "/settings",
     icon: Settings,
     matchStartsWith: true,
   },
 ];
-
-const SUPER_ADMIN_NAVIGATION: NavigationItem[] = [
-  {
-    label: "Dashboard admin",
-    href: "/admin/dashboard",
-    icon: Shield,
-    matchStartsWith: true,
-  },
-  {
-    label: "Paramètres admin",
-    href: "/admin/settings",
-    icon: Settings,
-    matchStartsWith: true,
-  },
-];
-
-export const adminNavigation: NavigationItem[] = SUPER_ADMIN_NAVIGATION;
 
 export function getNavigationByRole(role: UserRole): NavigationItem[] {
   switch (role) {
@@ -123,8 +105,6 @@ export function getNavigationByRole(role: UserRole): NavigationItem[] {
       return OWNER_NAVIGATION;
     case "AGENT":
       return AGENT_NAVIGATION;
-    case "SUPER_ADMIN":
-      return SUPER_ADMIN_NAVIGATION;
     default:
       return [];
   }
