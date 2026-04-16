@@ -8,7 +8,7 @@ export default function RegisterPage() {
         <div className="mb-6 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Creation de compte</p>
           <h1 className="text-2xl font-bold text-foreground md:text-3xl">Creer un compte</h1>
-          <p className="text-sm text-muted-foreground">Creez un compte entreprise (owner) ou un compte agent (employe).</p>
+          <p className="text-sm text-muted-foreground">Creez un compte Super Admin, Admin entreprise (owner) ou Agent (employe).</p>
         </div>
 
         <RegisterForm />

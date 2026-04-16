@@ -109,6 +109,7 @@ export default function LoginForm() {
           onChange={handleChange}
           className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
         >
+          <option value="SUPER_ADMIN">Super Admin (plateforme)</option>
           <option value="OWNER">Admin entreprise (owner)</option>
           <option value="AGENT">Agent (employe)</option>
         </select>

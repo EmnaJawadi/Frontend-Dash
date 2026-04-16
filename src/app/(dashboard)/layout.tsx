@@ -10,7 +10,7 @@ type DashboardLayoutProps = {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <RoleGuard allowedRoles={["OWNER", "AGENT"]}>
+    <RoleGuard allowedRoles={["SUPER_ADMIN", "OWNER", "AGENT"]}>
       <div className="min-h-screen">
         <Header />
 

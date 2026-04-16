@@ -13,6 +13,7 @@ export const ONBOARDING_ROUTES = {
 } as const;
 
 export const APP_ROUTES = {
+  SUPER_ADMIN: "/super-admin",
   DASHBOARD: "/dashboard",
   CONVERSATIONS: "/conversations",
   CONTACTS: "/contacts",
@@ -41,6 +42,11 @@ export const OWNER_ROUTES: string[] = [
   ONBOARDING_ROUTES.SETUP,
 ];
 
+export const SUPER_ADMIN_ROUTES: string[] = [
+  APP_ROUTES.SUPER_ADMIN,
+  ...OWNER_ROUTES,
+];
+
 export const AGENT_ROUTES: string[] = [
   APP_ROUTES.DASHBOARD,
   APP_ROUTES.CONVERSATIONS,
@@ -51,12 +57,15 @@ export const AGENT_ROUTES: string[] = [
 ];
 
 export const DEFAULT_ROUTE_BY_ROLE: Record<UserRole, string> = {
+  SUPER_ADMIN: APP_ROUTES.SUPER_ADMIN,
   OWNER: APP_ROUTES.DASHBOARD,
   AGENT: APP_ROUTES.DASHBOARD,
 };
 
 export function getAllowedRoutes(role: UserRole): string[] {
   switch (role) {
+    case "SUPER_ADMIN":
+      return SUPER_ADMIN_ROUTES;
     case "OWNER":
       return OWNER_ROUTES;
     case "AGENT":
@@ -75,7 +84,7 @@ export function isPublicRoute(pathname: string): boolean {
 }
 
 export function isAdminRoute(_pathname: string): boolean {
-  return false;
+  return _pathname === APP_ROUTES.SUPER_ADMIN || _pathname.startsWith(`${APP_ROUTES.SUPER_ADMIN}/`);
 }
 
 export function isOnboardingRoute(pathname: string): boolean {

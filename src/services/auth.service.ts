@@ -13,7 +13,7 @@ export type RegisterRequest = {
   email: string;
   password: string;
   phoneNumber?: string | null;
-  role?: "ADMIN" | "AGENT";
+  role?: "SUPER_ADMIN" | "ADMIN" | "AGENT";
 };
 
 export type BackendAuthUser = {

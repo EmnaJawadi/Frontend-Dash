@@ -12,6 +12,7 @@ import { headerSearchService, type HeaderSearchResult } from "@/src/services/hea
 import { ROLE_LABELS } from "@/src/types/role";
 
 const pageTitles: Record<string, string> = {
+  "/super-admin": "Super Admin",
   "/dashboard": "Tableau de bord",
   "/conversations": "Conversations",
   "/contacts": "Contacts",
@@ -22,6 +23,10 @@ const pageTitles: Record<string, string> = {
 };
 
 function getPageTitle(pathname: string) {
+  if (pathname.startsWith("/super-admin")) {
+    return "Super Admin";
+  }
+
   if (pathname.startsWith("/conversations/")) {
     return "Details de la conversation";
   }

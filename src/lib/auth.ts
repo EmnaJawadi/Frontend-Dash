@@ -21,19 +21,22 @@ import {
 export type CurrentUser = AuthUser;
 
 function mapBackendRole(role: BackendRole): UserRole {
+  if (role === "SUPER_ADMIN") return "SUPER_ADMIN";
   if (role === "AGENT") return "AGENT";
   return "OWNER";
 }
 
 function toAuthUser(user: BackendAuthUser, companyName?: string): AuthUser {
+  const role = mapBackendRole(user.role);
+
   return {
     id: user.id,
     firstName: user.firstName,
     lastName: user.lastName ?? "",
     email: user.email,
-    role: mapBackendRole(user.role),
-    companyId: "company-1",
-    companyName: companyName || "My Company",
+    role,
+    companyId: role === "SUPER_ADMIN" ? undefined : "company-1",
+    companyName: role === "SUPER_ADMIN" ? "Administration globale" : companyName || "My Company",
   };
 }
 
@@ -64,13 +67,19 @@ export async function login(payload: LoginPayload): Promise<AuthUser> {
 }
 
 export async function register(payload: RegisterPayload): Promise<AuthUser> {
-  const response = await authService.register({
+  const registerPayload = {
     firstName: payload.firstName.trim(),
     lastName: payload.lastName.trim(),
     email: payload.email.trim(),
     password: payload.password,
-    role: payload.role === "OWNER" ? "ADMIN" : "AGENT",
-  });
+    ...(payload.role === "OWNER"
+      ? { role: "ADMIN" as const }
+      : payload.role === "AGENT"
+        ? { role: "AGENT" as const }
+        : {}),
+  };
+
+  const response = await authService.register(registerPayload);
 
   const safeUser = toAuthUser(response.user, payload.companyName);
   saveSession(safeUser);

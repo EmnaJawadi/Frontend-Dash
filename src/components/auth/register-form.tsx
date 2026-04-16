@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { register, getDefaultRedirectByRole } from "@/src/lib/auth";
-import type { UserRole } from "@/src/types/role";
+import { isApiError } from "@/src/lib/api-error";
+import type { RegisterRole } from "@/src/types/auth";
 
 type RegisterFormState = {
   firstName: string;
@@ -11,7 +12,7 @@ type RegisterFormState = {
   email: string;
   password: string;
   confirmPassword: string;
-  role: UserRole;
+  role: RegisterRole;
   companyName: string;
 };
 
@@ -30,13 +31,16 @@ export default function RegisterForm() {
 
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingApi, setIsCheckingApi] = useState(false);
+  const [apiCheckMessage, setApiCheckMessage] = useState("");
+  const [apiCheckOk, setApiCheckOk] = useState<boolean | null>(null);
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = event.target;
 
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === "role" ? (value as RegisterRole) : value,
     }));
   }
 
@@ -59,7 +63,7 @@ export default function RegisterForm() {
       return;
     }
 
-    if (!formData.companyName.trim()) {
+    if (formData.role !== "SUPER_ADMIN" && !formData.companyName.trim()) {
       setError("Veuillez saisir le nom de l'entreprise.");
       return;
     }
@@ -73,16 +77,63 @@ export default function RegisterForm() {
         email: formData.email.trim(),
         password: formData.password,
         role: formData.role,
-        companyName: formData.companyName.trim(),
+        companyName:
+          formData.role === "SUPER_ADMIN" ? undefined : formData.companyName.trim(),
       });
 
       const redirectPath = user.role === "OWNER" ? "/company-info" : getDefaultRedirectByRole(user.role);
       router.push(redirectPath);
       router.refresh();
-    } catch {
-      setError("Impossible de creer le compte. Veuillez reessayer.");
+    } catch (submitError) {
+      if (isApiError(submitError)) {
+        setError(submitError.message || "Erreur API lors de la creation du compte.");
+      } else {
+        const message = submitError instanceof Error ? submitError.message : "Impossible de creer le compte.";
+        if (message.toLowerCase().includes("failed to fetch")) {
+          setError("API inaccessible. Verifiez que le backend tourne sur http://localhost:3001.");
+        } else {
+          setError(message);
+        }
+      }
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleTestApiConnection() {
+    setApiCheckMessage("");
+    setApiCheckOk(null);
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+    if (!apiUrl) {
+      setApiCheckOk(false);
+      setApiCheckMessage("NEXT_PUBLIC_API_URL est manquant.");
+      return;
+    }
+
+    setIsCheckingApi(true);
+
+    try {
+      const response = await fetch(`${apiUrl}/auth/me`, {
+        method: "GET",
+      });
+
+      if (response.ok) {
+        setApiCheckOk(true);
+        setApiCheckMessage("API connectee (endpoint auth/me OK).");
+      } else if (response.status === 401) {
+        setApiCheckOk(true);
+        setApiCheckMessage("API connectee (backend joignable, authentification requise).");
+      } else {
+        setApiCheckOk(false);
+        setApiCheckMessage(`API joignable mais reponse inattendue (HTTP ${response.status}).`);
+      }
+    } catch {
+      setApiCheckOk(false);
+      setApiCheckMessage("API inaccessible. Verifiez que le backend tourne sur http://localhost:3001.");
+    } finally {
+      setIsCheckingApi(false);
     }
   }
 
@@ -182,24 +233,52 @@ export default function RegisterForm() {
           onChange={handleChange}
           className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
         >
+          <option value="SUPER_ADMIN">Super Admin (plateforme)</option>
           <option value="OWNER">Admin entreprise (owner)</option>
           <option value="AGENT">Agent (employe)</option>
         </select>
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="companyName" className="block text-sm font-medium">
-          Nom de l'entreprise
-        </label>
-        <input
-          id="companyName"
-          name="companyName"
-          type="text"
-          value={formData.companyName}
-          onChange={handleChange}
-          placeholder="Support Vision"
-          className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
-        />
+      {formData.role !== "SUPER_ADMIN" ? (
+        <div className="space-y-1">
+          <label htmlFor="companyName" className="block text-sm font-medium">
+            Nom de l'entreprise
+          </label>
+          <input
+            id="companyName"
+            name="companyName"
+            type="text"
+            value={formData.companyName}
+            onChange={handleChange}
+            placeholder="Support Vision"
+            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
+          />
+        </div>
+      ) : null}
+
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={handleTestApiConnection}
+          disabled={isCheckingApi}
+          className="w-full rounded-xl border border-border/70 bg-background px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {isCheckingApi ? "Test de connexion API..." : "Tester connexion API"}
+        </button>
+
+        {apiCheckMessage ? (
+          <p
+            className={`text-sm ${
+              apiCheckOk === true
+                ? "text-emerald-700"
+                : apiCheckOk === false
+                  ? "text-red-700"
+                  : "text-muted-foreground"
+            }`}
+          >
+            {apiCheckMessage}
+          </p>
+        ) : null}
       </div>
 
       <button

@@ -50,10 +50,12 @@ export default function AppSidebar() {
   }, [role]);
 
   const isActive = (href: string, matchStartsWith?: boolean) => {
+    const baseHref = href.split("#")[0];
+
     if (matchStartsWith) {
-      return pathname.startsWith(href);
+      return pathname.startsWith(baseHref);
     }
-    return pathname === href;
+    return pathname === baseHref;
   };
 
   const handleLogout = () => {

@@ -1,5 +1,7 @@
 import type { UserRole } from "./role";
 
+export type RegisterRole = UserRole;
+
 export interface LoginPayload {
   email: string;
   password: string;
@@ -11,7 +13,7 @@ export interface RegisterPayload {
   lastName: string;
   email: string;
   password: string;
-  role: UserRole;
+  role: RegisterRole;
   companyName?: string;
 }
 

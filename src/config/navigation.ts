@@ -8,6 +8,7 @@ import {
   Building2,
   UserRoundPlus,
   Wrench,
+  ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { UserRole } from "@/src/types/role";
@@ -71,6 +72,40 @@ const OWNER_NAVIGATION: NavigationItem[] = [
   },
 ];
 
+const SUPER_ADMIN_NAVIGATION: NavigationItem[] = [
+  {
+    label: "Super Admin",
+    href: "/super-admin",
+    icon: ShieldCheck,
+    matchStartsWith: true,
+  },
+  { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
+  {
+    label: "Conversations",
+    href: "/conversations",
+    icon: MessageSquare,
+    matchStartsWith: true,
+  },
+  {
+    label: "Contacts",
+    href: "/contacts",
+    icon: Users,
+    matchStartsWith: true,
+  },
+  {
+    label: "Analyses",
+    href: "/analytics",
+    icon: BarChart3,
+    matchStartsWith: true,
+  },
+  {
+    label: "Parametres",
+    href: "/settings",
+    icon: Settings,
+    matchStartsWith: true,
+  },
+];
+
 const AGENT_NAVIGATION: NavigationItem[] = [
   { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
   {
@@ -101,6 +136,8 @@ const AGENT_NAVIGATION: NavigationItem[] = [
 
 export function getNavigationByRole(role: UserRole): NavigationItem[] {
   switch (role) {
+    case "SUPER_ADMIN":
+      return SUPER_ADMIN_NAVIGATION;
     case "OWNER":
       return OWNER_NAVIGATION;
     case "AGENT":

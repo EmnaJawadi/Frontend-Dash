@@ -9,6 +9,10 @@ export default function ForgotPasswordForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const isSmtpConfigError =
+    error.toLowerCase().includes("smtp") ||
+    error.toLowerCase().includes("app password") ||
+    error.toLowerCase().includes("service unavailable");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,7 +51,17 @@ export default function ForgotPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error ? <div className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
+      {error ? (
+        <div className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div>{error}</div>
+          {isSmtpConfigError ? (
+            <div className="mt-2 text-xs text-red-800/90">
+              Action requise: configurez SMTP_PASS (mot de passe d&apos;application Gmail) dans
+              le fichier backend <code>.env</code>, puis redemarrez le backend.
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="space-y-1">
         <label className="block text-sm font-medium">Email</label>

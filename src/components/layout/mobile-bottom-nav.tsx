@@ -28,7 +28,8 @@ export default function MobileBottomNav() {
       <div className="grid grid-cols-4 gap-1">
         {items.map((item) => {
           const Icon = item.icon;
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const targetPath = item.href.split("#")[0];
+          const active = pathname === targetPath || pathname.startsWith(`${targetPath}/`);
 
           return (
             <Link

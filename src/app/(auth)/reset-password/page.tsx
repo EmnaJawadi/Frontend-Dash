@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import ResetPasswordForm from "@/src/components/auth/reset-password-form";
 
@@ -11,7 +12,9 @@ export default function ResetPasswordPage() {
           <p className="text-sm text-muted-foreground">Entrez votre nouveau mot de passe pour terminer la reinitialisation.</p>
         </div>
 
-        <ResetPasswordForm />
+        <Suspense fallback={<div className="text-sm text-muted-foreground">Chargement...</div>}>
+          <ResetPasswordForm />
+        </Suspense>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Retour a{" "}

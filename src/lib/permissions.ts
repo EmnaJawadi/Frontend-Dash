@@ -2,31 +2,31 @@ import type { UserRole } from "@/src/types/role";
 import { APP_ROUTES, getAllowedRoutes, matchesAllowedRoute } from "@/src/lib/routes";
 
 export function canAccessAdmin(_role: UserRole): boolean {
-  return false;
+  return _role === "SUPER_ADMIN";
 }
 
 export function canAccessDashboard(role: UserRole): boolean {
-  return role === "OWNER" || role === "AGENT";
+  return role === "SUPER_ADMIN" || role === "OWNER" || role === "AGENT";
 }
 
 export function canManageCompany(role: UserRole): boolean {
-  return role === "OWNER";
+  return role === "SUPER_ADMIN" || role === "OWNER";
 }
 
 export function canManageUsers(role: UserRole): boolean {
-  return role === "OWNER";
+  return role === "SUPER_ADMIN" || role === "OWNER";
 }
 
 export function canViewAnalytics(role: UserRole): boolean {
-  return role === "OWNER";
+  return role === "SUPER_ADMIN" || role === "OWNER";
 }
 
 export function canViewContacts(role: UserRole): boolean {
-  return role === "OWNER" || role === "AGENT";
+  return role === "SUPER_ADMIN" || role === "OWNER" || role === "AGENT";
 }
 
 export function canViewConversations(role: UserRole): boolean {
-  return role === "OWNER" || role === "AGENT";
+  return role === "SUPER_ADMIN" || role === "OWNER" || role === "AGENT";
 }
 
 export function canAccessPath(role: UserRole, pathname: string): boolean {
@@ -35,6 +35,18 @@ export function canAccessPath(role: UserRole, pathname: string): boolean {
 }
 
 export function getNavigationByRole(role: UserRole) {
+  if (role === "SUPER_ADMIN") {
+    return [
+      { label: "Super Admin", href: APP_ROUTES.SUPER_ADMIN },
+      { label: "Tableau de bord", href: APP_ROUTES.DASHBOARD },
+      { label: "Conversations", href: APP_ROUTES.CONVERSATIONS },
+      { label: "Contacts", href: APP_ROUTES.CONTACTS },
+      { label: "Base de connaissances", href: APP_ROUTES.KNOWLEDGE_BASE },
+      { label: "Analyses", href: APP_ROUTES.ANALYTICS },
+      { label: "Parametres", href: APP_ROUTES.SETTINGS },
+    ];
+  }
+
   if (role === "OWNER") {
     return [
       { label: "Tableau de bord", href: APP_ROUTES.DASHBOARD },
