@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { isApiError } from "@/src/lib/api-error";
 import { contactsService } from "@/src/services/contacts.service";
 
 type BackendContact = {
@@ -32,6 +33,13 @@ type ContactsResponse = {
 
 function statusLabel(isBlocked: boolean) {
   return isBlocked ? "Bloque" : "Actif";
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (isApiError(error)) {
+    return error.message || fallback;
+  }
+  return fallback;
 }
 
 export default function ContactsPage() {
@@ -123,7 +131,7 @@ export default function ContactsPage() {
       setSuccess("Contact supprime avec succes.");
     } catch (err) {
       console.error("Failed to delete contact", err);
-      setError("Impossible de supprimer le contact.");
+      setError(getErrorMessage(err, "Impossible de supprimer le contact."));
     } finally {
       setDeletingContactId(null);
     }

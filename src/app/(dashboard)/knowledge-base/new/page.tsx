@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, FileText, Loader2, Save, Tags, UserRound } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, Save, Tags, Upload, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,7 @@ export default function NewArticlePage() {
   const [content, setContent] = React.useState("");
   const [category, setCategory] = React.useState<ArticleCategory>("commandes");
   const [author, setAuthor] = React.useState("Emna");
+  const [documentFile, setDocumentFile] = React.useState<File | null>(null);
   const [sourceConversationId, setSourceConversationId] = React.useState<string | null>(null);
   const [sourceApplied, setSourceApplied] = React.useState(false);
 
@@ -103,12 +104,12 @@ export default function NewArticlePage() {
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (!title.trim()) {
+    if (!title.trim() && !documentFile) {
       setError("Le titre est obligatoire.");
       return;
     }
 
-    if (content.trim().length < 20) {
+    if (!documentFile && content.trim().length < 20) {
       setError("Le contenu doit contenir au moins 20 caracteres.");
       return;
     }
@@ -117,12 +118,21 @@ export default function NewArticlePage() {
       setIsSubmitting(true);
       setError("");
 
-      await knowledgeBaseService.create({
-        title: title.trim(),
-        content: content.trim(),
-        summary: category,
-        language: "fr",
-      });
+      if (documentFile) {
+        await knowledgeBaseService.createFromFile({
+          file: documentFile,
+          title: title.trim() || documentFile.name,
+          summary: category,
+          language: "fr",
+        });
+      } else {
+        await knowledgeBaseService.create({
+          title: title.trim(),
+          content: content.trim(),
+          summary: category,
+          language: "fr",
+        });
+      }
 
       setSaveMessage("Article enregistre en base avec succes.");
       setTimeout(() => {
@@ -233,8 +243,32 @@ export default function NewArticlePage() {
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Redigez ici le contenu de l'article..."
-                  className="min-h-[220px] rounded-xl"
+                  disabled={Boolean(documentFile)}
+                  className="min-h-[220px] rounded-xl disabled:cursor-not-allowed disabled:bg-muted/50"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Si vous importez un fichier, le contenu sera extrait automatiquement.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="kb-file-upload">Importer un fichier (PDF, Word, PowerPoint)</Label>
+                <Input
+                  id="kb-file-upload"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                  className="h-11 rounded-xl"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    setDocumentFile(file);
+                    setError("");
+                  }}
+                />
+                {documentFile ? (
+                  <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm text-cyan-800">
+                    Fichier selectionne: {documentFile.name} ({Math.ceil(documentFile.size / 1024)} KB)
+                  </div>
+                ) : null}
               </div>
             </CardContent>
           </Card>
@@ -262,7 +296,11 @@ export default function NewArticlePage() {
               </div>
 
               <div className="rounded-2xl border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
-                {content ? content.slice(0, 220) + (content.length > 220 ? "..." : "") : "Aucun contenu saisi pour le moment."}
+                {documentFile
+                  ? `Le contenu sera extrait automatiquement depuis ${documentFile.name}.`
+                  : content
+                    ? content.slice(0, 220) + (content.length > 220 ? "..." : "")
+                    : "Aucun contenu saisi pour le moment."}
               </div>
             </CardContent>
           </Card>
@@ -276,6 +314,10 @@ export default function NewArticlePage() {
               <p className="text-sm text-muted-foreground">
                 Utilisez des reponses courtes, claires et faciles a reutiliser par le bot dans les conversations clients.
               </p>
+              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <Upload className="h-3.5 w-3.5" />
+                Admin et agents peuvent aussi importer des fichiers PDF, Word et PowerPoint.
+              </div>
 
               <div className="mt-4">
                 <Button

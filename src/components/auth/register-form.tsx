@@ -31,9 +31,6 @@ export default function RegisterForm() {
 
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCheckingApi, setIsCheckingApi] = useState(false);
-  const [apiCheckMessage, setApiCheckMessage] = useState("");
-  const [apiCheckOk, setApiCheckOk] = useState<boolean | null>(null);
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = event.target;
@@ -97,43 +94,6 @@ export default function RegisterForm() {
       }
     } finally {
       setIsSubmitting(false);
-    }
-  }
-
-  async function handleTestApiConnection() {
-    setApiCheckMessage("");
-    setApiCheckOk(null);
-
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-    if (!apiUrl) {
-      setApiCheckOk(false);
-      setApiCheckMessage("NEXT_PUBLIC_API_URL est manquant.");
-      return;
-    }
-
-    setIsCheckingApi(true);
-
-    try {
-      const response = await fetch(`${apiUrl}/auth/me`, {
-        method: "GET",
-      });
-
-      if (response.ok) {
-        setApiCheckOk(true);
-        setApiCheckMessage("API connectee (endpoint auth/me OK).");
-      } else if (response.status === 401) {
-        setApiCheckOk(true);
-        setApiCheckMessage("API connectee (backend joignable, authentification requise).");
-      } else {
-        setApiCheckOk(false);
-        setApiCheckMessage(`API joignable mais reponse inattendue (HTTP ${response.status}).`);
-      }
-    } catch {
-      setApiCheckOk(false);
-      setApiCheckMessage("API inaccessible. Verifiez que le backend tourne sur http://localhost:3001.");
-    } finally {
-      setIsCheckingApi(false);
     }
   }
 
@@ -255,31 +215,6 @@ export default function RegisterForm() {
           />
         </div>
       ) : null}
-
-      <div className="space-y-2">
-        <button
-          type="button"
-          onClick={handleTestApiConnection}
-          disabled={isCheckingApi}
-          className="w-full rounded-xl border border-border/70 bg-background px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          {isCheckingApi ? "Test de connexion API..." : "Tester connexion API"}
-        </button>
-
-        {apiCheckMessage ? (
-          <p
-            className={`text-sm ${
-              apiCheckOk === true
-                ? "text-emerald-700"
-                : apiCheckOk === false
-                  ? "text-red-700"
-                  : "text-muted-foreground"
-            }`}
-          >
-            {apiCheckMessage}
-          </p>
-        ) : null}
-      </div>
 
       <button
         type="submit"

@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { isApiError } from "@/src/lib/api-error";
 import { knowledgeBaseService } from "@/src/services/knowledge-base.service";
 
 type ArticleStatus = "published" | "draft" | "archived";
@@ -261,7 +262,11 @@ export default function KnowledgeBasePage() {
       setSuccess("Article supprime avec succes.");
     } catch (err) {
       console.error("Failed to delete article", err);
-      setError("Impossible de supprimer l'article.");
+      setError(
+        isApiError(err) && err.message
+          ? err.message
+          : "Impossible de supprimer l'article.",
+      );
     } finally {
       setDeletingArticleId(null);
     }

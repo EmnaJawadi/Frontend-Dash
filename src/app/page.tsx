@@ -11,7 +11,7 @@ export default async function HomePage() {
   }
 
   if (role === "SUPER_ADMIN") {
-    redirect("/super-admin");
+    redirect("/admin/dashboard");
   }
 
   redirect("/dashboard");

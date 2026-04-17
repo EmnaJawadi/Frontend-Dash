@@ -22,8 +22,8 @@ export type CurrentUser = AuthUser;
 
 function mapBackendRole(role: BackendRole): UserRole {
   if (role === "SUPER_ADMIN") return "SUPER_ADMIN";
-  if (role === "AGENT") return "AGENT";
-  return "OWNER";
+  if (role === "COMPANY_ADMIN") return "OWNER";
+  return "AGENT";
 }
 
 function toAuthUser(user: BackendAuthUser, companyName?: string): AuthUser {
@@ -35,7 +35,7 @@ function toAuthUser(user: BackendAuthUser, companyName?: string): AuthUser {
     lastName: user.lastName ?? "",
     email: user.email,
     role,
-    companyId: role === "SUPER_ADMIN" ? undefined : "company-1",
+    companyId: role === "SUPER_ADMIN" ? undefined : user.companyId ?? undefined,
     companyName: role === "SUPER_ADMIN" ? "Administration globale" : companyName || "My Company",
   };
 }
@@ -72,11 +72,15 @@ export async function register(payload: RegisterPayload): Promise<AuthUser> {
     lastName: payload.lastName.trim(),
     email: payload.email.trim(),
     password: payload.password,
-    ...(payload.role === "OWNER"
-      ? { role: "ADMIN" as const }
-      : payload.role === "AGENT"
-        ? { role: "AGENT" as const }
-        : {}),
+    role:
+      payload.role === "SUPER_ADMIN"
+        ? ("SUPER_ADMIN" as const)
+        : payload.role === "OWNER"
+          ? ("COMPANY_ADMIN" as const)
+          : ("AGENT" as const),
+    ...(payload.role !== "SUPER_ADMIN" && payload.companyName?.trim()
+      ? { companyName: payload.companyName.trim() }
+      : {}),
   };
 
   const response = await authService.register(registerPayload);
@@ -86,27 +90,34 @@ export async function register(payload: RegisterPayload): Promise<AuthUser> {
   return safeUser;
 }
 
-export function updateCurrentUserProfile(payload: {
+export async function updateCurrentUserProfile(payload: {
   firstName: string;
   lastName: string;
-}): AuthUser {
+}): Promise<AuthUser> {
   const currentUser = getCurrentStoredUser();
+  const firstName = payload.firstName.trim();
+  const lastName = payload.lastName.trim();
 
-  const updatedUser: AuthUser = {
-    ...currentUser,
-    firstName: payload.firstName.trim(),
-    lastName: payload.lastName.trim(),
-  };
+  if (!firstName || !lastName) {
+    throw new Error("Le prenom et le nom sont obligatoires.");
+  }
+
+  const backendUser = await authService.updateMe({
+    firstName,
+    lastName,
+  });
+
+  const updatedUser = toAuthUser(backendUser, currentUser.companyName);
 
   saveSession(updatedUser);
   return updatedUser;
 }
 
-export function updateCurrentUserPassword(payload: {
+export async function updateCurrentUserPassword(payload: {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
-}): void {
+}): Promise<void> {
   if (!payload.currentPassword.trim()) {
     throw new Error("Mot de passe actuel incorrect.");
   }
@@ -118,6 +129,11 @@ export function updateCurrentUserPassword(payload: {
   if (payload.newPassword !== payload.confirmPassword) {
     throw new Error("Les mots de passe ne correspondent pas.");
   }
+
+  await authService.changePassword({
+    currentPassword: payload.currentPassword,
+    newPassword: payload.newPassword,
+  });
 }
 
 export function logout(): void {

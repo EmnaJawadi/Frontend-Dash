@@ -9,6 +9,7 @@ import {
   UserRoundPlus,
   Wrench,
   ShieldCheck,
+  CreditCard,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { UserRole } from "@/src/types/role";
@@ -74,33 +75,32 @@ const OWNER_NAVIGATION: NavigationItem[] = [
 
 const SUPER_ADMIN_NAVIGATION: NavigationItem[] = [
   {
-    label: "Super Admin",
-    href: "/super-admin",
+    label: "Dashboard Admin",
+    href: "/admin/dashboard",
     icon: ShieldCheck,
     matchStartsWith: true,
   },
-  { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
   {
-    label: "Conversations",
-    href: "/conversations",
-    icon: MessageSquare,
+    label: "Entreprises",
+    href: "/admin/companies",
+    icon: Building2,
     matchStartsWith: true,
   },
   {
-    label: "Contacts",
-    href: "/contacts",
+    label: "Utilisateurs",
+    href: "/admin/users",
     icon: Users,
     matchStartsWith: true,
   },
   {
-    label: "Analyses",
-    href: "/analytics",
-    icon: BarChart3,
+    label: "Abonnements",
+    href: "/admin/subscriptions",
+    icon: CreditCard,
     matchStartsWith: true,
   },
   {
     label: "Parametres",
-    href: "/settings",
+    href: "/admin/settings",
     icon: Settings,
     matchStartsWith: true,
   },

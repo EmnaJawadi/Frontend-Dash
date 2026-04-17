@@ -16,7 +16,14 @@ const OWNER_ROUTES = [
   "/setup",
 ];
 
-const SUPER_ADMIN_ROUTES = ["/super-admin", ...OWNER_ROUTES];
+const SUPER_ADMIN_ROUTES = [
+  "/admin",
+  "/admin/dashboard",
+  "/admin/companies",
+  "/admin/subscriptions",
+  "/admin/users",
+  "/admin/settings",
+];
 
 const AGENT_ROUTES = [
   "/dashboard",
@@ -57,7 +64,7 @@ function isValidRole(role: string | undefined): role is AppRole {
 function getDefaultRouteByRole(role: AppRole): string {
   switch (role) {
     case "SUPER_ADMIN":
-      return "/super-admin";
+      return "/admin/dashboard";
     case "OWNER":
     case "AGENT":
       return "/dashboard";
@@ -107,7 +114,7 @@ export function proxy(request: NextRequest) {
     case "SUPER_ADMIN":
       return matchesRoute(pathname, SUPER_ADMIN_ROUTES)
         ? NextResponse.next()
-        : redirectTo(request, "/super-admin");
+        : redirectTo(request, "/admin/dashboard");
 
     case "OWNER":
       return matchesRoute(pathname, OWNER_ROUTES)

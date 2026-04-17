@@ -90,7 +90,7 @@ export default function ProfileSettingsPage() {
 
   const isSuperAdmin = useMemo(() => role === "SUPER_ADMIN", [role]);
 
-  function handleProfileSave() {
+  async function handleProfileSave() {
     setError("");
     setProfileMessage("");
 
@@ -101,7 +101,7 @@ export default function ProfileSettingsPage() {
 
     try {
       setIsSavingProfile(true);
-      const updated = updateCurrentUserProfile({ firstName, lastName });
+      const updated = await updateCurrentUserProfile({ firstName, lastName });
       setFirstName(updated.firstName);
       setLastName(updated.lastName);
       setProfileMessage("Profil mis a jour.");
@@ -112,13 +112,13 @@ export default function ProfileSettingsPage() {
     }
   }
 
-  function handlePasswordSave() {
+  async function handlePasswordSave() {
     setError("");
     setPasswordMessage("");
 
     try {
       setIsSavingPassword(true);
-      updateCurrentUserPassword({ currentPassword, newPassword, confirmPassword });
+      await updateCurrentUserPassword({ currentPassword, newPassword, confirmPassword });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -181,7 +181,7 @@ export default function ProfileSettingsPage() {
                 <Badge variant="secondary">{role ? ROLE_LABELS[role] : "Utilisateur"}</Badge>
               </div>
             </div>
-            <Button type="button" onClick={handleProfileSave} disabled={isSavingProfile}>
+            <Button type="button" onClick={() => void handleProfileSave()} disabled={isSavingProfile}>
               <Save className="mr-2 h-4 w-4" />
               {isSavingProfile ? "Enregistrement..." : "Enregistrer profil"}
             </Button>
@@ -200,7 +200,7 @@ export default function ProfileSettingsPage() {
             <div><Label>Mot de passe actuel</Label><Input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} /></div>
             <div><Label>Nouveau mot de passe</Label><Input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} /></div>
             <div><Label>Confirmer mot de passe</Label><Input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></div>
-            <Button type="button" onClick={handlePasswordSave} disabled={isSavingPassword}>
+            <Button type="button" onClick={() => void handlePasswordSave()} disabled={isSavingPassword}>
               <LockKeyhole className="mr-2 h-4 w-4" />
               {isSavingPassword ? "Mise a jour..." : "Modifier mot de passe"}
             </Button>

@@ -25,6 +25,33 @@ async function parseResponse(response: Response): Promise<unknown> {
   return response.text();
 }
 
+function resolveApiErrorMessage(data: unknown): string {
+  if (typeof data === "string" && data.trim()) {
+    return data;
+  }
+
+  if (data && typeof data === "object") {
+    const value = data as { message?: unknown; error?: unknown };
+
+    if (typeof value.message === "string" && value.message.trim()) {
+      return value.message;
+    }
+
+    if (Array.isArray(value.message) && value.message.length > 0) {
+      const first = value.message[0];
+      if (typeof first === "string" && first.trim()) {
+        return first;
+      }
+    }
+
+    if (typeof value.error === "string" && value.error.trim()) {
+      return value.error;
+    }
+  }
+
+  return "Request failed";
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestOptions = {}
@@ -35,22 +62,23 @@ async function request<T>(
 
   const { method = "GET", body, headers = {} } = options;
   const token = getAccessToken();
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
 
   const response = await fetch(`${API_URL}${endpoint}`, {
     method,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
   });
 
   const data = await parseResponse(response);
 
   if (!response.ok) {
     throw new ApiError(
-      typeof data === "string" ? data : "Request failed",
+      resolveApiErrorMessage(data),
       response.status,
       data
     );
@@ -65,6 +93,9 @@ export const apiClient = {
 
   post: <T>(endpoint: string, body?: unknown, headers?: Record<string, string>) =>
     request<T>(endpoint, { method: "POST", body, headers }),
+
+  postForm: <T>(endpoint: string, formData: FormData, headers?: Record<string, string>) =>
+    request<T>(endpoint, { method: "POST", body: formData, headers }),
 
   put: <T>(endpoint: string, body?: unknown, headers?: Record<string, string>) =>
     request<T>(endpoint, { method: "PUT", body, headers }),

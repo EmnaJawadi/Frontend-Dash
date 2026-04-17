@@ -36,9 +36,10 @@ import type {
 import { logout } from "@/src/lib/auth";
 
 const PLAN_OPTIONS: SubscriptionPlan[] = ["BASIC", "STANDARD", "PREMIUM", "ENTERPRISE"];
-const STATUS_OPTIONS: SubscriptionStatus[] = ["TRIAL", "ACTIVE", "OVERDUE", "CANCELED"];
+const STATUS_OPTIONS: SubscriptionStatus[] = ["ACTIVE", "SUSPENDED", "EXPIRED", "CANCELED"];
 const CYCLE_OPTIONS: BillingCycle[] = ["MONTHLY", "YEARLY"];
-const COMPANY_STATUS_OPTIONS: CompanyLifecycleStatus[] = ["ACTIVE", "INACTIVE", "SUSPENDED"];
+const COMPANY_STATUS_OPTIONS: CompanyLifecycleStatus[] = ["ACTIVE", "INACTIVE"];
+const EMPTY_COMPANIES: SuperAdminCompany[] = [];
 
 const EMPTY_COMPANY_FORM: UpsertCompanyPayload = {
   name: "",
@@ -50,7 +51,7 @@ const EMPTY_COMPANY_FORM: UpsertCompanyPayload = {
   lifecycleStatus: "ACTIVE",
   plan: "STANDARD",
   subscriptionDurationMonths: 1,
-  subscriptionStatus: "TRIAL",
+  subscriptionStatus: "ACTIVE",
   billingCycle: "MONTHLY",
   nextRenewalDate: new Date().toISOString().slice(0, 10),
 };
@@ -99,13 +100,30 @@ export default function SuperAdminPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const current = superAdminService.getSnapshot();
-    setSnapshot(current);
-    setSelectedCompanyId(current.companies[0]?.id ?? null);
-    setGlobalSettingsForm(current.globalSettings);
+    let isMounted = true;
+
+    async function bootstrap() {
+      try {
+        const current = await superAdminService.getSnapshot();
+        if (!isMounted) return;
+
+        setSnapshot(current);
+        setSelectedCompanyId(current.companies[0]?.id ?? null);
+        setGlobalSettingsForm(current.globalSettings);
+      } catch (loadError) {
+        if (!isMounted) return;
+        setError(withErrorMessage(loadError));
+      }
+    }
+
+    void bootstrap();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const companies = snapshot?.companies ?? [];
+  const companies = snapshot?.companies ?? EMPTY_COMPANIES;
   const selectedCompany =
     companies.find((company) => company.id === selectedCompanyId) ?? null;
   const selectedMembers = useMemo(
@@ -153,9 +171,10 @@ export default function SuperAdminPage() {
     }
   }
 
-  function runWithGuard(task: () => SuperAdminSnapshot, successMessage: string) {
+  async function runWithGuard(task: () => Promise<SuperAdminSnapshot>, successMessage: string) {
     try {
-      applySnapshot(task(), successMessage);
+      const nextSnapshot = await task();
+      applySnapshot(nextSnapshot, successMessage);
     } catch (taskError) {
       setError(withErrorMessage(taskError));
       setFeedback("");
@@ -178,7 +197,7 @@ export default function SuperAdminPage() {
     router.refresh();
   }
 
-  function handleCompanySubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleCompanySubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const payload: UpsertCompanyPayload = {
       ...companyForm,
@@ -191,7 +210,7 @@ export default function SuperAdminPage() {
       subscriptionDurationMonths: Math.max(1, Math.trunc(companyForm.subscriptionDurationMonths)),
     };
 
-    runWithGuard(
+    await runWithGuard(
       () => (editingCompanyId ? superAdminService.updateCompany(editingCompanyId, payload) : superAdminService.addCompany(payload)),
       editingCompanyId ? "Entreprise mise a jour." : "Entreprise ajoutee.",
     );
@@ -216,13 +235,13 @@ export default function SuperAdminPage() {
     setEditingCompanyId(company.id);
   }
 
-  function handleDeleteCompany(companyId: string) {
+  async function handleDeleteCompany(companyId: string) {
     if (!window.confirm("Supprimer cette entreprise ?")) return;
-    runWithGuard(() => superAdminService.deleteCompany(companyId), "Entreprise supprimee.");
+    await runWithGuard(() => superAdminService.deleteCompany(companyId), "Entreprise supprimee.");
     if (editingCompanyId === companyId) resetCompanyForm();
   }
 
-  function handleSubscriptionPatch(
+  async function handleSubscriptionPatch(
     companyId: string,
     patch: Partial<
       Pick<
@@ -236,17 +255,17 @@ export default function SuperAdminPage() {
       >
     >,
   ) {
-    runWithGuard(() => superAdminService.updateSubscription(companyId, patch), "Abonnement mis a jour.");
+    await runWithGuard(() => superAdminService.updateSubscription(companyId, patch), "Abonnement mis a jour.");
   }
 
-  function handleMemberSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleMemberSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedCompanyId) {
       setError("Selectionne une entreprise avant d'ajouter un utilisateur.");
       return;
     }
 
-    runWithGuard(
+    await runWithGuard(
       () =>
         editingMemberId
           ? superAdminService.updateMember(editingMemberId, memberForm)
@@ -268,21 +287,21 @@ export default function SuperAdminPage() {
     setEditingMemberId(member.id);
   }
 
-  function handleDeleteMember(memberId: string) {
+  async function handleDeleteMember(memberId: string) {
     if (!window.confirm("Supprimer cet utilisateur ?")) return;
-    runWithGuard(() => superAdminService.deleteMember(memberId), "Utilisateur supprime.");
+    await runWithGuard(() => superAdminService.deleteMember(memberId), "Utilisateur supprime.");
     if (editingMemberId === memberId) resetMemberForm();
   }
 
-  function handleSaveGlobalSettings() {
-    runWithGuard(
+  async function handleSaveGlobalSettings() {
+    await runWithGuard(
       () => superAdminService.updateGlobalSettings(globalSettingsForm),
       "Parametres globaux enregistres.",
     );
   }
 
-  function handleRunMaintenance() {
-    runWithGuard(() => superAdminService.runMaintenance(), "Test de maintenance execute.");
+  async function handleRunMaintenance() {
+    await runWithGuard(() => superAdminService.runMaintenance(), "Test de maintenance execute.");
   }
 
   if (!snapshot) {
@@ -308,7 +327,7 @@ export default function SuperAdminPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={handleRunMaintenance}>
+              <Button type="button" onClick={() => void handleRunMaintenance()}>
                 <ServerCog className="mr-2 h-4 w-4" />
                 Test maintenance
               </Button>
@@ -340,12 +359,12 @@ export default function SuperAdminPage() {
                     <p className="font-medium">{company.name}</p>
                     <p className="text-xs text-muted-foreground">{company.ownerEmail}</p>
                   </div>
-                  <select value={company.plan} onChange={(event) => handleSubscriptionPatch(company.id, { plan: event.target.value as SubscriptionPlan })} className="rounded-xl border border-border bg-background px-2 py-2">{PLAN_OPTIONS.map((plan) => <option key={plan} value={plan}>{plan}</option>)}</select>
-                  <select value={company.billingCycle} onChange={(event) => handleSubscriptionPatch(company.id, { billingCycle: event.target.value as BillingCycle })} className="rounded-xl border border-border bg-background px-2 py-2">{CYCLE_OPTIONS.map((cycle) => <option key={cycle} value={cycle}>{cycle}</option>)}</select>
-                  <Input type="number" min={1} value={company.subscriptionDurationMonths} onChange={(event) => handleSubscriptionPatch(company.id, { subscriptionDurationMonths: Number(event.target.value) || 1 })} />
-                  <select value={company.subscriptionStatus} onChange={(event) => handleSubscriptionPatch(company.id, { subscriptionStatus: event.target.value as SubscriptionStatus })} className="rounded-xl border border-border bg-background px-2 py-2">{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select>
-                  <Input type="date" value={company.nextRenewalDate} onChange={(event) => handleSubscriptionPatch(company.id, { nextRenewalDate: event.target.value })} />
-                  <Button type="button" variant="outline" onClick={() => runWithGuard(() => superAdminService.toggleSubscription(company.id, company.subscriptionStatus !== "ACTIVE"), company.subscriptionStatus === "ACTIVE" ? "Abonnement desactive." : "Abonnement active.")}>
+                  <select value={company.plan} onChange={(event) => void handleSubscriptionPatch(company.id, { plan: event.target.value as SubscriptionPlan })} className="rounded-xl border border-border bg-background px-2 py-2">{PLAN_OPTIONS.map((plan) => <option key={plan} value={plan}>{plan}</option>)}</select>
+                  <select value={company.billingCycle} onChange={(event) => void handleSubscriptionPatch(company.id, { billingCycle: event.target.value as BillingCycle })} className="rounded-xl border border-border bg-background px-2 py-2">{CYCLE_OPTIONS.map((cycle) => <option key={cycle} value={cycle}>{cycle}</option>)}</select>
+                  <Input type="number" min={1} value={company.subscriptionDurationMonths} onChange={(event) => void handleSubscriptionPatch(company.id, { subscriptionDurationMonths: Number(event.target.value) || 1 })} />
+                  <select value={company.subscriptionStatus} onChange={(event) => void handleSubscriptionPatch(company.id, { subscriptionStatus: event.target.value as SubscriptionStatus })} className="rounded-xl border border-border bg-background px-2 py-2">{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select>
+                  <Input type="date" value={company.nextRenewalDate} onChange={(event) => void handleSubscriptionPatch(company.id, { nextRenewalDate: event.target.value })} />
+                  <Button type="button" variant="outline" onClick={() => void runWithGuard(() => superAdminService.toggleSubscription(company.id, company.subscriptionStatus !== "ACTIVE"), company.subscriptionStatus === "ACTIVE" ? "Abonnement desactive." : "Abonnement active.")}>
                     {company.subscriptionStatus === "ACTIVE" ? "Desactiver" : "Activer"}
                   </Button>
                 </div>
@@ -406,7 +425,7 @@ export default function SuperAdminPage() {
                     </button>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => handleEditCompany(company)}>Modifier</Button>
-                      <Button variant="outline" size="sm" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => handleDeleteCompany(company.id)}>
+                      <Button variant="outline" size="sm" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => void handleDeleteCompany(company.id)}>
                         <Trash2 className="mr-1 h-4 w-4" />
                         Supprimer
                       </Button>
@@ -473,10 +492,10 @@ export default function SuperAdminPage() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button type="button" size="sm" variant="outline" onClick={() => handleEditMember(member.id)}>Editer</Button>
-                      <Button type="button" size="sm" variant="outline" onClick={() => runWithGuard(() => superAdminService.toggleMember(member.id, !member.isActive), member.isActive ? "Utilisateur desactive." : "Utilisateur active.")}>
+                      <Button type="button" size="sm" variant="outline" onClick={() => void runWithGuard(() => superAdminService.toggleMember(member.id, !member.isActive), member.isActive ? "Utilisateur desactive." : "Utilisateur active.")}>
                         {member.isActive ? "Desactiver" : "Activer"}
                       </Button>
-                      <Button type="button" size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => handleDeleteMember(member.id)}>
+                      <Button type="button" size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => void handleDeleteMember(member.id)}>
                         <Trash2 className="mr-1 h-3.5 w-3.5" />
                         Supprimer
                       </Button>
@@ -530,7 +549,7 @@ export default function SuperAdminPage() {
                 <Input value={globalSettingsForm.defaultLanguage} onChange={(event) => setGlobalSettingsForm((prev) => ({ ...prev, defaultLanguage: event.target.value }))} placeholder="Langue par defaut" />
                 <Input type="email" value={globalSettingsForm.supportEmail} onChange={(event) => setGlobalSettingsForm((prev) => ({ ...prev, supportEmail: event.target.value }))} placeholder="Email support" />
               </div>
-              <Button type="button" onClick={handleSaveGlobalSettings}>Enregistrer parametres globaux</Button>
+              <Button type="button" onClick={() => void handleSaveGlobalSettings()}>Enregistrer parametres globaux</Button>
 
               <div className="space-y-2 rounded-xl border border-border/70 p-3">
                 <p className="text-sm font-medium">Audit logs recents</p>

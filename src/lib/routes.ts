@@ -13,6 +13,12 @@ export const ONBOARDING_ROUTES = {
 } as const;
 
 export const APP_ROUTES = {
+  ADMIN_ROOT: "/admin",
+  ADMIN_DASHBOARD: "/admin/dashboard",
+  ADMIN_COMPANIES: "/admin/companies",
+  ADMIN_SUBSCRIPTIONS: "/admin/subscriptions",
+  ADMIN_USERS: "/admin/users",
+  ADMIN_SETTINGS: "/admin/settings",
   SUPER_ADMIN: "/super-admin",
   DASHBOARD: "/dashboard",
   CONVERSATIONS: "/conversations",
@@ -43,8 +49,12 @@ export const OWNER_ROUTES: string[] = [
 ];
 
 export const SUPER_ADMIN_ROUTES: string[] = [
-  APP_ROUTES.SUPER_ADMIN,
-  ...OWNER_ROUTES,
+  APP_ROUTES.ADMIN_ROOT,
+  APP_ROUTES.ADMIN_DASHBOARD,
+  APP_ROUTES.ADMIN_COMPANIES,
+  APP_ROUTES.ADMIN_SUBSCRIPTIONS,
+  APP_ROUTES.ADMIN_USERS,
+  APP_ROUTES.ADMIN_SETTINGS,
 ];
 
 export const AGENT_ROUTES: string[] = [
@@ -57,7 +67,7 @@ export const AGENT_ROUTES: string[] = [
 ];
 
 export const DEFAULT_ROUTE_BY_ROLE: Record<UserRole, string> = {
-  SUPER_ADMIN: APP_ROUTES.SUPER_ADMIN,
+  SUPER_ADMIN: APP_ROUTES.ADMIN_DASHBOARD,
   OWNER: APP_ROUTES.DASHBOARD,
   AGENT: APP_ROUTES.DASHBOARD,
 };
@@ -84,7 +94,12 @@ export function isPublicRoute(pathname: string): boolean {
 }
 
 export function isAdminRoute(_pathname: string): boolean {
-  return _pathname === APP_ROUTES.SUPER_ADMIN || _pathname.startsWith(`${APP_ROUTES.SUPER_ADMIN}/`);
+  return (
+    _pathname === APP_ROUTES.ADMIN_ROOT ||
+    _pathname.startsWith(`${APP_ROUTES.ADMIN_ROOT}/`) ||
+    _pathname === APP_ROUTES.SUPER_ADMIN ||
+    _pathname.startsWith(`${APP_ROUTES.SUPER_ADMIN}/`)
+  );
 }
 
 export function isOnboardingRoute(pathname: string): boolean {

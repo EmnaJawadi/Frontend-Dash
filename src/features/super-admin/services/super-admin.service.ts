@@ -1,10 +1,12 @@
 "use client";
 
+import { apiClient } from "@/src/lib/api-client";
 import type {
   BillingCycle,
   CompanyLifecycleStatus,
   MaintenanceReport,
   MaintenanceServiceCheck,
+  ManagedUserRole,
   SubscriptionPlan,
   SubscriptionStatus,
   SuperAdminCompany,
@@ -14,404 +16,588 @@ import type {
   UpsertMemberPayload,
 } from "@/src/features/super-admin/types/super-admin.types";
 
-const STORAGE_KEY = "super_admin_snapshot_v2";
+type CompanyStatusBackend = "ACTIVE" | "INACTIVE";
+type SubscriptionStatusBackend = "ACTIVE" | "SUSPENDED" | "EXPIRED" | "CANCELED";
+type UserRoleBackend = "SUPER_ADMIN" | "COMPANY_ADMIN" | "AGENT" | "EMPLOYEE";
 
-function clone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
+type PaginatedResponse<T> = {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
+type BackendDashboardStats = {
+  companies: {
+    total: number;
+    active: number;
+    inactive: number;
+  };
+  users: {
+    total: number;
+    active: number;
+    inactive: number;
+  };
+  subscriptions: {
+    total: number;
+    active: number;
+    suspended: number;
+    expired: number;
+    canceled: number;
+  };
+  platform: {
+    maintenanceMode: boolean;
+    databaseConnected: boolean;
+    status: "OPERATIONAL" | "DEGRADED" | "MAINTENANCE";
+  };
+  generatedAt: string;
+};
+
+type BackendMaintenanceHealth = {
+  status: "OPERATIONAL" | "DEGRADED" | "MAINTENANCE";
+  maintenanceMode: boolean;
+  database: {
+    connected: boolean;
+  };
+  counters: BackendDashboardStats;
+  generatedAt: string;
+};
+
+type BackendPlatformSettings = {
+  platformName?: string;
+  supportEmail?: string | null;
+  defaultLanguage?: string;
+  defaultCurrency?: string;
+  maintenanceMode?: boolean;
+  allowUserInvitations?: boolean;
+  allowInvitations?: boolean;
+  updatedAt?: string;
+};
+
+type BackendAuditLog = {
+  id: string;
+  action: string | null;
+  entityType: string | null;
+  entityId: string | null;
+  createdAt: string;
+};
+
+type BackendCompany = {
+  id: string;
+  name: string;
+  legalName: string | null;
+  email: string | null;
+  status: CompanyStatusBackend;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type BackendSubscription = {
+  id: string;
+  companyId: string;
+  plan: string;
+  status: SubscriptionStatusBackend;
+  startDate: string;
+  endDate: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type BackendUser = {
+  id: string;
+  firstName: string;
+  lastName: string | null;
+  fullName: string;
+  email: string;
+  role: UserRoleBackend;
+  isActive: boolean;
+  companyId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const DEFAULT_USER_PASSWORD = "TempPass#2026";
+const PLAN_VALUES: SubscriptionPlan[] = ["BASIC", "STANDARD", "PREMIUM", "ENTERPRISE"];
+const STATUS_VALUES: SubscriptionStatus[] = ["ACTIVE", "SUSPENDED", "EXPIRED", "CANCELED"];
+
+function toDateOnly(value: string | Date): string {
+  const date = new Date(value);
+  return date.toISOString().slice(0, 10);
 }
 
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
-function todayIso(): string {
-  return nowIso().slice(0, 10);
+function todayDateOnly(): string {
+  return toDateOnly(new Date());
 }
 
 function addDays(baseDate: string, days: number): string {
   const date = new Date(baseDate);
   date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+  return toDateOnly(date);
 }
 
 function addMonths(baseDate: string, months: number): string {
   const date = new Date(baseDate);
   date.setMonth(date.getMonth() + Math.max(1, Math.trunc(months)));
-  return date.toISOString().slice(0, 10);
+  return toDateOnly(date);
 }
 
-function toId(value: string): string {
-  return (
-    value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || `company-${Date.now()}`
-  );
+function durationMonths(startDate: string, endDate: string | null | undefined): number {
+  if (!endDate) return 1;
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+
+  return Math.max(1, months || 1);
 }
 
-function makeMemberId(companyId: string, role: "OWNER" | "AGENT"): string {
-  return `${companyId}-${role.toLowerCase()}-${Math.random().toString(16).slice(2, 8)}`;
+function splitFullName(fullName: string): { firstName: string; lastName: string } {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) {
+    return { firstName: parts[0] ?? "User", lastName: "Admin" };
+  }
+
+  return {
+    firstName: parts[0],
+    lastName: parts.slice(1).join(" "),
+  };
+}
+
+function safeText(value: string | null | undefined, fallback: string): string {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : fallback;
+}
+
+function normalizePlan(plan: string | null | undefined): SubscriptionPlan {
+  const normalized = plan?.trim().toUpperCase();
+  if (normalized && PLAN_VALUES.includes(normalized as SubscriptionPlan)) {
+    return normalized as SubscriptionPlan;
+  }
+  return "STANDARD";
+}
+
+function normalizeSubscriptionStatus(
+  status: SubscriptionStatusBackend | string | null | undefined,
+): SubscriptionStatus {
+  const normalized = status?.toString().trim().toUpperCase();
+  if (normalized && STATUS_VALUES.includes(normalized as SubscriptionStatus)) {
+    return normalized as SubscriptionStatus;
+  }
+  return "ACTIVE";
+}
+
+function normalizeLifecycleStatus(status: CompanyStatusBackend | string): CompanyLifecycleStatus {
+  return status.toUpperCase() === "ACTIVE" ? "ACTIVE" : "INACTIVE";
+}
+
+function toBackendCompanyStatus(status: CompanyLifecycleStatus): CompanyStatusBackend {
+  return status === "ACTIVE" ? "ACTIVE" : "INACTIVE";
+}
+
+function toBackendSubscriptionStatus(status: SubscriptionStatus): SubscriptionStatusBackend {
+  if (status === "SUSPENDED") return "SUSPENDED";
+  if (status === "EXPIRED") return "EXPIRED";
+  if (status === "CANCELED") return "CANCELED";
+  return "ACTIVE";
+}
+
+function toManagedRole(role: UserRoleBackend): ManagedUserRole | null {
+  if (role === "COMPANY_ADMIN") return "OWNER";
+  if (role === "AGENT" || role === "EMPLOYEE") return "AGENT";
+  return null;
+}
+
+function toBackendRole(role: ManagedUserRole): Exclude<UserRoleBackend, "SUPER_ADMIN" | "EMPLOYEE"> {
+  return role === "OWNER" ? "COMPANY_ADMIN" : "AGENT";
+}
+
+function computeBillingCycle(duration: number): BillingCycle {
+  return duration >= 12 ? "YEARLY" : "MONTHLY";
 }
 
 function computeBotHealth(
-  plan: SubscriptionPlan,
   lifecycleStatus: CompanyLifecycleStatus,
   subscriptionStatus: SubscriptionStatus,
+  plan: SubscriptionPlan,
 ): number {
-  const baseByPlan: Record<SubscriptionPlan, number> = {
+  const planBase: Record<SubscriptionPlan, number> = {
     BASIC: 78,
     STANDARD: 85,
     PREMIUM: 92,
     ENTERPRISE: 97,
   };
 
-  const lifecyclePenalty = lifecycleStatus === "ACTIVE" ? 0 : lifecycleStatus === "INACTIVE" ? 8 : 12;
+  const lifecyclePenalty = lifecycleStatus === "ACTIVE" ? 0 : 10;
   const subscriptionPenalty =
     subscriptionStatus === "ACTIVE"
       ? 0
-      : subscriptionStatus === "TRIAL"
-        ? 2
-        : subscriptionStatus === "OVERDUE"
-          ? 11
-          : 16;
+      : subscriptionStatus === "SUSPENDED"
+        ? 12
+        : subscriptionStatus === "EXPIRED"
+          ? 15
+          : 18;
 
-  return Math.max(35, baseByPlan[plan] - lifecyclePenalty - subscriptionPenalty);
+  return Math.max(35, planBase[plan] - lifecyclePenalty - subscriptionPenalty);
 }
 
-function buildMaintenanceServices(apiLatencyMs: number, queueBacklog: number): MaintenanceServiceCheck[] {
+function toMaintenanceServices(
+  maintenance: BackendMaintenanceHealth,
+  stats: BackendDashboardStats,
+): MaintenanceServiceCheck[] {
+  const degraded = maintenance.status !== "OPERATIONAL";
+  const hasExpired = stats.subscriptions.expired > 0 || stats.subscriptions.suspended > 0;
+
   return [
     {
       key: "backend",
       label: "API Backend",
-      status: apiLatencyMs < 420 ? "HEALTHY" : "WARNING",
-      message: apiLatencyMs < 420 ? "Reponse API stable." : "Latence elevee detectee.",
+      status: degraded ? "WARNING" : "HEALTHY",
+      message: degraded ? "Plateforme en mode degrade/maintenance." : "API operationnelle.",
     },
     {
-      key: "bot",
-      label: "Moteur Bot",
-      status: "HEALTHY",
-      message: "Intents charges et reponses automatiques actives.",
+      key: "database",
+      label: "Base de donnees",
+      status: maintenance.database.connected ? "HEALTHY" : "CRITICAL",
+      message: maintenance.database.connected ? "Connexion PostgreSQL stable." : "Connexion base indisponible.",
     },
     {
-      key: "gateway",
-      label: "Passerelle WhatsApp",
-      status: "HEALTHY",
-      message: "Reception et emission des messages operationnelles.",
-    },
-    {
-      key: "queue",
-      label: "File de traitement",
-      status: queueBacklog < 35 ? "HEALTHY" : "WARNING",
-      message: queueBacklog < 35 ? "File sous controle." : "Backlog en hausse a surveiller.",
+      key: "subscriptions",
+      label: "Abonnements",
+      status: hasExpired ? "WARNING" : "HEALTHY",
+      message: hasExpired
+        ? "Des abonnements suspendus/expirés necessitent une action."
+        : "Aucun abonnement critique detecte.",
     },
   ];
 }
 
-function buildMaintenance(seed?: number): MaintenanceReport {
-  const minute = seed ?? new Date().getMinutes();
-  const apiLatencyMs = 180 + (minute % 9) * 32;
-  const queueBacklog = 8 + (minute % 7) * 5;
-  const botSuccessRate = Math.max(85, 99 - (minute % 6) * 2);
+function toMaintenanceReport(
+  maintenance: BackendMaintenanceHealth,
+  stats: BackendDashboardStats,
+): MaintenanceReport {
+  const activeUsers = stats.users.active || 1;
+  const successRate = Math.round((stats.subscriptions.active / Math.max(stats.subscriptions.total, 1)) * 100);
 
   return {
-    checkedAt: nowIso(),
-    appVersion: "frontend-2.4.0",
-    apiLatencyMs,
-    queueBacklog,
-    botSuccessRate,
-    services: buildMaintenanceServices(apiLatencyMs, queueBacklog),
+    checkedAt: maintenance.generatedAt ?? new Date().toISOString(),
+    appVersion: "backend-live",
+    apiLatencyMs: maintenance.database.connected ? 180 : 1800,
+    queueBacklog: Math.max(0, stats.users.total - activeUsers),
+    botSuccessRate: Math.max(45, Math.min(99, successRate)),
+    services: toMaintenanceServices(maintenance, stats),
   };
 }
 
-function buildMember(
-  companyId: string,
-  fullName: string,
-  email: string,
-  role: "OWNER" | "AGENT",
-  isActive = true,
-): SuperAdminMember {
-  return {
-    id: makeMemberId(companyId, role),
-    companyId,
-    fullName,
-    email,
-    role,
-    isActive,
-  };
+function toAuditTarget(log: BackendAuditLog): string {
+  const type = safeText(log.entityType, "Systeme");
+  const entityId = safeText(log.entityId, "");
+  return entityId ? `${type} (${entityId})` : type;
 }
 
-function createDefaultSnapshot(): SuperAdminSnapshot {
-  const today = todayIso();
+function buildSnapshot(input: {
+  companies: BackendCompany[];
+  subscriptions: BackendSubscription[];
+  users: BackendUser[];
+  stats: BackendDashboardStats;
+  maintenance: BackendMaintenanceHealth;
+  settings: BackendPlatformSettings;
+  auditLogs: BackendAuditLog[];
+}): SuperAdminSnapshot {
+  const mappedMembers: SuperAdminMember[] = input.users
+    .filter((user) => Boolean(user.companyId))
+    .map((user) => {
+      const role = toManagedRole(user.role);
+      if (!role) return null;
 
-  const companies: SuperAdminCompany[] = [
-    {
-      id: "support-os",
-      name: "Support OS",
-      industry: "Customer Support SaaS",
-      ownerName: "Emna Jawadi",
-      ownerEmail: "emna@supportos.com",
-      adminCount: 2,
-      agentCount: 14,
-      lifecycleStatus: "ACTIVE",
-      plan: "ENTERPRISE",
-      subscriptionDurationMonths: 12,
-      subscriptionStatus: "ACTIVE",
-      billingCycle: "YEARLY",
-      nextRenewalDate: addDays(today, 240),
-      botHealthScore: 97,
-      createdAt: addDays(today, -210),
-    },
-    {
-      id: "client-bridge",
-      name: "Client Bridge",
-      industry: "Retail Operations",
-      ownerName: "Majdi Abbes",
-      ownerEmail: "majdi@clientbridge.com",
-      adminCount: 1,
-      agentCount: 8,
-      lifecycleStatus: "ACTIVE",
-      plan: "PREMIUM",
-      subscriptionDurationMonths: 1,
-      subscriptionStatus: "ACTIVE",
-      billingCycle: "MONTHLY",
-      nextRenewalDate: addDays(today, 23),
-      botHealthScore: 91,
-      createdAt: addDays(today, -124),
-    },
-    {
-      id: "help-desk-pro",
-      name: "Help Desk Pro",
-      industry: "Internal Support",
-      ownerName: "Sara Ben Ali",
-      ownerEmail: "sara@helpdeskpro.com",
-      adminCount: 1,
-      agentCount: 3,
-      lifecycleStatus: "SUSPENDED",
-      plan: "STANDARD",
-      subscriptionDurationMonths: 1,
-      subscriptionStatus: "OVERDUE",
-      billingCycle: "MONTHLY",
-      nextRenewalDate: addDays(today, -3),
-      botHealthScore: 72,
-      createdAt: addDays(today, -86),
-    },
-  ];
+      return {
+        id: user.id,
+        companyId: user.companyId as string,
+        fullName: safeText(user.fullName, `${user.firstName} ${user.lastName ?? ""}`.trim()),
+        email: user.email,
+        role,
+        isActive: user.isActive,
+      } satisfies SuperAdminMember;
+    })
+    .filter((member): member is SuperAdminMember => member !== null);
 
-  const members: SuperAdminMember[] = [
-    buildMember("support-os", "Emna Jawadi", "emna@supportos.com", "OWNER"),
-    buildMember("support-os", "Nesrine Kefi", "nesrine@supportos.com", "OWNER"),
-    buildMember("support-os", "Youssef Ben Amor", "youssef@supportos.com", "AGENT"),
-    buildMember("support-os", "Mouna Tlatli", "mouna@supportos.com", "AGENT"),
-    buildMember("client-bridge", "Majdi Abbes", "majdi@clientbridge.com", "OWNER"),
-    buildMember("client-bridge", "Meriem Khlifi", "meriem@clientbridge.com", "AGENT"),
-    buildMember("client-bridge", "Rim Chatti", "rim@clientbridge.com", "AGENT"),
-    buildMember("help-desk-pro", "Sara Ben Ali", "sara@helpdeskpro.com", "OWNER"),
-    buildMember("help-desk-pro", "Adem Mansour", "adem@helpdeskpro.com", "AGENT"),
-  ];
+  const subscriptionsByCompany = new Map<string, BackendSubscription>();
+  for (const subscription of input.subscriptions) {
+    if (!subscriptionsByCompany.has(subscription.companyId)) {
+      subscriptionsByCompany.set(subscription.companyId, subscription);
+    }
+  }
+
+  const companies: SuperAdminCompany[] = input.companies.map((company) => {
+    const companyMembers = mappedMembers.filter((member) => member.companyId === company.id);
+    const admins = companyMembers.filter((member) => member.role === "OWNER");
+    const agents = companyMembers.filter((member) => member.role === "AGENT");
+    const owner = admins.find((admin) => admin.isActive) ?? admins[0];
+
+    const subscription = subscriptionsByCompany.get(company.id);
+    const plan = normalizePlan(subscription?.plan);
+    const subscriptionStatus = normalizeSubscriptionStatus(subscription?.status);
+    const lifecycleStatus = normalizeLifecycleStatus(company.status);
+    const nextRenewalDate = subscription?.endDate
+      ? toDateOnly(subscription.endDate)
+      : addMonths(todayDateOnly(), 1);
+    const subscriptionDurationMonths = durationMonths(
+      subscription?.startDate ?? company.createdAt,
+      subscription?.endDate ?? null,
+    );
+
+    return {
+      id: company.id,
+      name: company.name,
+      industry: safeText(company.legalName, "Non defini"),
+      ownerName: owner?.fullName ?? "Admin non assigne",
+      ownerEmail: owner?.email ?? company.email ?? "owner@company.local",
+      adminCount: admins.length,
+      agentCount: agents.length,
+      lifecycleStatus,
+      plan,
+      subscriptionDurationMonths,
+      subscriptionStatus,
+      billingCycle: computeBillingCycle(subscriptionDurationMonths),
+      nextRenewalDate,
+      botHealthScore: computeBotHealth(lifecycleStatus, subscriptionStatus, plan),
+      createdAt: toDateOnly(company.createdAt),
+    };
+  });
+
+  const settings = input.settings ?? {};
 
   return {
     companies,
-    members,
-    maintenance: buildMaintenance(2),
+    members: mappedMembers,
+    maintenance: toMaintenanceReport(input.maintenance, input.stats),
     globalSettings: {
-      maintenanceMode: false,
-      allowInvitations: true,
-      defaultLanguage: "fr",
-      supportEmail: "support@plateforme.com",
+      maintenanceMode: Boolean(settings.maintenanceMode),
+      allowInvitations: Boolean(settings.allowUserInvitations ?? settings.allowInvitations ?? true),
+      defaultLanguage: safeText(settings.defaultLanguage, "fr"),
+      supportEmail: safeText(settings.supportEmail ?? undefined, ""),
     },
-    auditLogs: [
-      {
-        id: `log-${Date.now()}-1`,
-        action: "Initialisation espace Super Admin",
-        target: "Plateforme",
-        createdAt: nowIso(),
-      },
-    ],
+    auditLogs: input.auditLogs.map((log) => ({
+      id: log.id,
+      action: safeText(log.action ?? undefined, "Action systeme"),
+      target: toAuditTarget(log),
+      createdAt: log.createdAt,
+    })),
   };
 }
 
-function readSnapshot(): SuperAdminSnapshot {
-  if (typeof window === "undefined") return createDefaultSnapshot();
+async function fetchCompanies(): Promise<BackendCompany[]> {
+  const res = await apiClient.get<PaginatedResponse<BackendCompany>>("/admin/companies?page=1&limit=500");
+  return res.data;
+}
 
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    const initial = createDefaultSnapshot();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-    return initial;
+async function fetchSubscriptions(companyId?: string): Promise<BackendSubscription[]> {
+  const query = companyId
+    ? `/admin/subscriptions?page=1&limit=500&companyId=${encodeURIComponent(companyId)}`
+    : "/admin/subscriptions?page=1&limit=500";
+
+  const res = await apiClient.get<PaginatedResponse<BackendSubscription>>(query);
+  return res.data;
+}
+
+async function fetchUsers(companyId?: string): Promise<BackendUser[]> {
+  const query = companyId
+    ? `/admin/users?page=1&limit=500&companyId=${encodeURIComponent(companyId)}`
+    : "/admin/users?page=1&limit=500";
+
+  const res = await apiClient.get<PaginatedResponse<BackendUser>>(query);
+  return res.data;
+}
+
+async function fetchSnapshot(): Promise<SuperAdminSnapshot> {
+  const [stats, maintenance, settings, auditLogs, companies, subscriptions, users] = await Promise.all([
+    apiClient.get<BackendDashboardStats>("/admin/dashboard/stats"),
+    apiClient.get<BackendMaintenanceHealth>("/admin/maintenance/health"),
+    apiClient.get<BackendPlatformSettings>("/admin/maintenance/platform-settings"),
+    apiClient.get<PaginatedResponse<BackendAuditLog>>("/admin/maintenance/audit-logs?page=1&limit=50"),
+    fetchCompanies(),
+    fetchSubscriptions(),
+    fetchUsers(),
+  ]);
+
+  return buildSnapshot({
+    companies,
+    subscriptions,
+    users,
+    stats,
+    maintenance,
+    settings,
+    auditLogs: auditLogs.data,
+  });
+}
+
+async function ensurePrimaryOwner(companyId: string, fullName: string, email: string): Promise<void> {
+  const users = await fetchUsers(companyId);
+  const admins = users.filter((user) => user.role === "COMPANY_ADMIN");
+  const normalizedEmail = email.trim().toLowerCase();
+  const names = splitFullName(fullName);
+  const matched = admins.find((admin) => admin.email.toLowerCase() === normalizedEmail);
+  const target = matched ?? admins[0];
+
+  if (!target) {
+    await apiClient.post("/admin/users", {
+      companyId,
+      firstName: names.firstName,
+      lastName: names.lastName,
+      email: normalizedEmail,
+      password: DEFAULT_USER_PASSWORD,
+      role: "COMPANY_ADMIN",
+    });
+    return;
   }
 
-  try {
-    return JSON.parse(raw) as SuperAdminSnapshot;
-  } catch {
-    const fallback = createDefaultSnapshot();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback));
-    return fallback;
-  }
+  await apiClient.patch(`/admin/users/${target.id}`, {
+    firstName: names.firstName,
+    lastName: names.lastName,
+    email: normalizedEmail,
+    role: "COMPANY_ADMIN",
+    isActive: true,
+  });
 }
 
-function persist(snapshot: SuperAdminSnapshot): SuperAdminSnapshot {
-  if (typeof window !== "undefined") {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-  }
-  return clone(snapshot);
-}
+async function ensureMinimumUsers(companyId: string, desiredAdmins: number, desiredAgents: number): Promise<void> {
+  const users = await fetchUsers(companyId);
+  const admins = users.filter((user) => user.role === "COMPANY_ADMIN");
+  const agents = users.filter((user) => user.role === "AGENT" || user.role === "EMPLOYEE");
+  const normalizedAdmins = Math.max(1, Math.trunc(desiredAdmins));
+  const normalizedAgents = Math.max(0, Math.trunc(desiredAgents));
 
-function pushAudit(snapshot: SuperAdminSnapshot, action: string, target: string): void {
-  snapshot.auditLogs = [
-    { id: `log-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`, action, target, createdAt: nowIso() },
-    ...snapshot.auditLogs,
-  ].slice(0, 150);
-}
-
-function membersOf(snapshot: SuperAdminSnapshot, companyId: string): SuperAdminMember[] {
-  return snapshot.members.filter((member) => member.companyId === companyId);
-}
-
-function syncCompanyCounts(snapshot: SuperAdminSnapshot, companyId: string): void {
-  const company = snapshot.companies.find((item) => item.id === companyId);
-  if (!company) return;
-
-  const members = membersOf(snapshot, companyId);
-  const admins = members.filter((member) => member.role === "OWNER");
-  const agents = members.filter((member) => member.role === "AGENT");
-
-  company.adminCount = admins.length;
-  company.agentCount = agents.length;
-
-  const primaryAdmin = admins.find((admin) => admin.isActive) ?? admins[0];
-  if (primaryAdmin) {
-    company.ownerName = primaryAdmin.fullName;
-    company.ownerEmail = primaryAdmin.email;
-  }
-}
-
-function ensureAtLeastOneOwner(snapshot: SuperAdminSnapshot, companyId: string): void {
-  const ownerCount = membersOf(snapshot, companyId).filter((member) => member.role === "OWNER").length;
-  if (ownerCount < 1) {
-    throw new Error("Chaque entreprise doit conserver au moins un admin.");
-  }
-}
-
-function ensureAtLeastOneActiveOwner(snapshot: SuperAdminSnapshot, companyId: string): void {
-  const activeOwnerCount = membersOf(snapshot, companyId).filter(
-    (member) => member.role === "OWNER" && member.isActive,
-  ).length;
-  if (activeOwnerCount < 1) {
-    throw new Error("Au moins un admin actif est requis.");
-  }
-}
-
-function adjustMembersToTargets(snapshot: SuperAdminSnapshot, company: SuperAdminCompany): void {
-  const desiredAdmins = Math.max(1, Math.trunc(company.adminCount));
-  const desiredAgents = Math.max(0, Math.trunc(company.agentCount));
-  const currentMembers = membersOf(snapshot, company.id);
-  const admins = currentMembers.filter((member) => member.role === "OWNER");
-  const agents = currentMembers.filter((member) => member.role === "AGENT");
-
-  if (admins.length < desiredAdmins) {
-    for (let i = admins.length; i < desiredAdmins; i += 1) {
-      snapshot.members.push(
-        buildMember(
-          company.id,
-          i === 0 ? company.ownerName : `${company.name} Admin ${i + 1}`,
-          i === 0 ? company.ownerEmail : `admin${i + 1}@${company.id}.com`,
-          "OWNER",
-        ),
-      );
-    }
-  } else if (admins.length > desiredAdmins) {
-    let toRemove = admins.length - desiredAdmins;
-    snapshot.members = snapshot.members.filter((member) => {
-      if (toRemove < 1) return true;
-      if (member.companyId !== company.id || member.role !== "OWNER") return true;
-      if (member.email === company.ownerEmail && member.fullName === company.ownerName) return true;
-      toRemove -= 1;
-      return false;
+  for (let i = admins.length; i < normalizedAdmins; i += 1) {
+    const index = i + 1;
+    await apiClient.post("/admin/users", {
+      companyId,
+      firstName: "Admin",
+      lastName: `${index}`,
+      email: `admin-${Date.now()}-${index}@${companyId}.local`,
+      password: DEFAULT_USER_PASSWORD,
+      role: "COMPANY_ADMIN",
     });
   }
 
-  if (agents.length < desiredAgents) {
-    for (let i = agents.length; i < desiredAgents; i += 1) {
-      snapshot.members.push(
-        buildMember(company.id, `${company.name} Agent ${i + 1}`, `agent${i + 1}@${company.id}.com`, "AGENT"),
-      );
-    }
-  } else if (agents.length > desiredAgents) {
-    let toRemove = agents.length - desiredAgents;
-    snapshot.members = snapshot.members.filter((member) => {
-      if (toRemove < 1) return true;
-      if (member.companyId !== company.id || member.role !== "AGENT") return true;
-      toRemove -= 1;
-      return false;
+  for (let i = agents.length; i < normalizedAgents; i += 1) {
+    const index = i + 1;
+    await apiClient.post("/admin/users", {
+      companyId,
+      firstName: "Agent",
+      lastName: `${index}`,
+      email: `agent-${Date.now()}-${index}@${companyId}.local`,
+      password: DEFAULT_USER_PASSWORD,
+      role: "AGENT",
     });
   }
+}
 
-  syncCompanyCounts(snapshot, company.id);
+async function resolveCompanySubscription(companyId: string): Promise<BackendSubscription | null> {
+  const subscriptions = await fetchSubscriptions(companyId);
+  return subscriptions[0] ?? null;
+}
+
+function toSubscriptionDates(payload: UpsertCompanyPayload): { startDate: string; endDate: string } {
+  const startDate = todayDateOnly();
+  const duration = Math.max(1, Math.trunc(payload.subscriptionDurationMonths));
+  const endDate = payload.nextRenewalDate || addMonths(startDate, duration);
+
+  return {
+    startDate,
+    endDate,
+  };
 }
 
 export const superAdminService = {
-  getSnapshot(): SuperAdminSnapshot {
-    return clone(readSnapshot());
+  async getSnapshot(): Promise<SuperAdminSnapshot> {
+    return fetchSnapshot();
   },
 
-  addCompany(payload: UpsertCompanyPayload): SuperAdminSnapshot {
-    const snapshot = readSnapshot();
-    const id = toId(payload.name);
-    const baseDate = todayIso();
-    const company: SuperAdminCompany = {
-      ...payload,
-      id,
-      adminCount: Math.max(1, Math.trunc(payload.adminCount)),
-      agentCount: Math.max(0, Math.trunc(payload.agentCount)),
-      subscriptionDurationMonths: Math.max(1, Math.trunc(payload.subscriptionDurationMonths)),
-      nextRenewalDate: payload.nextRenewalDate || addMonths(baseDate, payload.subscriptionDurationMonths),
-      createdAt: baseDate,
-      botHealthScore: computeBotHealth(payload.plan, payload.lifecycleStatus, payload.subscriptionStatus),
-    };
+  async addCompany(payload: UpsertCompanyPayload): Promise<SuperAdminSnapshot> {
+    const createdCompany = await apiClient.post<BackendCompany>("/admin/companies", {
+      name: payload.name.trim(),
+      legalName: payload.industry.trim() || null,
+      email: payload.ownerEmail.trim().toLowerCase(),
+      isActive: payload.lifecycleStatus === "ACTIVE",
+    });
 
-    snapshot.companies = [company, ...snapshot.companies.filter((item) => item.id !== id)];
-    adjustMembersToTargets(snapshot, company);
-    pushAudit(snapshot, "Creation entreprise", company.name);
+    const subscriptionDates = toSubscriptionDates(payload);
 
-    return persist(snapshot);
+    await apiClient.post("/admin/subscriptions", {
+      companyId: createdCompany.id,
+      plan: payload.plan,
+      status: toBackendSubscriptionStatus(payload.subscriptionStatus),
+      startDate: subscriptionDates.startDate,
+      endDate: subscriptionDates.endDate,
+      isActive: payload.subscriptionStatus === "ACTIVE",
+    });
+
+    await ensurePrimaryOwner(
+      createdCompany.id,
+      payload.ownerName.trim(),
+      payload.ownerEmail.trim().toLowerCase(),
+    );
+
+    await ensureMinimumUsers(
+      createdCompany.id,
+      payload.adminCount,
+      payload.agentCount,
+    );
+
+    return fetchSnapshot();
   },
 
-  updateCompany(companyId: string, payload: UpsertCompanyPayload): SuperAdminSnapshot {
-    const snapshot = readSnapshot();
-    const company = snapshot.companies.find((item) => item.id === companyId);
-    if (!company) throw new Error("Entreprise introuvable.");
+  async updateCompany(companyId: string, payload: UpsertCompanyPayload): Promise<SuperAdminSnapshot> {
+    await apiClient.patch(`/admin/companies/${companyId}`, {
+      name: payload.name.trim(),
+      legalName: payload.industry.trim() || null,
+      email: payload.ownerEmail.trim().toLowerCase(),
+      isActive: toBackendCompanyStatus(payload.lifecycleStatus) === "ACTIVE",
+    });
 
-    company.name = payload.name.trim();
-    company.industry = payload.industry.trim() || "Non defini";
-    company.ownerName = payload.ownerName.trim();
-    company.ownerEmail = payload.ownerEmail.trim();
-    company.lifecycleStatus = payload.lifecycleStatus;
-    company.plan = payload.plan;
-    company.subscriptionStatus = payload.subscriptionStatus;
-    company.billingCycle = payload.billingCycle;
-    company.subscriptionDurationMonths = Math.max(1, Math.trunc(payload.subscriptionDurationMonths));
-    company.nextRenewalDate = payload.nextRenewalDate;
-    company.adminCount = Math.max(1, Math.trunc(payload.adminCount));
-    company.agentCount = Math.max(0, Math.trunc(payload.agentCount));
-    company.botHealthScore = computeBotHealth(company.plan, company.lifecycleStatus, company.subscriptionStatus);
+    const existingSubscription = await resolveCompanySubscription(companyId);
+    const subscriptionDates = toSubscriptionDates(payload);
 
-    adjustMembersToTargets(snapshot, company);
-    pushAudit(snapshot, "Mise a jour entreprise", company.name);
+    if (existingSubscription) {
+      await apiClient.patch(`/admin/subscriptions/${existingSubscription.id}`, {
+        plan: payload.plan,
+        status: toBackendSubscriptionStatus(payload.subscriptionStatus),
+        startDate: subscriptionDates.startDate,
+        endDate: subscriptionDates.endDate,
+        isActive: payload.subscriptionStatus === "ACTIVE",
+      });
+    } else {
+      await apiClient.post("/admin/subscriptions", {
+        companyId,
+        plan: payload.plan,
+        status: toBackendSubscriptionStatus(payload.subscriptionStatus),
+        startDate: subscriptionDates.startDate,
+        endDate: subscriptionDates.endDate,
+        isActive: payload.subscriptionStatus === "ACTIVE",
+      });
+    }
 
-    return persist(snapshot);
+    await ensurePrimaryOwner(
+      companyId,
+      payload.ownerName.trim(),
+      payload.ownerEmail.trim().toLowerCase(),
+    );
+
+    await ensureMinimumUsers(companyId, payload.adminCount, payload.agentCount);
+
+    return fetchSnapshot();
   },
 
-  deleteCompany(companyId: string): SuperAdminSnapshot {
-    const snapshot = readSnapshot();
-    const company = snapshot.companies.find((item) => item.id === companyId);
-    snapshot.companies = snapshot.companies.filter((item) => item.id !== companyId);
-    snapshot.members = snapshot.members.filter((member) => member.companyId !== companyId);
-    pushAudit(snapshot, "Suppression entreprise", company?.name ?? companyId);
-    return persist(snapshot);
+  async deleteCompany(companyId: string): Promise<SuperAdminSnapshot> {
+    await apiClient.delete(`/admin/companies/${companyId}`);
+    return fetchSnapshot();
   },
 
-  updateSubscription(
+  async updateSubscription(
     companyId: string,
     payload: Partial<
       Pick<
@@ -419,138 +605,126 @@ export const superAdminService = {
         "plan" | "subscriptionStatus" | "billingCycle" | "nextRenewalDate" | "lifecycleStatus" | "subscriptionDurationMonths"
       >
     >,
-  ): SuperAdminSnapshot {
-    const snapshot = readSnapshot();
-    const company = snapshot.companies.find((item) => item.id === companyId);
-    if (!company) throw new Error("Entreprise introuvable.");
-
-    if (payload.plan) company.plan = payload.plan;
-    if (payload.subscriptionStatus) company.subscriptionStatus = payload.subscriptionStatus;
-    if (payload.billingCycle) company.billingCycle = payload.billingCycle;
-    if (payload.lifecycleStatus) company.lifecycleStatus = payload.lifecycleStatus;
-    if (payload.subscriptionDurationMonths !== undefined) {
-      company.subscriptionDurationMonths = Math.max(1, Math.trunc(payload.subscriptionDurationMonths));
+  ): Promise<SuperAdminSnapshot> {
+    if (payload.lifecycleStatus) {
+      await apiClient.patch(`/admin/companies/${companyId}/activation`, {
+        isActive: payload.lifecycleStatus === "ACTIVE",
+      });
     }
-    if (payload.nextRenewalDate) company.nextRenewalDate = payload.nextRenewalDate;
 
-    company.botHealthScore = computeBotHealth(company.plan, company.lifecycleStatus, company.subscriptionStatus);
-    pushAudit(snapshot, "Mise a jour abonnement", company.name);
+    const existingSubscription = await resolveCompanySubscription(companyId);
+    const baseStartDate = existingSubscription?.startDate ? toDateOnly(existingSubscription.startDate) : todayDateOnly();
+    const duration = payload.subscriptionDurationMonths ?? durationMonths(baseStartDate, existingSubscription?.endDate);
+    const endDate = payload.nextRenewalDate ?? addMonths(baseStartDate, duration);
 
-    return persist(snapshot);
-  },
-
-  toggleSubscription(companyId: string, isEnabled: boolean): SuperAdminSnapshot {
-    const status: SubscriptionStatus = isEnabled ? "ACTIVE" : "CANCELED";
-    return this.updateSubscription(companyId, { subscriptionStatus: status });
-  },
-
-  addMember(companyId: string, payload: UpsertMemberPayload): SuperAdminSnapshot {
-    const snapshot = readSnapshot();
-    const company = snapshot.companies.find((item) => item.id === companyId);
-    if (!company) throw new Error("Entreprise introuvable.");
-
-    const normalizedEmail = payload.email.trim().toLowerCase();
-    const exists = snapshot.members.some((member) => member.email.toLowerCase() === normalizedEmail);
-    if (exists) throw new Error("Cet email existe deja.");
-
-    snapshot.members.push(
-      buildMember(
+    if (existingSubscription) {
+      await apiClient.patch(`/admin/subscriptions/${existingSubscription.id}`, {
+        ...(payload.plan ? { plan: payload.plan } : {}),
+        ...(payload.subscriptionStatus
+          ? { status: toBackendSubscriptionStatus(payload.subscriptionStatus), isActive: payload.subscriptionStatus === "ACTIVE" }
+          : {}),
+        ...(payload.nextRenewalDate || payload.subscriptionDurationMonths
+          ? { startDate: baseStartDate, endDate }
+          : {}),
+      });
+    } else {
+      await apiClient.post("/admin/subscriptions", {
         companyId,
-        payload.fullName.trim(),
-        normalizedEmail,
-        payload.role,
-        payload.isActive ?? true,
-      ),
-    );
-
-    syncCompanyCounts(snapshot, companyId);
-    ensureAtLeastOneOwner(snapshot, companyId);
-    ensureAtLeastOneActiveOwner(snapshot, companyId);
-    pushAudit(snapshot, "Ajout utilisateur", company.name);
-
-    return persist(snapshot);
-  },
-
-  updateMember(memberId: string, payload: Partial<UpsertMemberPayload>): SuperAdminSnapshot {
-    const snapshot = readSnapshot();
-    const member = snapshot.members.find((item) => item.id === memberId);
-    if (!member) throw new Error("Utilisateur introuvable.");
-
-    const previousRole = member.role;
-    const previousActive = member.isActive;
-
-    if (payload.fullName !== undefined) member.fullName = payload.fullName.trim();
-    if (payload.email !== undefined) member.email = payload.email.trim().toLowerCase();
-    if (payload.role !== undefined) member.role = payload.role;
-    if (payload.isActive !== undefined) member.isActive = payload.isActive;
-
-    syncCompanyCounts(snapshot, member.companyId);
-
-    if (previousRole === "OWNER" && member.role !== "OWNER") {
-      ensureAtLeastOneOwner(snapshot, member.companyId);
+        plan: payload.plan ?? "STANDARD",
+        status: toBackendSubscriptionStatus(payload.subscriptionStatus ?? "ACTIVE"),
+        startDate: baseStartDate,
+        endDate,
+        isActive: (payload.subscriptionStatus ?? "ACTIVE") === "ACTIVE",
+      });
     }
 
-    if (previousRole === "OWNER" && previousActive && !member.isActive) {
-      ensureAtLeastOneActiveOwner(snapshot, member.companyId);
-    }
-
-    if (payload.role === "OWNER") {
-      ensureAtLeastOneOwner(snapshot, member.companyId);
-      ensureAtLeastOneActiveOwner(snapshot, member.companyId);
-    }
-
-    pushAudit(snapshot, "Mise a jour utilisateur", member.email);
-    return persist(snapshot);
+    return fetchSnapshot();
   },
 
-  toggleMember(memberId: string, isActive: boolean): SuperAdminSnapshot {
-    return this.updateMember(memberId, { isActive });
-  },
+  async toggleSubscription(companyId: string, isEnabled: boolean): Promise<SuperAdminSnapshot> {
+    const existingSubscription = await resolveCompanySubscription(companyId);
+    const nextStatus: SubscriptionStatus = isEnabled ? "ACTIVE" : "SUSPENDED";
 
-  deleteMember(memberId: string): SuperAdminSnapshot {
-    const snapshot = readSnapshot();
-    const member = snapshot.members.find((item) => item.id === memberId);
-    if (!member) throw new Error("Utilisateur introuvable.");
-
-    const companyId = member.companyId;
-    snapshot.members = snapshot.members.filter((item) => item.id !== memberId);
-
-    if (member.role === "OWNER") {
-      ensureAtLeastOneOwner(snapshot, companyId);
-      ensureAtLeastOneActiveOwner(snapshot, companyId);
+    if (existingSubscription) {
+      await apiClient.patch(`/admin/subscriptions/${existingSubscription.id}/status`, {
+        status: toBackendSubscriptionStatus(nextStatus),
+        isActive: isEnabled,
+      });
+    } else {
+      await apiClient.post("/admin/subscriptions", {
+        companyId,
+        plan: "STANDARD",
+        status: toBackendSubscriptionStatus(nextStatus),
+        startDate: todayDateOnly(),
+        endDate: addMonths(todayDateOnly(), 1),
+        isActive: isEnabled,
+      });
     }
 
-    syncCompanyCounts(snapshot, companyId);
-    pushAudit(snapshot, "Suppression utilisateur", member.email);
-
-    return persist(snapshot);
+    return fetchSnapshot();
   },
 
-  updateGlobalSettings(
+  async addMember(companyId: string, payload: UpsertMemberPayload): Promise<SuperAdminSnapshot> {
+    const names = splitFullName(payload.fullName);
+    const created = await apiClient.post<BackendUser>("/admin/users", {
+      companyId,
+      firstName: names.firstName,
+      lastName: names.lastName,
+      email: payload.email.trim().toLowerCase(),
+      password: DEFAULT_USER_PASSWORD,
+      role: toBackendRole(payload.role),
+    });
+
+    if (payload.isActive === false) {
+      await apiClient.patch(`/admin/users/${created.id}/activation`, { isActive: false });
+    }
+
+    return fetchSnapshot();
+  },
+
+  async updateMember(memberId: string, payload: Partial<UpsertMemberPayload>): Promise<SuperAdminSnapshot> {
+    const names = payload.fullName ? splitFullName(payload.fullName) : null;
+
+    await apiClient.patch(`/admin/users/${memberId}`, {
+      ...(names ? { firstName: names.firstName, lastName: names.lastName } : {}),
+      ...(payload.email !== undefined ? { email: payload.email.trim().toLowerCase() } : {}),
+      ...(payload.role !== undefined ? { role: toBackendRole(payload.role) } : {}),
+      ...(payload.isActive !== undefined ? { isActive: payload.isActive } : {}),
+    });
+
+    return fetchSnapshot();
+  },
+
+  async toggleMember(memberId: string, isActive: boolean): Promise<SuperAdminSnapshot> {
+    await apiClient.patch(`/admin/users/${memberId}/activation`, { isActive });
+    return fetchSnapshot();
+  },
+
+  async deleteMember(memberId: string): Promise<SuperAdminSnapshot> {
+    await apiClient.delete(`/admin/users/${memberId}`);
+    return fetchSnapshot();
+  },
+
+  async updateGlobalSettings(
     payload: Partial<{
       maintenanceMode: boolean;
       allowInvitations: boolean;
       defaultLanguage: string;
       supportEmail: string;
     }>,
-  ): SuperAdminSnapshot {
-    const snapshot = readSnapshot();
+  ): Promise<SuperAdminSnapshot> {
+    await apiClient.patch("/admin/maintenance/platform-settings", {
+      ...(payload.maintenanceMode !== undefined ? { maintenanceMode: payload.maintenanceMode } : {}),
+      ...(payload.allowInvitations !== undefined ? { allowUserInvitations: payload.allowInvitations } : {}),
+      ...(payload.defaultLanguage !== undefined ? { defaultLanguage: payload.defaultLanguage } : {}),
+      ...(payload.supportEmail !== undefined ? { supportEmail: payload.supportEmail || null } : {}),
+    });
 
-    snapshot.globalSettings = {
-      ...snapshot.globalSettings,
-      ...payload,
-      defaultLanguage: payload.defaultLanguage?.trim() ?? snapshot.globalSettings.defaultLanguage,
-      supportEmail: payload.supportEmail?.trim() ?? snapshot.globalSettings.supportEmail,
-    };
-
-    pushAudit(snapshot, "Mise a jour parametres globaux", "Plateforme");
-    return persist(snapshot);
+    return fetchSnapshot();
   },
 
-  runMaintenance(): SuperAdminSnapshot {
-    const snapshot = readSnapshot();
-    snapshot.maintenance = buildMaintenance();
-    pushAudit(snapshot, "Execution test maintenance", "Technique");
-    return persist(snapshot);
+  async runMaintenance(): Promise<SuperAdminSnapshot> {
+    await apiClient.get("/admin/maintenance/health");
+    return fetchSnapshot();
   },
 };

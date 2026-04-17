@@ -1,9 +1,9 @@
 import type { UserRole } from "@/src/types/role";
 
 export type SubscriptionPlan = "BASIC" | "STANDARD" | "PREMIUM" | "ENTERPRISE";
-export type SubscriptionStatus = "TRIAL" | "ACTIVE" | "OVERDUE" | "CANCELED";
+export type SubscriptionStatus = "ACTIVE" | "SUSPENDED" | "EXPIRED" | "CANCELED";
 export type BillingCycle = "MONTHLY" | "YEARLY";
-export type CompanyLifecycleStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
+export type CompanyLifecycleStatus = "ACTIVE" | "INACTIVE";
 export type TechnicalHealthStatus = "HEALTHY" | "WARNING" | "CRITICAL";
 export type ManagedUserRole = Extract<UserRole, "OWNER" | "AGENT">;
 
