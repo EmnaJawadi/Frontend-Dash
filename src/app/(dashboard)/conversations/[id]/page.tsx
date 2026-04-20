@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
+import { AiReplyPanel } from "@/src/components/conversations/ai-reply-panel";
 import { ConversationDetails } from "@/src/components/conversations/conversation-details";
 import { ConversationMessages } from "@/src/components/conversations/conversation-messages";
 import { LoadingSpinner } from "@/src/components/shared/loading-spinner";
@@ -204,6 +205,11 @@ export default function ConversationDetailsPage() {
               <h2 className="text-lg font-semibold">Messages</h2>
               <p className="text-sm text-muted-foreground">Historique complet de la conversation.</p>
             </div>
+
+            <AiReplyPanel
+              conversation={conversation}
+              onSent={loadConversation}
+            />
 
             <ConversationMessages messages={conversation.messages} />
           </div>

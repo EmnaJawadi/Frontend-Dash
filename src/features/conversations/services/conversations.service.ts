@@ -2,9 +2,13 @@ import { apiClient } from "@/src/lib/api-client";
 import type {
   ConversationDetails,
   ConversationFilters,
+  AiReplyDecision,
+  AiReplyRequest,
   ConversationListItem,
   ConversationsResponse,
   ConversationStatus,
+  WhatsappReplyRequest,
+  WhatsappReplyResult,
 } from "@/src/features/conversations/types/conversations.types";
 
 type BackendListResponse = {
@@ -141,8 +145,20 @@ function mapDetails(item: BackendConversation): ConversationDetails {
         (message.senderType as "customer" | "bot" | "agent" | "system") ?? "customer",
       direction: (message.direction as "inbound" | "outbound") ?? "inbound",
       type:
-        (message.type as "text" | "image" | "audio" | "document" | "system") ??
-        (message.messageType as "text" | "image" | "audio" | "document" | "system") ??
+        (message.type as
+          | "text"
+          | "template"
+          | "image"
+          | "audio"
+          | "document"
+          | "system") ??
+        (message.messageType as
+          | "text"
+          | "template"
+          | "image"
+          | "audio"
+          | "document"
+          | "system") ??
         "text",
       content: message.content ?? "",
       timestamp:
@@ -258,6 +274,20 @@ export const conversationsService = {
     });
 
     return { success: true };
+  },
+
+  async generateAiReply(payload: AiReplyRequest): Promise<AiReplyDecision> {
+    return apiClient.post<AiReplyDecision>("/ai/reply", payload);
+  },
+
+  async sendWhatsappReply(
+    payload: WhatsappReplyRequest,
+  ): Promise<WhatsappReplyResult> {
+    return apiClient.post<WhatsappReplyResult>("/whatsapp/reply", {
+      ...payload,
+      automated: payload.automated ?? false,
+      senderType: payload.senderType ?? "agent",
+    });
   },
 
   async deleteConversation(id: string): Promise<{ success: boolean }> {

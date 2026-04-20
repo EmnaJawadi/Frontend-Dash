@@ -12,7 +12,13 @@ export type SenderType = "customer" | "bot" | "agent" | "system";
 
 export type MessageDirection = "inbound" | "outbound";
 
-export type MessageType = "text" | "image" | "audio" | "document" | "system";
+export type MessageType =
+  | "text"
+  | "template"
+  | "image"
+  | "audio"
+  | "document"
+  | "system";
 
 export type MessageStatus = "sent" | "delivered" | "read" | "failed";
 
@@ -92,4 +98,60 @@ export interface ConversationsResponse {
   total: number;
   page: number;
   pageSize: number;
+}
+
+export interface AiReplyDecision {
+  intent: string;
+  answer: string;
+  reply: string;
+  provider: string;
+  model: string;
+  safe: boolean;
+  canSendFreeForm: boolean;
+  templateRequired: boolean;
+  handoffRequired: boolean;
+  needsClarification: boolean;
+  reason: string | null;
+  sources: string[];
+  tagsToApply: string[];
+  shouldEscalate: boolean;
+  escalationReason: string | null;
+  confidence: number;
+  blockedReason: string | null;
+  aiRunId: string | null;
+  action: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface AiReplyRequest {
+  conversationId: string;
+  messageId?: string;
+  message: string;
+  direction?: "inbound" | "outbound" | "system";
+  messageType?: string;
+  channel?: "whatsapp";
+}
+
+export interface WhatsappReplyRequest {
+  conversationId: string;
+  message?: string;
+  templateName?: string;
+  language?: string;
+  parameters?: string[];
+  automated?: boolean;
+  senderType?: "agent" | "bot" | "system";
+}
+
+export interface WhatsappReplyResult {
+  sent: boolean;
+  skipped: boolean;
+  action: string;
+  canSendFreeForm: boolean;
+  templateRequired: boolean;
+  reason: string | null;
+  message?: string;
+  messageType: "text" | "template" | null;
+  templateName: string | null;
+  messageId: string | null;
+  storedMessageId: string | null;
 }
