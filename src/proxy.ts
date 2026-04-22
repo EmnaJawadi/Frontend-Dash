@@ -26,11 +26,10 @@ const SUPER_ADMIN_ROUTES = [
 ];
 
 const AGENT_ROUTES = [
-  "/dashboard",
   "/conversations",
   "/contacts",
   "/knowledge-base",
-  "/settings",
+  "/analytics",
   "/settings/profile",
   "/settings/account",
 ];
@@ -66,8 +65,9 @@ function getDefaultRouteByRole(role: AppRole): string {
     case "SUPER_ADMIN":
       return "/admin/dashboard";
     case "OWNER":
-    case "AGENT":
       return "/dashboard";
+    case "AGENT":
+      return "/conversations";
     default:
       return "/login";
   }
@@ -124,7 +124,7 @@ export function proxy(request: NextRequest) {
     case "AGENT":
       return matchesRoute(pathname, AGENT_ROUTES)
         ? NextResponse.next()
-        : redirectTo(request, "/dashboard");
+        : redirectTo(request, "/conversations");
 
     default:
       return redirectTo(request, "/login");

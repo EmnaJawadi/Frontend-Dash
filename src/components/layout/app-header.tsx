@@ -18,7 +18,7 @@ const pageTitles: Record<string, string> = {
   "/contacts": "Contacts",
   "/knowledge-base": "Base de connaissances",
   "/analytics": "Analytique",
-  "/settings": "Parametres",
+  "/settings": "Parametres entreprise",
   "/settings/profile": "Mon profil",
 };
 

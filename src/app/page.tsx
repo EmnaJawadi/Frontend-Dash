@@ -14,5 +14,9 @@ export default async function HomePage() {
     redirect("/admin/dashboard");
   }
 
+  if (role === "AGENT") {
+    redirect("/conversations");
+  }
+
   redirect("/dashboard");
 }

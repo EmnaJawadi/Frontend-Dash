@@ -182,6 +182,8 @@ export default function KnowledgeBasePage() {
   const [items, setItems] = React.useState<KnowledgeArticle[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [deletingArticleId, setDeletingArticleId] = React.useState<string | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
+  const [selectedArticleIds, setSelectedArticleIds] = React.useState<Set<string>>(new Set());
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
 
@@ -243,10 +245,43 @@ export default function KnowledgeBasePage() {
     };
   }, [items]);
 
+  React.useEffect(() => {
+    setSelectedArticleIds((prev) => {
+      const visibleIds = new Set(filteredArticles.map((article) => article.id));
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (visibleIds.has(id)) {
+          next.add(id);
+        }
+      });
+      return next;
+    });
+  }, [filteredArticles]);
+
   function resetFilters() {
     setSearch("");
     setStatus("all");
     setCategory("all");
+  }
+
+  function toggleArticleSelection(articleId: string, checked: boolean) {
+    setSelectedArticleIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(articleId);
+      } else {
+        next.delete(articleId);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible(checked: boolean) {
+    if (checked) {
+      setSelectedArticleIds(new Set(filteredArticles.map((article) => article.id)));
+      return;
+    }
+    setSelectedArticleIds(new Set());
   }
 
   async function handleDeleteArticle(article: KnowledgeArticle) {
@@ -259,6 +294,11 @@ export default function KnowledgeBasePage() {
       setSuccess(null);
       await knowledgeBaseService.remove(article.id);
       await loadArticles();
+      setSelectedArticleIds((prev) => {
+        const next = new Set(prev);
+        next.delete(article.id);
+        return next;
+      });
       setSuccess("Article supprime avec succes.");
     } catch (err) {
       console.error("Failed to delete article", err);
@@ -271,6 +311,54 @@ export default function KnowledgeBasePage() {
       setDeletingArticleId(null);
     }
   }
+
+  async function handleDeleteSelectedArticles() {
+    if (selectedArticleIds.size === 0) return;
+
+    const confirmed = window.confirm(
+      `Supprimer ${selectedArticleIds.size} article(s) selectionne(s) ?`,
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsBulkDeleting(true);
+      setError(null);
+      setSuccess(null);
+
+      const ids = Array.from(selectedArticleIds);
+      const deletions = await Promise.allSettled(
+        ids.map((id) => knowledgeBaseService.remove(id)),
+      );
+      const deletedCount = deletions.filter((item) => item.status === "fulfilled").length;
+      const failedCount = ids.length - deletedCount;
+
+      await loadArticles();
+      setSelectedArticleIds(new Set());
+
+      if (failedCount > 0) {
+        setError(`${deletedCount} article(s) supprime(s), ${failedCount} echec(s).`);
+      } else {
+        setSuccess(`${deletedCount} article(s) supprime(s) avec succes.`);
+      }
+    } catch (err) {
+      console.error("Failed to delete selected articles", err);
+      setError("Impossible de supprimer la selection.");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  }
+
+  const selectedCount = selectedArticleIds.size;
+  const allVisibleSelected =
+    filteredArticles.length > 0 && selectedCount === filteredArticles.length;
+  const partiallySelected =
+    selectedCount > 0 && selectedCount < filteredArticles.length;
+  const selectAllRef = React.useRef<HTMLInputElement | null>(null);
+
+  React.useEffect(() => {
+    if (!selectAllRef.current) return;
+    selectAllRef.current.indeterminate = partiallySelected;
+  }, [partiallySelected]);
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -380,6 +468,28 @@ export default function KnowledgeBasePage() {
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       {success ? <p className="text-sm text-emerald-700">{success}</p> : null}
 
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void handleDeleteSelectedArticles()}
+          disabled={selectedCount === 0 || isBulkDeleting}
+          className="rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+        >
+          {isBulkDeleting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Suppression...
+            </>
+          ) : (
+            <>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Supprimer la selection ({selectedCount})
+            </>
+          )}
+        </Button>
+      </div>
+
       <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
         {isLoading ? "Chargement..." : `${filteredArticles.length} article(s) trouve(s)`}
       </div>
@@ -398,6 +508,16 @@ export default function KnowledgeBasePage() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left text-muted-foreground">
               <tr>
+                <th className="px-4 py-3 font-medium">
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    aria-label="Selectionner tous les articles visibles"
+                    checked={allVisibleSelected}
+                    onChange={(event) => toggleSelectAllVisible(event.target.checked)}
+                    className="h-4 w-4 rounded border border-border"
+                  />
+                </th>
                 <th className="px-4 py-3 font-medium">Titre</th>
                 <th className="px-4 py-3 font-medium">Categorie</th>
                 <th className="px-4 py-3 font-medium">Statut</th>
@@ -413,6 +533,17 @@ export default function KnowledgeBasePage() {
                   key={article.id}
                   className="border-t border-border/60 transition hover:bg-muted/20"
                 >
+                  <td className="px-4 py-4">
+                    <input
+                      type="checkbox"
+                      aria-label="Selectionner l'article"
+                      checked={selectedArticleIds.has(article.id)}
+                      onChange={(event) =>
+                        toggleArticleSelection(article.id, event.target.checked)
+                      }
+                      className="h-4 w-4 rounded border border-border"
+                    />
+                  </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
                       <div className="rounded-xl bg-muted p-2 text-muted-foreground">
@@ -447,7 +578,7 @@ export default function KnowledgeBasePage() {
                         variant="outline"
                         className="rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                         onClick={() => void handleDeleteArticle(article)}
-                        disabled={deletingArticleId === article.id}
+                        disabled={deletingArticleId === article.id || isBulkDeleting}
                       >
                         {deletingArticleId === article.id ? (
                           <>

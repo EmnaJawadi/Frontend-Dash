@@ -11,7 +11,6 @@ import {
   Loader2,
   MailOpen,
   MessageSquareText,
-  Square,
   Trash2,
   User,
   UserRound,
@@ -23,7 +22,8 @@ import type { ConversationListItem } from "@/src/features/conversations/types/co
 
 type ConversationTableProps = {
   conversations: ConversationListItem[];
-  onDeleteConversation?: (conversationId: string) => void | Promise<void>;
+  onDeleteConversation?: (conversationId: string) => Promise<void>;
+  onRefresh?: () => void | Promise<void>;
 };
 
 function getStatusLabel(status: ConversationListItem["status"]) {
@@ -114,9 +114,46 @@ function HeaderCell({
 export function ConversationTable({
   conversations,
   onDeleteConversation,
+  onRefresh,
 }: ConversationTableProps) {
   const [deletingConversationId, setDeletingConversationId] = React.useState<string | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
+  const [selectedConversationIds, setSelectedConversationIds] = React.useState<Set<string>>(new Set());
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setSelectedConversationIds((prev) => {
+      const visibleIds = new Set(conversations.map((item) => item.id));
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (visibleIds.has(id)) {
+          next.add(id);
+        }
+      });
+      return next;
+    });
+  }, [conversations]);
+
+  function toggleConversationSelection(conversationId: string, checked: boolean) {
+    setSelectedConversationIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(conversationId);
+      } else {
+        next.delete(conversationId);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible(checked: boolean) {
+    if (checked) {
+      setSelectedConversationIds(new Set(conversations.map((item) => item.id)));
+      return;
+    }
+    setSelectedConversationIds(new Set());
+  }
 
   async function handleDelete(conversationId: string, contactName: string) {
     const confirmed = window.confirm(
@@ -128,7 +165,15 @@ export function ConversationTable({
     try {
       setDeletingConversationId(conversationId);
       setDeleteError(null);
+      setDeleteSuccess(null);
       await onDeleteConversation?.(conversationId);
+      await onRefresh?.();
+      setSelectedConversationIds((prev) => {
+        const next = new Set(prev);
+        next.delete(conversationId);
+        return next;
+      });
+      setDeleteSuccess("Conversation supprimee avec succes.");
     } catch (error) {
       console.error("Failed to delete conversation", error);
       setDeleteError("Impossible de supprimer la conversation.");
@@ -137,9 +182,73 @@ export function ConversationTable({
     }
   }
 
+  async function handleDeleteSelectedConversations() {
+    if (selectedConversationIds.size === 0 || !onDeleteConversation) return;
+
+    const confirmed = window.confirm(
+      `Supprimer ${selectedConversationIds.size} conversation(s) selectionnee(s) ?`,
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsBulkDeleting(true);
+      setDeleteError(null);
+      setDeleteSuccess(null);
+
+      const ids = Array.from(selectedConversationIds);
+      const deletions = await Promise.allSettled(
+        ids.map((id) => onDeleteConversation(id)),
+      );
+
+      const deletedCount = deletions.filter((item) => item.status === "fulfilled").length;
+      const failedCount = ids.length - deletedCount;
+
+      await onRefresh?.();
+      setSelectedConversationIds(new Set());
+
+      if (failedCount > 0) {
+        setDeleteError(
+          `${deletedCount} conversation(s) supprimee(s), ${failedCount} echec(s).`,
+        );
+      } else {
+        setDeleteSuccess(`${deletedCount} conversation(s) supprimee(s) avec succes.`);
+      }
+    } catch (error) {
+      console.error("Failed to delete selected conversations", error);
+      setDeleteError("Impossible de supprimer les conversations selectionnees.");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  }
+
+  const selectedCount = selectedConversationIds.size;
+  const allVisibleSelected =
+    conversations.length > 0 && selectedCount === conversations.length;
+  const partiallySelected =
+    selectedCount > 0 && selectedCount < conversations.length;
+  const selectAllRef = React.useRef<HTMLInputElement | null>(null);
+
+  React.useEffect(() => {
+    if (!selectAllRef.current) return;
+    selectAllRef.current.indeterminate = partiallySelected;
+  }, [partiallySelected]);
+
   return (
     <div className="space-y-3">
       {deleteError ? <p className="text-sm text-destructive">{deleteError}</p> : null}
+      {deleteSuccess ? <p className="text-sm text-emerald-700">{deleteSuccess}</p> : null}
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => void handleDeleteSelectedConversations()}
+          disabled={selectedCount === 0 || isBulkDeleting}
+          className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isBulkDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+          Supprimer la selection ({selectedCount})
+        </button>
+      </div>
 
       <DataTable
         data={conversations}
@@ -148,13 +257,26 @@ export function ConversationTable({
         columns={[
           {
             key: "select",
-            header: <Square className="h-4 w-4" />,
+            header: (
+              <input
+                ref={selectAllRef}
+                type="checkbox"
+                checked={allVisibleSelected}
+                onChange={(event) => toggleSelectAllVisible(event.target.checked)}
+                aria-label="Selectionner toutes les conversations"
+                className="h-4 w-4 rounded border border-border"
+              />
+            ),
             className: "w-[52px]",
-            render: () => (
+            render: (item) => (
               <input
                 type="checkbox"
                 aria-label="Selectionner la conversation"
                 className="h-4 w-4 rounded border border-border"
+                checked={selectedConversationIds.has(item.id)}
+                onChange={(event) =>
+                  toggleConversationSelection(item.id, event.target.checked)
+                }
               />
             ),
           },
@@ -243,7 +365,7 @@ export function ConversationTable({
                 <button
                   type="button"
                   onClick={() => void handleDelete(item.id, item.contactName)}
-                  disabled={deletingConversationId === item.id}
+                  disabled={deletingConversationId === item.id || isBulkDeleting}
                   className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {deletingConversationId === item.id ? (

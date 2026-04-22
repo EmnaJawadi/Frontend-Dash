@@ -134,12 +134,6 @@ function todayDateOnly(): string {
   return toDateOnly(new Date());
 }
 
-function addDays(baseDate: string, days: number): string {
-  const date = new Date(baseDate);
-  date.setDate(date.getDate() + days);
-  return toDateOnly(date);
-}
-
 function addMonths(baseDate: string, months: number): string {
   const date = new Date(baseDate);
   date.setMonth(date.getMonth() + Math.max(1, Math.trunc(months)));

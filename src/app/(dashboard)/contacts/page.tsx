@@ -47,7 +47,9 @@ export default function ContactsPage() {
   const [search, setSearch] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
   const [deletingContactId, setDeletingContactId] = React.useState<string | null>(null);
+  const [selectedContactIds, setSelectedContactIds] = React.useState<Set<string>>(new Set());
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
 
@@ -80,6 +82,19 @@ export default function ContactsPage() {
   React.useEffect(() => {
     void loadContacts();
   }, [loadContacts]);
+
+  React.useEffect(() => {
+    setSelectedContactIds((prev) => {
+      const visibleIds = new Set(contacts.map((item) => item.id));
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (visibleIds.has(id)) {
+          next.add(id);
+        }
+      });
+      return next;
+    });
+  }, [contacts]);
 
   async function handleCreateContact(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -137,6 +152,65 @@ export default function ContactsPage() {
     }
   }
 
+  function toggleContactSelection(contactId: string, checked: boolean) {
+    setSelectedContactIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(contactId);
+      } else {
+        next.delete(contactId);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible(checked: boolean) {
+    if (checked) {
+      setSelectedContactIds(new Set(contacts.map((contact) => contact.id)));
+      return;
+    }
+    setSelectedContactIds(new Set());
+  }
+
+  async function handleDeleteSelectedContacts() {
+    if (selectedContactIds.size === 0) return;
+
+    const confirmed = window.confirm(
+      `Supprimer ${selectedContactIds.size} contact(s) selectionne(s) ?`,
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsBulkDeleting(true);
+      setError(null);
+      setSuccess(null);
+
+      const ids = Array.from(selectedContactIds);
+      const deletions = await Promise.allSettled(
+        ids.map((id) => contactsService.remove(id)),
+      );
+
+      const deletedCount = deletions.filter((item) => item.status === "fulfilled").length;
+      const failedCount = ids.length - deletedCount;
+
+      await loadContacts();
+      setSelectedContactIds(new Set());
+
+      if (failedCount > 0) {
+        setError(
+          `${deletedCount} contact(s) supprime(s), ${failedCount} echec(s).`,
+        );
+      } else {
+        setSuccess(`${deletedCount} contact(s) supprime(s) avec succes.`);
+      }
+    } catch (err) {
+      console.error("Failed to delete selected contacts", err);
+      setError(getErrorMessage(err, "Impossible de supprimer la selection."));
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  }
+
   const stats = React.useMemo(() => {
     const blocked = contacts.filter((item) => item.isBlocked).length;
     return {
@@ -145,6 +219,18 @@ export default function ContactsPage() {
       blocked,
     };
   }, [contacts]);
+
+  const selectedCount = selectedContactIds.size;
+  const allVisibleSelected =
+    contacts.length > 0 && selectedCount === contacts.length;
+  const partiallySelected =
+    selectedCount > 0 && selectedCount < contacts.length;
+  const selectAllRef = React.useRef<HTMLInputElement | null>(null);
+
+  React.useEffect(() => {
+    if (!selectAllRef.current) return;
+    selectAllRef.current.indeterminate = partiallySelected;
+  }, [partiallySelected]);
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -229,6 +315,20 @@ export default function ContactsPage() {
               <RefreshCw className="mr-2 h-4 w-4" />
               Actualiser
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+              onClick={() => void handleDeleteSelectedContacts()}
+              disabled={selectedCount === 0 || isBulkDeleting}
+            >
+              {isBulkDeleting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Supprimer la selection ({selectedCount})
+            </Button>
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -246,6 +346,17 @@ export default function ContactsPage() {
               <table className="w-full min-w-[720px] text-sm">
                 <thead className="bg-muted/40">
                   <tr>
+                    <th className="px-4 py-3 text-left font-medium">
+                      <input
+                        ref={selectAllRef}
+                        type="checkbox"
+                        checked={allVisibleSelected}
+                        onChange={(event) =>
+                          toggleSelectAllVisible(event.target.checked)
+                        }
+                        aria-label="Selectionner tous les contacts"
+                      />
+                    </th>
                     <th className="px-4 py-3 text-left font-medium">Nom</th>
                     <th className="px-4 py-3 text-left font-medium">Telephone</th>
                     <th className="px-4 py-3 text-left font-medium">Email</th>
@@ -257,6 +368,16 @@ export default function ContactsPage() {
                 <tbody>
                   {contacts.map((contact) => (
                     <tr key={contact.id} className="border-t">
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedContactIds.has(contact.id)}
+                          onChange={(event) =>
+                            toggleContactSelection(contact.id, event.target.checked)
+                          }
+                          aria-label={`Selectionner ${contact.fullName || contact.phoneNumber}`}
+                        />
+                      </td>
                       <td className="px-4 py-3">{contact.fullName || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim()}</td>
                       <td className="px-4 py-3">{contact.phoneNumber}</td>
                       <td className="px-4 py-3">{contact.email || "-"}</td>
@@ -281,7 +402,7 @@ export default function ContactsPage() {
                       <td className="px-4 py-3 text-right">
                         <div className="inline-flex items-center gap-2">
                           <Button asChild variant="outline" size="sm">
-                            <Link href={`/contacts/${contact.id}`}>Voir</Link>
+                            <Link href={`/contacts/${contact.id}`}>Voir details</Link>
                           </Button>
                           <Button asChild size="sm">
                             <Link href={`/contacts/${contact.id}/edit`}>Modifier</Link>
@@ -292,7 +413,7 @@ export default function ContactsPage() {
                             size="sm"
                             className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                             onClick={() => void handleDeleteContact(contact)}
-                            disabled={deletingContactId === contact.id}
+                            disabled={deletingContactId === contact.id || isBulkDeleting}
                           >
                             {deletingContactId === contact.id ? (
                               <>

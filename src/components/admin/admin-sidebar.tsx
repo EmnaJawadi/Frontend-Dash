@@ -20,7 +20,7 @@ const ADMIN_NAV_ITEMS = [
   { label: "Entreprises", href: "/admin/companies", icon: Building2 },
   { label: "Utilisateurs", href: "/admin/users", icon: Users },
   { label: "Abonnements", href: "/admin/subscriptions", icon: CreditCard },
-  { label: "Parametres", href: "/admin/settings", icon: Settings },
+  { label: "Parametres Plateforme", href: "/admin/settings", icon: Settings },
   { label: "Mon profil", href: "/admin/settings/profile", icon: UserCircle2 },
 ];
 

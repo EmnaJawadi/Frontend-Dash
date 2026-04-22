@@ -87,8 +87,8 @@ export default function ConversationsPage() {
           conversations={conversations}
           onDeleteConversation={async (conversationId) => {
             await conversationsService.deleteConversation(conversationId);
-            await refetch();
           }}
+          onRefresh={refetch}
         />
       </div>
 

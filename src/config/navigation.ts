@@ -7,7 +7,6 @@ import {
   Settings,
   Building2,
   UserRoundPlus,
-  Wrench,
   ShieldCheck,
   CreditCard,
 } from "lucide-react";
@@ -22,7 +21,7 @@ export type NavigationItem = {
 };
 
 const OWNER_NAVIGATION: NavigationItem[] = [
-  { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Dashboard entreprise", href: "/dashboard", icon: LayoutDashboard },
   {
     label: "Conversations",
     href: "/conversations",
@@ -48,27 +47,15 @@ const OWNER_NAVIGATION: NavigationItem[] = [
     matchStartsWith: true,
   },
   {
-    label: "Parametres",
+    label: "Parametres entreprise",
     href: "/settings",
     icon: Settings,
-    matchStartsWith: true,
-  },
-  {
-    label: "Informations societe",
-    href: "/company-info",
-    icon: Building2,
     matchStartsWith: true,
   },
   {
     label: "Equipe",
     href: "/team",
     icon: UserRoundPlus,
-    matchStartsWith: true,
-  },
-  {
-    label: "Configuration",
-    href: "/setup",
-    icon: Wrench,
     matchStartsWith: true,
   },
 ];
@@ -107,7 +94,6 @@ const SUPER_ADMIN_NAVIGATION: NavigationItem[] = [
 ];
 
 const AGENT_NAVIGATION: NavigationItem[] = [
-  { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
   {
     label: "Conversations",
     href: "/conversations",
@@ -127,9 +113,9 @@ const AGENT_NAVIGATION: NavigationItem[] = [
     matchStartsWith: true,
   },
   {
-    label: "Parametres",
-    href: "/settings",
-    icon: Settings,
+    label: "Analyses",
+    href: "/analytics",
+    icon: BarChart3,
     matchStartsWith: true,
   },
 ];

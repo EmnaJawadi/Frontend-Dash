@@ -3,23 +3,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { settingsService } from "@/src/features/settings/services/settings.service";
 import type {
-  SettingsData,
-  UpdateSettingsPayload,
+  CompanySettingsData,
+  UpdateCompanySettingsPayload,
 } from "@/src/features/settings/types/settings.types";
 
 export function useSettings() {
-  const [data, setData] = useState<SettingsData | null>(null);
+  const [data, setData] = useState<CompanySettingsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const fetchSettings = useCallback(async () => {
+  const fetchSettings = useCallback(async (companyId?: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await settingsService.getSettings();
+      const response = await settingsService.getCompanySettings(companyId);
       setData(response);
     } catch (err) {
       console.error("Echec du chargement des parametres:", err);
@@ -29,23 +29,29 @@ export function useSettings() {
     }
   }, []);
 
-  const saveSettings = useCallback(async (payload: UpdateSettingsPayload) => {
-    try {
-      setIsSaving(true);
-      setSaveError(null);
-      const response = await settingsService.updateSettings(payload);
-      setData(response);
-      return response;
-    } catch (err) {
-      console.error("Echec de sauvegarde des parametres:", err);
-      const message =
-        "Impossible d'enregistrer les parametres. Veuillez reessayer.";
-      setSaveError(message);
-      throw err;
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
+  const saveSettings = useCallback(
+    async (payload: UpdateCompanySettingsPayload, companyId?: string) => {
+      try {
+        setIsSaving(true);
+        setSaveError(null);
+        const response = await settingsService.updateCompanySettings(
+          payload,
+          companyId,
+        );
+        setData(response);
+        return response;
+      } catch (err) {
+        console.error("Echec de sauvegarde des parametres:", err);
+        const message =
+          "Impossible d'enregistrer les parametres. Veuillez reessayer.";
+        setSaveError(message);
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     fetchSettings();
