@@ -147,14 +147,12 @@ function mapDetails(item: BackendConversation): ConversationDetails {
       type:
         (message.type as
           | "text"
-          | "template"
           | "image"
           | "audio"
           | "document"
           | "system") ??
         (message.messageType as
           | "text"
-          | "template"
           | "image"
           | "audio"
           | "document"

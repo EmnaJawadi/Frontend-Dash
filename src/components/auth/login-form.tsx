@@ -61,13 +61,13 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {error ? (
-        <div className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+        <div className="auth-alert auth-alert-error">{error}</div>
       ) : null}
 
-      <div className="space-y-1">
-        <label htmlFor="email" className="block text-sm font-medium">
+      <div className="space-y-1.5">
+        <label htmlFor="email" className="auth-label">
           Email
         </label>
         <input
@@ -78,12 +78,12 @@ export default function LoginForm() {
           placeholder="email@entreprise.com"
           value={formData.email}
           onChange={handleChange}
-          className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
+          className="auth-input"
         />
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="password" className="block text-sm font-medium">
+      <div className="space-y-1.5">
+        <label htmlFor="password" className="auth-label">
           Mot de passe
         </label>
         <input
@@ -94,12 +94,12 @@ export default function LoginForm() {
           placeholder="********"
           value={formData.password}
           onChange={handleChange}
-          className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
+          className="auth-input"
         />
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="role" className="block text-sm font-medium">
+      <div className="space-y-1.5">
+        <label htmlFor="role" className="auth-label">
           Type de compte
         </label>
         <select
@@ -107,7 +107,7 @@ export default function LoginForm() {
           name="role"
           value={formData.role}
           onChange={handleChange}
-          className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
+          className="auth-select"
         >
           <option value="SUPER_ADMIN">Super Admin (plateforme)</option>
           <option value="OWNER">Admin entreprise (owner)</option>
@@ -118,7 +118,7 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full rounded-xl bg-primary px-4 py-2.5 font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+        className="auth-button"
       >
         {isSubmitting ? "Connexion..." : "Se connecter"}
       </button>

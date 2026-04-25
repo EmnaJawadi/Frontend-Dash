@@ -1,93 +1,93 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { register, getDefaultRedirectByRole } from "@/src/lib/auth";
+import { apiClient } from "@/src/lib/api-client";
 import { isApiError } from "@/src/lib/api-error";
-import type { RegisterRole } from "@/src/types/auth";
 
-type RegisterFormState = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  role: RegisterRole;
+type RegistrationRequestFormState = {
   companyName: string;
+  businessEmail: string;
+  phoneNumber: string;
+  responsibleFullName: string;
+  businessType: string;
+  message: string;
 };
 
 export default function RegisterForm() {
-  const router = useRouter();
-
-  const [formData, setFormData] = useState<RegisterFormState>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    role: "OWNER",
+  const [formData, setFormData] = useState<RegistrationRequestFormState>({
     companyName: "",
+    businessEmail: "",
+    phoneNumber: "",
+    responsibleFullName: "",
+    businessType: "",
+    message: "",
   });
 
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleChange(event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+  function handleChange(
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) {
     const { name, value } = event.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === "role" ? (value as RegisterRole) : value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setSuccess("");
 
-    if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim() || !formData.password.trim()) {
+    if (
+      !formData.companyName.trim() ||
+      !formData.businessEmail.trim() ||
+      !formData.phoneNumber.trim() ||
+      !formData.responsibleFullName.trim() ||
+      !formData.businessType.trim()
+    ) {
       setError("Veuillez remplir tous les champs obligatoires.");
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caracteres.");
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("Les mots de passe ne correspondent pas.");
-      return;
-    }
-
-    if (formData.role !== "SUPER_ADMIN" && !formData.companyName.trim()) {
-      setError("Veuillez saisir le nom de l'entreprise.");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const user = await register({
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        email: formData.email.trim(),
-        password: formData.password,
-        role: formData.role,
-        companyName:
-          formData.role === "SUPER_ADMIN" ? undefined : formData.companyName.trim(),
+      await apiClient.post("/public/company-registration", {
+        companyName: formData.companyName.trim(),
+        businessEmail: formData.businessEmail.trim().toLowerCase(),
+        phoneNumber: formData.phoneNumber.trim(),
+        responsibleFullName: formData.responsibleFullName.trim(),
+        requestedRole: "COMPANY_ADMIN",
+        businessType: formData.businessType.trim(),
+        message: formData.message.trim() || undefined,
       });
 
-      const redirectPath = user.role === "OWNER" ? "/company-info" : getDefaultRedirectByRole(user.role);
-      router.push(redirectPath);
-      router.refresh();
+      setSuccess(
+        "Demande envoyee. Votre entreprise restera en attente d'approbation Super Admin avant l'acces au dashboard.",
+      );
+      setFormData({
+        companyName: "",
+        businessEmail: "",
+        phoneNumber: "",
+        responsibleFullName: "",
+        businessType: "",
+        message: "",
+      });
     } catch (submitError) {
       if (isApiError(submitError)) {
-        setError(submitError.message || "Erreur API lors de la creation du compte.");
+        setError(
+          submitError.message || "Erreur API lors de l'envoi de la demande.",
+        );
       } else {
-        const message = submitError instanceof Error ? submitError.message : "Impossible de creer le compte.";
+        const message =
+          submitError instanceof Error
+            ? submitError.message
+            : "Impossible d'envoyer la demande.";
         if (message.toLowerCase().includes("failed to fetch")) {
-          setError("API inaccessible. Verifiez que le backend tourne sur http://localhost:3001.");
+          setError(
+            "API inaccessible. Verifiez que le backend tourne sur http://localhost:3001.",
+          );
         } else {
           setError(message);
         }
@@ -98,130 +98,119 @@ export default function RegisterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {error ? (
-        <div className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+        <div className="auth-alert auth-alert-error">
+          {error}
+        </div>
+      ) : null}
+      {success ? (
+        <div className="auth-alert auth-alert-success">
+          {success}
+        </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-1">
-          <label htmlFor="firstName" className="block text-sm font-medium">
-            Prenom
-          </label>
-          <input
-            id="firstName"
-            name="firstName"
-            type="text"
-            value={formData.firstName}
-            onChange={handleChange}
-            placeholder="Prenom"
-            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label htmlFor="lastName" className="block text-sm font-medium">
-            Nom
-          </label>
-          <input
-            id="lastName"
-            name="lastName"
-            type="text"
-            value={formData.lastName}
-            onChange={handleChange}
-            placeholder="Nom"
-            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor="email" className="block text-sm font-medium">
-          Email
+      <div className="space-y-1.5">
+        <label htmlFor="companyName" className="auth-label">
+          Nom de l'entreprise
         </label>
         <input
-          id="email"
-          name="email"
-          type="email"
-          value={formData.email}
+          id="companyName"
+          name="companyName"
+          type="text"
+          value={formData.companyName}
           onChange={handleChange}
-          placeholder="email@entreprise.com"
-          className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
+          placeholder="Support Vision"
+          className="auth-input"
         />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-1">
-          <label htmlFor="password" className="block text-sm font-medium">
-            Mot de passe
+        <div className="space-y-1.5">
+          <label htmlFor="businessEmail" className="auth-label">
+            Email professionnel
           </label>
           <input
-            id="password"
-            name="password"
-            type="password"
-            value={formData.password}
+            id="businessEmail"
+            name="businessEmail"
+            type="email"
+            value={formData.businessEmail}
             onChange={handleChange}
-            placeholder="******"
-            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
+            placeholder="contact@entreprise.com"
+            className="auth-input"
           />
         </div>
-
-        <div className="space-y-1">
-          <label htmlFor="confirmPassword" className="block text-sm font-medium">
-            Confirmer le mot de passe
+        <div className="space-y-1.5">
+          <label htmlFor="phoneNumber" className="auth-label">
+            Telephone professionnel
           </label>
           <input
-            id="confirmPassword"
-            name="confirmPassword"
-            type="password"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            placeholder="******"
-            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor="role" className="block text-sm font-medium">
-          Type de compte
-        </label>
-        <select
-          id="role"
-          name="role"
-          value={formData.role}
-          onChange={handleChange}
-          className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
-        >
-          <option value="SUPER_ADMIN">Super Admin (plateforme)</option>
-          <option value="OWNER">Admin entreprise (owner)</option>
-          <option value="AGENT">Agent (employe)</option>
-        </select>
-      </div>
-
-      {formData.role !== "SUPER_ADMIN" ? (
-        <div className="space-y-1">
-          <label htmlFor="companyName" className="block text-sm font-medium">
-            Nom de l'entreprise
-          </label>
-          <input
-            id="companyName"
-            name="companyName"
+            id="phoneNumber"
+            name="phoneNumber"
             type="text"
-            value={formData.companyName}
+            value={formData.phoneNumber}
             onChange={handleChange}
-            placeholder="Support Vision"
-            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
+            placeholder="+234..."
+            className="auth-input"
           />
         </div>
-      ) : null}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-1.5">
+          <label
+            htmlFor="responsibleFullName"
+            className="auth-label"
+          >
+            Responsable
+          </label>
+          <input
+            id="responsibleFullName"
+            name="responsibleFullName"
+            type="text"
+            value={formData.responsibleFullName}
+            onChange={handleChange}
+            placeholder="Nom complet"
+            className="auth-input"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="businessType" className="auth-label">
+            Type d'activite
+          </label>
+          <input
+            id="businessType"
+            name="businessType"
+            type="text"
+            value={formData.businessType}
+            onChange={handleChange}
+            placeholder="E-commerce, services..."
+            className="auth-input"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="message" className="auth-label">
+          Message (optionnel)
+        </label>
+        <textarea
+          id="message"
+          name="message"
+          value={formData.message}
+          onChange={handleChange}
+          rows={4}
+          className="auth-textarea"
+          placeholder="Precisez vos besoins."
+        />
+      </div>
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full rounded-xl bg-primary px-4 py-2.5 font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+        className="auth-button"
       >
-        {isSubmitting ? "Creation..." : "Creer un compte"}
+        {isSubmitting ? "Envoi..." : "Demander l'inscription entreprise"}
       </button>
     </form>
   );

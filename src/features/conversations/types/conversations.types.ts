@@ -14,7 +14,6 @@ export type MessageDirection = "inbound" | "outbound";
 
 export type MessageType =
   | "text"
-  | "template"
   | "image"
   | "audio"
   | "document"
@@ -108,7 +107,6 @@ export interface AiReplyDecision {
   model: string;
   safe: boolean;
   canSendFreeForm: boolean;
-  templateRequired: boolean;
   handoffRequired: boolean;
   needsClarification: boolean;
   reason: string | null;
@@ -134,10 +132,7 @@ export interface AiReplyRequest {
 
 export interface WhatsappReplyRequest {
   conversationId: string;
-  message?: string;
-  templateName?: string;
-  language?: string;
-  parameters?: string[];
+  message: string;
   automated?: boolean;
   senderType?: "agent" | "bot" | "system";
 }
@@ -147,11 +142,9 @@ export interface WhatsappReplyResult {
   skipped: boolean;
   action: string;
   canSendFreeForm: boolean;
-  templateRequired: boolean;
   reason: string | null;
   message?: string;
-  messageType: "text" | "template" | null;
-  templateName: string | null;
+  messageType: "text" | null;
   messageId: string | null;
   storedMessageId: string | null;
 }

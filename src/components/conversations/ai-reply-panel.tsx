@@ -53,13 +53,6 @@ function findLatestCustomerMessage(
   );
 }
 
-function splitTemplateParameters(value: string): string[] {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 export function AiReplyPanel({ conversation, onSent }: AiReplyPanelProps) {
   const latestCustomerMessage = useMemo(
     () => findLatestCustomerMessage(conversation.messages),
@@ -68,20 +61,14 @@ export function AiReplyPanel({ conversation, onSent }: AiReplyPanelProps) {
 
   const [decision, setDecision] = useState<AiReplyDecision | null>(null);
   const [draftAnswer, setDraftAnswer] = useState("");
-  const [templateName, setTemplateName] = useState("");
-  const [templateLanguage, setTemplateLanguage] = useState(
-    conversation.contact.language ?? "fr",
-  );
-  const [templateParameters, setTemplateParameters] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const canSendText =
-    Boolean(decision?.canSendFreeForm) &&
-    !decision?.templateRequired &&
     !decision?.handoffRequired &&
+    !decision?.needsClarification &&
     Boolean(draftAnswer.trim());
 
   const generateReply = async () => {
@@ -107,14 +94,12 @@ export function AiReplyPanel({ conversation, onSent }: AiReplyPanelProps) {
       setDecision(result);
       setDraftAnswer(result.answer || result.reply || "");
 
-      if (result.templateRequired) {
-        setNotice(
-          "Fenetre WhatsApp fermee: un template approuve est requis pour envoyer.",
-        );
-      } else if (result.handoffRequired) {
+      if (result.handoffRequired) {
         setNotice("L'agent IA recommande un transfert humain.");
       } else if (result.needsClarification) {
         setNotice("L'agent IA propose une question de clarification.");
+      } else {
+        setNotice("Reponse IA prete pour envoi via Evolution API.");
       }
     } catch (err) {
       console.error("Echec de generation IA:", err);
@@ -139,8 +124,8 @@ export function AiReplyPanel({ conversation, onSent }: AiReplyPanelProps) {
         senderType: "agent",
       });
 
-      if (!result.sent && result.templateRequired) {
-        setNotice("Envoi bloque: template WhatsApp requis.");
+      if (!result.sent) {
+        setNotice(result.reason ?? "Le message n'a pas ete envoye.");
         return;
       }
 
@@ -149,41 +134,6 @@ export function AiReplyPanel({ conversation, onSent }: AiReplyPanelProps) {
     } catch (err) {
       console.error("Echec d'envoi WhatsApp:", err);
       setError("Impossible d'envoyer la reponse WhatsApp.");
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  const sendTemplateReply = async () => {
-    if (!templateName.trim()) {
-      setError("Le nom du template est requis.");
-      return;
-    }
-
-    try {
-      setIsSending(true);
-      setError(null);
-      setNotice(null);
-
-      const result = await conversationsService.sendWhatsappReply({
-        conversationId: conversation.id,
-        templateName: templateName.trim(),
-        language: templateLanguage.trim() || "fr",
-        parameters: splitTemplateParameters(templateParameters),
-        automated: false,
-        senderType: "agent",
-      });
-
-      if (!result.sent) {
-        setNotice(result.reason ?? "Le template n'a pas ete envoye.");
-        return;
-      }
-
-      await onSent();
-      setNotice("Template envoye via WhatsApp.");
-    } catch (err) {
-      console.error("Echec d'envoi template:", err);
-      setError("Impossible d'envoyer le template WhatsApp.");
     } finally {
       setIsSending(false);
     }
@@ -200,8 +150,8 @@ export function AiReplyPanel({ conversation, onSent }: AiReplyPanelProps) {
             <h3 className="text-base font-semibold">Agent IA</h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            Genere une reponse fondee sur la base de connaissances, avec
-            decision n8n et verification de la fenetre WhatsApp.
+            Reponses automatiques basees sur la base de connaissances et le
+            contexte metier de la conversation.
           </p>
         </div>
 
@@ -244,11 +194,6 @@ export function AiReplyPanel({ conversation, onSent }: AiReplyPanelProps) {
               tone={decision.canSendFreeForm ? "success" : "warning"}
             >
               Free-form: {decision.canSendFreeForm ? "autorise" : "bloque"}
-            </DecisionPill>
-            <DecisionPill
-              tone={decision.templateRequired ? "warning" : "success"}
-            >
-              Template: {decision.templateRequired ? "requis" : "non requis"}
             </DecisionPill>
             <DecisionPill
               tone={decision.handoffRequired ? "danger" : "success"}
@@ -299,43 +244,6 @@ export function AiReplyPanel({ conversation, onSent }: AiReplyPanelProps) {
               {isSending ? "Envoi..." : "Envoyer la reponse"}
             </button>
           </div>
-
-          {decision.templateRequired ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-              <p className="text-sm font-medium text-amber-800">
-                Template WhatsApp requis
-              </p>
-              <div className="mt-3 grid gap-3 md:grid-cols-[1fr_120px]">
-                <input
-                  value={templateName}
-                  onChange={(event) => setTemplateName(event.target.value)}
-                  className="rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:border-amber-500"
-                  placeholder="Nom du template, ex: follow_up_support"
-                />
-                <input
-                  value={templateLanguage}
-                  onChange={(event) => setTemplateLanguage(event.target.value)}
-                  className="rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:border-amber-500"
-                  placeholder="fr"
-                />
-              </div>
-              <input
-                value={templateParameters}
-                onChange={(event) => setTemplateParameters(event.target.value)}
-                className="mt-3 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:border-amber-500"
-                placeholder="Parametres separes par virgule: Emna, votre demande SAV"
-              />
-              <button
-                type="button"
-                onClick={sendTemplateReply}
-                disabled={isSending || !templateName.trim()}
-                className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Send className="h-4 w-4" />
-                {isSending ? "Envoi..." : "Envoyer le template"}
-              </button>
-            </div>
-          ) : null}
         </div>
       ) : null}
 

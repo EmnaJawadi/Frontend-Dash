@@ -1,4 +1,9 @@
 import { apiClient } from "@/src/lib/api-client";
+import {
+  clearAuthTokens,
+  getRefreshToken,
+  setAuthTokens,
+} from "@/src/lib/auth-token";
 
 export type BackendRole = "SUPER_ADMIN" | "COMPANY_ADMIN" | "AGENT" | "EMPLOYEE";
 
@@ -52,9 +57,12 @@ export type RefreshResponse = {
 };
 
 function persistTokens(tokens: { accessToken?: string; refreshToken?: string }) {
-  if (typeof window === "undefined") return;
-  if (tokens.accessToken) localStorage.setItem("accessToken", tokens.accessToken);
-  if (tokens.refreshToken) localStorage.setItem("refreshToken", tokens.refreshToken);
+  if (!tokens.accessToken) return;
+
+  setAuthTokens({
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+  });
 }
 
 export const authService = {
@@ -71,7 +79,7 @@ export const authService = {
   },
 
   async refresh(): Promise<RefreshResponse> {
-    const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
+    const refreshToken = getRefreshToken();
     const res = await apiClient.post<RefreshResponse>(
       "/auth/refresh",
       refreshToken ? { refreshToken } : undefined
@@ -101,8 +109,6 @@ export const authService = {
   },
 
   logout(): void {
-    if (typeof window === "undefined") return;
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    clearAuthTokens();
   },
 };

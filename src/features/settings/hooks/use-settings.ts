@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { isApiError } from "@/src/lib/api-error";
 import { settingsService } from "@/src/features/settings/services/settings.service";
 import type {
   CompanySettingsData,
@@ -22,8 +23,16 @@ export function useSettings() {
       const response = await settingsService.getCompanySettings(companyId);
       setData(response);
     } catch (err) {
-      console.error("Echec du chargement des parametres:", err);
-      setError("Impossible de charger les parametres. Veuillez reessayer.");
+      if (isApiError(err)) {
+        if (err.status === 401) {
+          setError("Session expiree. Veuillez vous reconnecter.");
+        } else {
+          setError(err.message || "Impossible de charger les parametres. Veuillez reessayer.");
+        }
+      } else {
+        console.error("Echec du chargement des parametres:", err);
+        setError("Impossible de charger les parametres. Veuillez reessayer.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -41,9 +50,16 @@ export function useSettings() {
         setData(response);
         return response;
       } catch (err) {
-        console.error("Echec de sauvegarde des parametres:", err);
-        const message =
-          "Impossible d'enregistrer les parametres. Veuillez reessayer.";
+        const message = isApiError(err)
+          ? err.status === 401
+            ? "Session expiree. Veuillez vous reconnecter."
+            : err.message || "Impossible d'enregistrer les parametres. Veuillez reessayer."
+          : "Impossible d'enregistrer les parametres. Veuillez reessayer.";
+
+        if (!isApiError(err)) {
+          console.error("Echec de sauvegarde des parametres:", err);
+        }
+
         setSaveError(message);
         throw err;
       } finally {
@@ -54,7 +70,7 @@ export function useSettings() {
   );
 
   useEffect(() => {
-    fetchSettings();
+    void fetchSettings();
   }, [fetchSettings]);
 
   return {

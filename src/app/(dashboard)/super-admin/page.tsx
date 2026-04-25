@@ -24,6 +24,7 @@ import RoleGuard from "@/src/components/layout/role-guard";
 import { superAdminService } from "@/src/features/super-admin/services/super-admin.service";
 import type {
   BillingCycle,
+  CompanyRegistrationRequestItem,
   CompanyLifecycleStatus,
   ManagedUserRole,
   SubscriptionPlan,
@@ -81,6 +82,9 @@ export default function SuperAdminPage() {
   const router = useRouter();
 
   const [snapshot, setSnapshot] = useState<SuperAdminSnapshot | null>(null);
+  const [registrationRequests, setRegistrationRequests] = useState<
+    CompanyRegistrationRequestItem[]
+  >([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
   const [companyForm, setCompanyForm] = useState<UpsertCompanyPayload>(EMPTY_COMPANY_FORM);
@@ -104,10 +108,14 @@ export default function SuperAdminPage() {
 
     async function bootstrap() {
       try {
-        const current = await superAdminService.getSnapshot();
+        const [current, requests] = await Promise.all([
+          superAdminService.getSnapshot(),
+          superAdminService.getCompanyRegistrationRequests(),
+        ]);
         if (!isMounted) return;
 
         setSnapshot(current);
+        setRegistrationRequests(requests);
         setSelectedCompanyId(current.companies[0]?.id ?? null);
         setGlobalSettingsForm(current.globalSettings);
       } catch (loadError) {
@@ -175,6 +183,28 @@ export default function SuperAdminPage() {
     try {
       const nextSnapshot = await task();
       applySnapshot(nextSnapshot, successMessage);
+    } catch (taskError) {
+      setError(withErrorMessage(taskError));
+      setFeedback("");
+    }
+  }
+
+  async function refreshRegistrationRequests() {
+    try {
+      const requests = await superAdminService.getCompanyRegistrationRequests();
+      setRegistrationRequests(requests);
+    } catch (loadError) {
+      setError(withErrorMessage(loadError));
+    }
+  }
+
+  async function runRegistrationAction(task: () => Promise<void>, successMessage: string) {
+    try {
+      await task();
+      await Promise.all([
+        refreshRegistrationRequests(),
+        runWithGuard(() => superAdminService.getSnapshot(), successMessage),
+      ]);
     } catch (taskError) {
       setError(withErrorMessage(taskError));
       setFeedback("");
@@ -304,6 +334,35 @@ export default function SuperAdminPage() {
     await runWithGuard(() => superAdminService.runMaintenance(), "Test de maintenance execute.");
   }
 
+  async function handleApproveRegistrationRequest(requestId: string) {
+    await runRegistrationAction(
+      () => superAdminService.approveCompanyRegistrationRequest(requestId),
+      "Demande d'inscription approuvee.",
+    );
+  }
+
+  async function handleRejectRegistrationRequest(requestId: string) {
+    const reason = window.prompt("Motif de rejet (optionnel) :") ?? "";
+    await runRegistrationAction(
+      () => superAdminService.rejectCompanyRegistrationRequest(requestId, reason),
+      "Demande d'inscription rejetee.",
+    );
+  }
+
+  async function handleNeedsMoreInfoRegistrationRequest(requestId: string) {
+    const infoRequest = window.prompt("Informations a demander :") ?? "";
+    if (!infoRequest.trim()) return;
+
+    await runRegistrationAction(
+      () =>
+        superAdminService.requestMoreInfoForCompanyRegistration(
+          requestId,
+          infoRequest.trim(),
+        ),
+      "Demande mise en statut besoin d'informations.",
+    );
+  }
+
   if (!snapshot) {
     return (
       <RoleGuard allowedRoles={["SUPER_ADMIN"]}>
@@ -340,6 +399,97 @@ export default function SuperAdminPage() {
 
         {feedback ? <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">{feedback}</div> : null}
         {error ? <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div> : null}
+
+        <section id="company-registration-requests">
+          <Card>
+            <CardHeader className="flex flex-row items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              <h3 className="text-lg font-semibold">
+                Demandes d'inscription entreprise
+              </h3>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {registrationRequests.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Aucune demande en attente.
+                </p>
+              ) : (
+                registrationRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="rounded-xl border border-border/70 p-3"
+                  >
+                    <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                      <div className="space-y-1">
+                        <p className="font-medium">{request.companyName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {request.businessEmail} - {request.phoneNumber}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Responsable: {request.responsibleFullName} | Type:{" "}
+                          {request.businessType}
+                        </p>
+                        {request.message ? (
+                          <p className="text-xs text-muted-foreground">
+                            Message: {request.message}
+                          </p>
+                        ) : null}
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="secondary">{request.status}</Badge>
+                          {request.approvedCompanyId ? (
+                            <Badge variant="secondary">
+                              Company ID: {request.approvedCompanyId}
+                            </Badge>
+                          ) : null}
+                          {request.activationToken ? (
+                            <Badge variant="secondary">
+                              Lien activation genere
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {request.status === "PENDING_APPROVAL" ||
+                      request.status === "NEEDS_MORE_INFO" ? (
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              void handleApproveRegistrationRequest(request.id)
+                            }
+                          >
+                            Approuver
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              void handleNeedsMoreInfoRegistrationRequest(
+                                request.id,
+                              )
+                            }
+                          >
+                            Demander infos
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-red-200 text-red-700 hover:bg-red-50"
+                            onClick={() =>
+                              void handleRejectRegistrationRequest(request.id)
+                            }
+                          >
+                            Rejeter
+                          </Button>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </section>
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <Card><CardContent className="flex items-center justify-between p-4"><div><p className="text-xs text-muted-foreground">Entreprises</p><p className="text-2xl font-semibold">{stats.totalCompanies}</p></div><Building2 className="h-5 w-5 text-primary" /></CardContent></Card>

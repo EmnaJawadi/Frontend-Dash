@@ -1,8 +1,7 @@
-// src/features/dashboard/hooks/use-dashboard.ts
-
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { isApiError } from "@/src/lib/api-error";
 import { dashboardService } from "@/src/features/dashboard/services/dashboard.service";
 import type { DashboardData } from "@/src/features/dashboard/types/dashboard.types";
 
@@ -19,15 +18,23 @@ export function useDashboard() {
       const response = await dashboardService.getDashboardData();
       setData(response);
     } catch (err) {
-      console.error("Échec du chargement des données du tableau de bord :", err);
-      setError("Impossible de charger les données du tableau de bord. Veuillez réessayer.");
+      if (isApiError(err)) {
+        setError(
+          err.status === 401
+            ? "Session expiree. Veuillez vous reconnecter."
+            : err.message || "Impossible de charger les donnees du tableau de bord. Veuillez reessayer.",
+        );
+      } else {
+        console.error("Echec du chargement des donnees du tableau de bord:", err);
+        setError("Impossible de charger les donnees du tableau de bord. Veuillez reessayer.");
+      }
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchDashboard();
+    void fetchDashboard();
   }, [fetchDashboard]);
 
   return {

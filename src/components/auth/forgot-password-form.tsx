@@ -43,16 +43,16 @@ export default function ForgotPasswordForm() {
 
   if (isSubmitted) {
     return (
-      <div className="rounded-2xl border border-green-300 bg-green-50 px-4 py-4 text-sm text-green-700">
+      <div className="auth-alert auth-alert-success">
         Un lien de reinitialisation a ete envoye a <strong>{email}</strong>.
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {error ? (
-        <div className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="auth-alert auth-alert-error">
           <div>{error}</div>
           {isSmtpConfigError ? (
             <div className="mt-2 text-xs text-red-800/90">
@@ -63,14 +63,14 @@ export default function ForgotPasswordForm() {
         </div>
       ) : null}
 
-      <div className="space-y-1">
-        <label className="block text-sm font-medium">Email</label>
+      <div className="space-y-1.5">
+        <label className="auth-label">Email</label>
         <input
           type="email"
           placeholder="email@entreprise.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:ring-2 focus:ring-primary/25"
+          className="auth-input"
           required
         />
       </div>
@@ -78,7 +78,7 @@ export default function ForgotPasswordForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full rounded-xl bg-primary px-4 py-2.5 font-medium text-primary-foreground transition hover:opacity-90"
+        className="auth-button"
       >
         {isSubmitting ? "Envoi..." : "Envoyer le lien"}
       </button>

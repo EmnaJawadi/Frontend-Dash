@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { isApiError } from "@/src/lib/api-error";
 import { analyticsService } from "@/src/features/analytics/services/analytics.service";
 import type {
   AnalyticsData,
@@ -20,15 +21,23 @@ export function useAnalytics(filters: AnalyticsFilters) {
       const response = await analyticsService.getAnalyticsData(filters);
       setData(response);
     } catch (err) {
-      console.error("Echec du chargement des donnees analytics :", err);
-      setError("Impossible de charger les donnees analytics. Veuillez reessayer.");
+      if (isApiError(err)) {
+        setError(
+          err.status === 401
+            ? "Session expiree. Veuillez vous reconnecter."
+            : err.message || "Impossible de charger les donnees analytics. Veuillez reessayer.",
+        );
+      } else {
+        console.error("Echec du chargement des donnees analytics :", err);
+        setError("Impossible de charger les donnees analytics. Veuillez reessayer.");
+      }
     } finally {
       setIsLoading(false);
     }
   }, [filters]);
 
   useEffect(() => {
-    fetchAnalytics();
+    void fetchAnalytics();
   }, [fetchAnalytics]);
 
   return {

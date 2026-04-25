@@ -86,8 +86,9 @@ export function proxy(request: NextRequest) {
 
   const authCookie = request.cookies.get("is_authenticated")?.value;
   const roleCookie = request.cookies.get("user_role")?.value;
+  const accessTokenCookie = request.cookies.get("accessToken")?.value;
 
-  const isAuthenticated = authCookie === "true";
+  const isAuthenticated = authCookie === "true" && Boolean(accessTokenCookie);
   const userRole = isValidRole(roleCookie) ? roleCookie : null;
 
   if (pathname === "/") {

@@ -1,8 +1,7 @@
-// src/features/conversations/hooks/use-conversations.ts
-
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { isApiError } from "@/src/lib/api-error";
 import { conversationsService } from "@/src/features/conversations/services/conversations.service";
 import type {
   ConversationFilters,
@@ -32,24 +31,28 @@ export function useConversations(initialPageSize = 10) {
       setIsLoading(true);
       setError(null);
 
-      const response = await conversationsService.getConversations(
-        filters,
-        page,
-        pageSize
-      );
+      const response = await conversationsService.getConversations(filters, page, pageSize);
 
       setConversations(response.data);
       setTotal(response.total);
     } catch (err) {
-      console.error("Échec du chargement des conversations :", err);
-      setError("Impossible de charger les conversations. Veuillez réessayer.");
+      if (isApiError(err)) {
+        setError(
+          err.status === 401
+            ? "Session expiree. Veuillez vous reconnecter."
+            : err.message || "Impossible de charger les conversations. Veuillez reessayer.",
+        );
+      } else {
+        console.error("Echec du chargement des conversations:", err);
+        setError("Impossible de charger les conversations. Veuillez reessayer.");
+      }
     } finally {
       setIsLoading(false);
     }
   }, [filters, page, pageSize]);
 
   useEffect(() => {
-    fetchConversations();
+    void fetchConversations();
   }, [fetchConversations]);
 
   const updateFilters = (nextFilters: Partial<ConversationFilters>) => {

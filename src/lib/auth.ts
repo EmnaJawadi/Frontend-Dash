@@ -11,6 +11,7 @@ import {
   getStoredRole,
   saveSession,
 } from "@/src/lib/session";
+import { clearAuthTokens, hasAccessToken } from "@/src/lib/auth-token";
 import { getDefaultRouteByRole } from "@/src/lib/routes";
 import {
   authService,
@@ -142,14 +143,25 @@ export function logout(): void {
 }
 
 export function isAuthenticated(): boolean {
-  return getAuthFlag();
+  const authFlag = getAuthFlag();
+  if (!authFlag) return false;
+
+  if (!hasAccessToken()) {
+    clearAuthTokens();
+    clearSession();
+    return false;
+  }
+
+  return true;
 }
 
 export function getCurrentUser(): CurrentUser | null {
+  if (!isAuthenticated()) return null;
   return getSession();
 }
 
 export function getUserRole(): UserRole | null {
+  if (!isAuthenticated()) return null;
   return getStoredRole();
 }
 

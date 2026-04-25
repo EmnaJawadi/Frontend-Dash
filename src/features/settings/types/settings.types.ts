@@ -54,8 +54,6 @@ export type CompanyWhatsappTechnicalSettings = {
   verifyToken: string;
   verifyWebhookSignature: boolean;
   notificationsEnabled: boolean;
-  sessionWindowHours: number;
-  allowTemplatesOutsideWindow: boolean;
   defaultCountryCode: string;
 };
 

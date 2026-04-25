@@ -4,6 +4,7 @@ import { apiClient } from "@/src/lib/api-client";
 import type {
   BillingCycle,
   CompanyLifecycleStatus,
+  CompanyRegistrationRequestItem,
   MaintenanceReport,
   MaintenanceServiceCheck,
   ManagedUserRole,
@@ -119,6 +120,25 @@ type BackendUser = {
   companyId: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+type BackendCompanyRegistrationRequest = {
+  id: string;
+  companyName: string;
+  businessEmail: string;
+  phoneNumber: string;
+  responsibleFullName: string;
+  requestedRole: "COMPANY_ADMIN";
+  businessType: string;
+  message: string | null;
+  status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "NEEDS_MORE_INFO";
+  rejectionReason: string | null;
+  infoRequest: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  approvedAt: string | null;
+  activationToken: string | null;
+  approvedCompanyId: string | null;
 };
 
 const DEFAULT_USER_PASSWORD = "TempPass#2026";
@@ -291,6 +311,29 @@ function toAuditTarget(log: BackendAuditLog): string {
   const type = safeText(log.entityType, "Systeme");
   const entityId = safeText(log.entityId, "");
   return entityId ? `${type} (${entityId})` : type;
+}
+
+function toRegistrationRequestItem(
+  item: BackendCompanyRegistrationRequest,
+): CompanyRegistrationRequestItem {
+  return {
+    id: item.id,
+    companyName: item.companyName,
+    businessEmail: item.businessEmail,
+    phoneNumber: item.phoneNumber,
+    responsibleFullName: item.responsibleFullName,
+    requestedRole: "COMPANY_ADMIN",
+    businessType: item.businessType,
+    message: item.message,
+    status: item.status,
+    rejectionReason: item.rejectionReason,
+    infoRequest: item.infoRequest,
+    createdAt: item.createdAt,
+    reviewedAt: item.reviewedAt,
+    approvedAt: item.approvedAt,
+    activationToken: item.activationToken,
+    approvedCompanyId: item.approvedCompanyId,
+  };
 }
 
 function buildSnapshot(input: {
@@ -720,5 +763,44 @@ export const superAdminService = {
   async runMaintenance(): Promise<SuperAdminSnapshot> {
     await apiClient.get("/admin/maintenance/health");
     return fetchSnapshot();
+  },
+
+  async getCompanyRegistrationRequests(): Promise<CompanyRegistrationRequestItem[]> {
+    const response = await apiClient.get<{
+      items: BackendCompanyRegistrationRequest[];
+      meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      };
+    }>("/admin/company-registration-requests?page=1&limit=200");
+
+    return response.items.map(toRegistrationRequestItem);
+  },
+
+  async approveCompanyRegistrationRequest(id: string): Promise<void> {
+    await apiClient.patch(`/admin/company-registration-requests/${id}/approve`, {
+      companyStatus: "TRIAL",
+    });
+  },
+
+  async rejectCompanyRegistrationRequest(
+    id: string,
+    rejectionReason?: string,
+  ): Promise<void> {
+    await apiClient.patch(`/admin/company-registration-requests/${id}/reject`, {
+      rejectionReason: rejectionReason || undefined,
+    });
+  },
+
+  async requestMoreInfoForCompanyRegistration(
+    id: string,
+    infoRequest: string,
+  ): Promise<void> {
+    await apiClient.patch(
+      `/admin/company-registration-requests/${id}/needs-more-info`,
+      { infoRequest },
+    );
   },
 };
