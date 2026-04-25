@@ -122,6 +122,9 @@ export default function AdminDashboardPage() {
                 <Link href="/admin/users" className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
                   Voir utilisateurs
                 </Link>
+                <Link href="/admin/registration-requests" className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                  Voir demandes inscription
+                </Link>
                 <Link href="/admin/subscriptions" className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
                   Voir abonnements
                 </Link>

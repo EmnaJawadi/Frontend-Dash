@@ -12,6 +12,18 @@ export type CompanyRegistrationRequestStatus =
   | "REJECTED"
   | "NEEDS_MORE_INFO";
 
+export type SuperAdminNotificationPriority = "low" | "medium" | "high";
+
+export interface SuperAdminNotificationItem {
+  id: string;
+  type: "COMPANY_REGISTRATION_REQUEST";
+  title: string;
+  message: string;
+  priority: SuperAdminNotificationPriority;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export interface SuperAdminCompany {
   id: string;
   name: string;

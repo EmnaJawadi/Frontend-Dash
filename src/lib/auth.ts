@@ -17,6 +17,7 @@ import {
   authService,
   type BackendAuthUser,
   type BackendRole,
+  type RegisterResponse,
 } from "@/src/services/auth.service";
 
 export type CurrentUser = AuthUser;
@@ -67,28 +68,31 @@ export async function login(payload: LoginPayload): Promise<AuthUser> {
   return safeUser;
 }
 
-export async function register(payload: RegisterPayload): Promise<AuthUser> {
-  const registerPayload = {
-    firstName: payload.firstName.trim(),
-    lastName: payload.lastName.trim(),
-    email: payload.email.trim(),
+export async function register(payload: RegisterPayload): Promise<{
+  message: string;
+  status?: string;
+  requestId?: string;
+}> {
+  const responsibleFullName = `${payload.firstName} ${payload.lastName}`.trim();
+
+  const response: RegisterResponse = await authService.register({
+    companyName: payload.companyName?.trim() || "Entreprise",
+    businessEmail: payload.email.trim(),
+    phoneNumber: payload.phoneNumber?.trim() || "N/A",
+    responsibleFullName: responsibleFullName || payload.email.trim(),
+    businessType: payload.businessType?.trim() || "Non precise",
+    message: payload.message?.trim() || undefined,
     password: payload.password,
-    role:
-      payload.role === "SUPER_ADMIN"
-        ? ("SUPER_ADMIN" as const)
-        : payload.role === "OWNER"
-          ? ("COMPANY_ADMIN" as const)
-          : ("AGENT" as const),
-    ...(payload.role !== "SUPER_ADMIN" && payload.companyName?.trim()
-      ? { companyName: payload.companyName.trim() }
-      : {}),
+    requestedRole: "COMPANY_ADMIN",
+  });
+
+  return {
+    message:
+      response.message ||
+      "Votre demande d inscription a ete envoyee. Elle sera verifiee par l administration.",
+    status: response.status ?? response.data?.status,
+    requestId: response.requestId ?? response.data?.id,
   };
-
-  const response = await authService.register(registerPayload);
-
-  const safeUser = toAuthUser(response.user, payload.companyName);
-  saveSession(safeUser);
-  return safeUser;
 }
 
 export async function updateCurrentUserProfile(payload: {

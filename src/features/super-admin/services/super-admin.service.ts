@@ -10,6 +10,7 @@ import type {
   ManagedUserRole,
   SubscriptionPlan,
   SubscriptionStatus,
+  SuperAdminNotificationItem,
   SuperAdminCompany,
   SuperAdminMember,
   SuperAdminSnapshot,
@@ -139,6 +140,16 @@ type BackendCompanyRegistrationRequest = {
   approvedAt: string | null;
   activationToken: string | null;
   approvedCompanyId: string | null;
+};
+
+type BackendNotification = {
+  id: string;
+  type: "COMPANY_REGISTRATION_REQUEST";
+  title: string;
+  message: string;
+  priority: "low" | "medium" | "high";
+  isRead: boolean;
+  createdAt: string;
 };
 
 const DEFAULT_USER_PASSWORD = "TempPass#2026";
@@ -333,6 +344,20 @@ function toRegistrationRequestItem(
     approvedAt: item.approvedAt,
     activationToken: item.activationToken,
     approvedCompanyId: item.approvedCompanyId,
+  };
+}
+
+function toSuperAdminNotificationItem(
+  item: BackendNotification,
+): SuperAdminNotificationItem {
+  return {
+    id: item.id,
+    type: item.type,
+    title: item.title,
+    message: item.message,
+    priority: item.priority,
+    isRead: item.isRead,
+    createdAt: item.createdAt,
   };
 }
 
@@ -777,6 +802,26 @@ export const superAdminService = {
     }>("/admin/company-registration-requests?page=1&limit=200");
 
     return response.items.map(toRegistrationRequestItem);
+  },
+
+  async getCompanyRegistrationNotifications(
+    limit = 50,
+  ): Promise<SuperAdminNotificationItem[]> {
+    const response = await apiClient.get<{
+      items: BackendNotification[];
+      meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      };
+    }>(
+      `/notifications?type=COMPANY_REGISTRATION_REQUEST&page=1&limit=${encodeURIComponent(
+        String(limit),
+      )}`,
+    );
+
+    return response.items.map(toSuperAdminNotificationItem);
   },
 
   async approveCompanyRegistrationRequest(id: string): Promise<void> {

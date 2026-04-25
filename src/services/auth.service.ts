@@ -13,14 +13,14 @@ export type LoginRequest = {
 };
 
 export type RegisterRequest = {
-  firstName: string;
-  lastName?: string | null;
-  email: string;
+  companyName: string;
+  businessEmail: string;
+  phoneNumber: string;
+  responsibleFullName: string;
+  businessType: string;
+  message?: string;
   password: string;
-  phoneNumber?: string | null;
-  role: BackendRole;
-  companyId?: string;
-  companyName?: string;
+  requestedRole?: "COMPANY_ADMIN";
 };
 
 export type BackendAuthUser = {
@@ -38,6 +38,20 @@ export type AuthResponse = {
   accessToken: string;
   refreshToken?: string;
   user: BackendAuthUser;
+};
+
+export type RegisterResponse = {
+  success?: boolean;
+  message?: string;
+  status?: string;
+  requestId?: string;
+  data?: {
+    id: string;
+    status: string;
+    companyName: string;
+    businessEmail: string;
+    createdAt: string;
+  };
 };
 
 export type UpdateMeRequest = {
@@ -72,9 +86,8 @@ export const authService = {
     return res;
   },
 
-  async register(payload: RegisterRequest): Promise<AuthResponse> {
-    const res = await apiClient.post<AuthResponse>("/auth/register", payload);
-    persistTokens(res);
+  async register(payload: RegisterRequest): Promise<RegisterResponse> {
+    const res = await apiClient.post<RegisterResponse>("/public/company-registration", payload);
     return res;
   },
 

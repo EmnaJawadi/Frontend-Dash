@@ -20,6 +20,7 @@ const SUPER_ADMIN_ROUTES = [
   "/admin",
   "/admin/dashboard",
   "/admin/companies",
+  "/admin/registration-requests",
   "/admin/subscriptions",
   "/admin/users",
   "/admin/settings",

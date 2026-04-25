@@ -9,6 +9,8 @@ type RegistrationRequestFormState = {
   businessEmail: string;
   phoneNumber: string;
   responsibleFullName: string;
+  password: string;
+  confirmPassword: string;
   businessType: string;
   message: string;
 };
@@ -19,6 +21,8 @@ export default function RegisterForm() {
     businessEmail: "",
     phoneNumber: "",
     responsibleFullName: "",
+    password: "",
+    confirmPassword: "",
     businessType: "",
     message: "",
   });
@@ -44,9 +48,21 @@ export default function RegisterForm() {
       !formData.businessEmail.trim() ||
       !formData.phoneNumber.trim() ||
       !formData.responsibleFullName.trim() ||
+      !formData.password.trim() ||
+      !formData.confirmPassword.trim() ||
       !formData.businessType.trim()
     ) {
       setError("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError("Le mot de passe doit contenir au moins 6 caracteres.");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Les mots de passe ne correspondent pas.");
       return;
     }
 
@@ -61,16 +77,19 @@ export default function RegisterForm() {
         requestedRole: "COMPANY_ADMIN",
         businessType: formData.businessType.trim(),
         message: formData.message.trim() || undefined,
+        password: formData.password,
       });
 
       setSuccess(
-        "Demande envoyee. Votre entreprise restera en attente d'approbation Super Admin avant l'acces au dashboard.",
+        "Votre demande d inscription a ete envoyee. Elle sera verifiee par l administration.",
       );
       setFormData({
         companyName: "",
         businessEmail: "",
         phoneNumber: "",
         responsibleFullName: "",
+        password: "",
+        confirmPassword: "",
         businessType: "",
         message: "",
       });
@@ -151,6 +170,37 @@ export default function RegisterForm() {
             value={formData.phoneNumber}
             onChange={handleChange}
             placeholder="+234..."
+            className="auth-input"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-1.5">
+          <label htmlFor="password" className="auth-label">
+            Mot de passe
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="Au moins 6 caracteres"
+            className="auth-input"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="confirmPassword" className="auth-label">
+            Confirmation mot de passe
+          </label>
+          <input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            placeholder="Repetez votre mot de passe"
             className="auth-input"
           />
         </div>

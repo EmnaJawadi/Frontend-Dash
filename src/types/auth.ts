@@ -15,6 +15,9 @@ export interface RegisterPayload {
   password: string;
   role: RegisterRole;
   companyName?: string;
+  phoneNumber?: string;
+  businessType?: string;
+  message?: string;
 }
 
 export interface AuthUser {

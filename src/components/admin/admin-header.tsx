@@ -19,6 +19,10 @@ const TITLES: Record<string, { title: string; subtitle: string }> = {
     title: "Utilisateurs",
     subtitle: "Acces direct aux admins entreprise et agents",
   },
+  "/admin/registration-requests": {
+    title: "Demandes d inscription",
+    subtitle: "Validation ou refus des inscriptions entreprises",
+  },
   "/admin/subscriptions": {
     title: "Abonnements",
     subtitle: "Suivi des plans, statuts et renouvellements",

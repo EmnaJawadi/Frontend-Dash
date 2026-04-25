@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Building2,
+  ClipboardList,
   CreditCard,
   LayoutDashboard,
   LogOut,
@@ -19,6 +20,11 @@ const ADMIN_NAV_ITEMS = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Entreprises", href: "/admin/companies", icon: Building2 },
   { label: "Utilisateurs", href: "/admin/users", icon: Users },
+  {
+    label: "Demandes inscription",
+    href: "/admin/registration-requests",
+    icon: ClipboardList,
+  },
   { label: "Abonnements", href: "/admin/subscriptions", icon: CreditCard },
   { label: "Parametres Plateforme", href: "/admin/settings", icon: Settings },
   { label: "Mon profil", href: "/admin/settings/profile", icon: UserCircle2 },

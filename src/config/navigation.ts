@@ -6,6 +6,7 @@ import {
   BarChart3,
   Settings,
   Building2,
+  ClipboardList,
   UserRoundPlus,
   ShieldCheck,
   CreditCard,
@@ -71,6 +72,12 @@ const SUPER_ADMIN_NAVIGATION: NavigationItem[] = [
     label: "Entreprises",
     href: "/admin/companies",
     icon: Building2,
+    matchStartsWith: true,
+  },
+  {
+    label: "Demandes inscription",
+    href: "/admin/registration-requests",
+    icon: ClipboardList,
     matchStartsWith: true,
   },
   {
