@@ -7,13 +7,25 @@ export const conversationsService = {
   update: (id: string, payload: Record<string, unknown>) => apiClient.patch(`/conversations/${id}`, payload),
   remove: (id: string) => apiClient.delete(`/conversations/${id}`),
 
-  listMessages: (conversationId: string) => apiClient.get(`/conversations/${conversationId}/messages`),
+  listMessages: (conversationId: string) =>
+    apiClient.get(`/messages?conversationId=${encodeURIComponent(conversationId)}`),
   sendMessage: (conversationId: string, payload: Record<string, unknown>) =>
-    apiClient.post(`/conversations/${conversationId}/messages`, payload),
+    apiClient.post(`/messages/send`, {
+      conversationId,
+      content: payload.content ?? payload.message,
+      type: payload.type,
+      senderId: payload.senderId,
+    }),
 
   addTag: (conversationId: string, tagId: string) =>
-    apiClient.post(`/conversations/${conversationId}/tags`, { tagId }),
+    apiClient.post(`/conversation-tags`, {
+      conversationId,
+      label: tagId,
+    }),
 
   removeTag: (conversationId: string, tagId: string) =>
-    apiClient.delete(`/conversations/${conversationId}/tags/${tagId}`),
+    apiClient.deleteWithBody(`/conversation-tags`, {
+      conversationId,
+      label: tagId,
+    }),
 };

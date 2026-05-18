@@ -12,14 +12,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <RoleGuard allowedRoles={["OWNER", "AGENT"]}>
       <div className="min-h-screen">
-        <Header />
-
-        <div className="flex">
+        <div className="flex min-h-screen">
           <AppSidebar />
 
-          <main className="min-w-0 flex-1 px-4 pb-24 pt-5 md:px-6 md:pb-8 md:pt-6">
-            <div className="mx-auto w-full max-w-7xl space-y-6 fade-up">{children}</div>
-          </main>
+          <div className="min-w-0 flex-1">
+            <Header />
+
+            <main className="px-4 pb-24 pt-4 md:px-7 md:pb-8 lg:px-9">
+              <div className="mx-auto w-full max-w-[94rem] space-y-6 fade-up">{children}</div>
+            </main>
+          </div>
         </div>
 
         <MobileBottomNav />

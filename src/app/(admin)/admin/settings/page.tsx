@@ -14,6 +14,7 @@ import {
 import { settingsService } from "@/src/features/settings/services/settings.service";
 import type {
   PlatformAuditFilters,
+  PlatformIntegration,
   PlatformSettings,
   PlatformSettingsData,
 } from "@/src/features/settings/types/settings.types";
@@ -105,15 +106,7 @@ export default function AdminSettingsPage() {
       setError(null);
       setSuccess(null);
       await settingsService.testPlatformIntegration(
-        key as
-          | "backend_api"
-          | "postgresql"
-          | "redis"
-          | "n8n"
-          | "smtp"
-          | "whatsapp_meta"
-          | "file_storage"
-          | "queue_jobs",
+        key as PlatformIntegration["key"],
       );
       await fetchSettings(filters);
       setSuccess("Test de connexion execute.");

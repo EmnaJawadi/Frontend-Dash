@@ -118,7 +118,7 @@ export default function EditContactPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       <Button asChild variant="outline">
         <Link href={`/contacts/${id}`}>
           <ArrowLeft className="mr-2 h-4 w-4" />

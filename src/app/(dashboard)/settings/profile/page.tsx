@@ -148,13 +148,6 @@ export default function ProfileSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Profile Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Gere tes informations personnelles, ton mot de passe et les options de securite.
-        </p>
-      </div>
-
       {error ? <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div> : null}
       {profileMessage ? <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">{profileMessage}</div> : null}
       {passwordMessage ? <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">{passwordMessage}</div> : null}
@@ -181,7 +174,7 @@ export default function ProfileSettingsPage() {
                 <Badge variant="secondary">{role ? ROLE_LABELS[role] : "Utilisateur"}</Badge>
               </div>
             </div>
-            <Button type="button" onClick={() => void handleProfileSave()} disabled={isSavingProfile}>
+            <Button type="button" className="w-full" onClick={() => void handleProfileSave()} disabled={isSavingProfile}>
               <Save className="mr-2 h-4 w-4" />
               {isSavingProfile ? "Enregistrement..." : "Enregistrer profil"}
             </Button>
@@ -200,7 +193,7 @@ export default function ProfileSettingsPage() {
             <div><Label>Mot de passe actuel</Label><Input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} /></div>
             <div><Label>Nouveau mot de passe</Label><Input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} /></div>
             <div><Label>Confirmer mot de passe</Label><Input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></div>
-            <Button type="button" onClick={() => void handlePasswordSave()} disabled={isSavingPassword}>
+            <Button type="button" className="w-full" onClick={() => void handlePasswordSave()} disabled={isSavingPassword}>
               <LockKeyhole className="mr-2 h-4 w-4" />
               {isSavingPassword ? "Mise a jour..." : "Modifier mot de passe"}
             </Button>

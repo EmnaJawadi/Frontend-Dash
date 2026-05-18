@@ -74,20 +74,20 @@ export default function AdminProfileSettingsPage() {
 
   return (
     <div className="grid gap-5 xl:grid-cols-2">
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+      <section className="section-card space-y-4 p-6">
         <div className="flex items-center gap-2">
-          <UserCircle2 className="h-5 w-5 text-slate-700" />
-          <h2 className="text-lg font-semibold text-slate-900">Mon profil</h2>
+          <UserCircle2 className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-bold text-foreground">Informations personnelles</h2>
         </div>
 
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           Modifiez vos informations personnelles Super Admin.
         </p>
 
         <label className="block space-y-1">
-          <span className="text-sm text-slate-600">Prenom</span>
+          <span className="text-sm font-medium text-foreground">Prenom</span>
           <input
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-border/80 bg-card/80 px-3 py-2.5 text-sm outline-none transition focus:ring-4 focus:ring-primary/20"
             value={firstName}
             onChange={(event) => setFirstName(event.target.value)}
             placeholder="Prenom"
@@ -95,9 +95,9 @@ export default function AdminProfileSettingsPage() {
         </label>
 
         <label className="block space-y-1">
-          <span className="text-sm text-slate-600">Nom</span>
+          <span className="text-sm font-medium text-foreground">Nom</span>
           <input
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-border/80 bg-card/80 px-3 py-2.5 text-sm outline-none transition focus:ring-4 focus:ring-primary/20"
             value={lastName}
             onChange={(event) => setLastName(event.target.value)}
             placeholder="Nom"
@@ -105,9 +105,9 @@ export default function AdminProfileSettingsPage() {
         </label>
 
         <label className="block space-y-1">
-          <span className="text-sm text-slate-600">Email</span>
+          <span className="text-sm font-medium text-foreground">Email</span>
           <input
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500"
+            className="w-full rounded-xl border border-border/80 bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground"
             value={email}
             readOnly
           />
@@ -117,28 +117,28 @@ export default function AdminProfileSettingsPage() {
           type="button"
           disabled={isSavingProfile}
           onClick={() => void handleSaveProfile()}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-70"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-70"
         >
           <Save className="h-4 w-4" />
           {isSavingProfile ? "Enregistrement..." : "Enregistrer le profil"}
         </button>
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+      <section className="section-card space-y-4 p-6">
         <div className="flex items-center gap-2">
-          <LockKeyhole className="h-5 w-5 text-slate-700" />
-          <h2 className="text-lg font-semibold text-slate-900">Securite du compte</h2>
+          <LockKeyhole className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-bold text-foreground">Securite du compte</h2>
         </div>
 
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           Modifiez votre mot de passe de connexion.
         </p>
 
         <label className="block space-y-1">
-          <span className="text-sm text-slate-600">Mot de passe actuel</span>
+          <span className="text-sm font-medium text-foreground">Mot de passe actuel</span>
           <input
             type="password"
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-border/80 bg-card/80 px-3 py-2.5 text-sm outline-none transition focus:ring-4 focus:ring-primary/20"
             value={currentPassword}
             onChange={(event) => setCurrentPassword(event.target.value)}
             placeholder="Mot de passe actuel"
@@ -146,10 +146,10 @@ export default function AdminProfileSettingsPage() {
         </label>
 
         <label className="block space-y-1">
-          <span className="text-sm text-slate-600">Nouveau mot de passe</span>
+          <span className="text-sm font-medium text-foreground">Nouveau mot de passe</span>
           <input
             type="password"
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-border/80 bg-card/80 px-3 py-2.5 text-sm outline-none transition focus:ring-4 focus:ring-primary/20"
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
             placeholder="Nouveau mot de passe"
@@ -157,10 +157,10 @@ export default function AdminProfileSettingsPage() {
         </label>
 
         <label className="block space-y-1">
-          <span className="text-sm text-slate-600">Confirmer le mot de passe</span>
+          <span className="text-sm font-medium text-foreground">Confirmer le mot de passe</span>
           <input
             type="password"
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-border/80 bg-card/80 px-3 py-2.5 text-sm outline-none transition focus:ring-4 focus:ring-primary/20"
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             placeholder="Confirmer le mot de passe"
@@ -171,7 +171,7 @@ export default function AdminProfileSettingsPage() {
           type="button"
           disabled={isSavingPassword}
           onClick={() => void handleSavePassword()}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-70"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 px-4 py-3 text-sm font-bold text-primary transition hover:bg-primary/10 disabled:opacity-70"
         >
           <LockKeyhole className="h-4 w-4" />
           {isSavingPassword ? "Mise a jour..." : "Changer le mot de passe"}

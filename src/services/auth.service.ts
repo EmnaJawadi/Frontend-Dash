@@ -23,6 +23,15 @@ export type RegisterRequest = {
   requestedRole?: "COMPANY_ADMIN";
 };
 
+export type RegisterAgentRequest = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  companyName: string;
+};
+
 export type BackendAuthUser = {
   id: string;
   firstName: string;
@@ -50,6 +59,19 @@ export type RegisterResponse = {
     status: string;
     companyName: string;
     businessEmail: string;
+    createdAt: string;
+  };
+};
+
+export type RegisterAgentResponse = {
+  success?: boolean;
+  message?: string;
+  data?: {
+    id: string;
+    status: string;
+    companyId: string;
+    companyName: string;
+    email: string;
     createdAt: string;
   };
 };
@@ -89,6 +111,10 @@ export const authService = {
   async register(payload: RegisterRequest): Promise<RegisterResponse> {
     const res = await apiClient.post<RegisterResponse>("/public/company-registration", payload);
     return res;
+  },
+
+  async registerAgent(payload: RegisterAgentRequest): Promise<RegisterAgentResponse> {
+    return apiClient.post<RegisterAgentResponse>("/auth/register-agent", payload);
   },
 
   async refresh(): Promise<RefreshResponse> {

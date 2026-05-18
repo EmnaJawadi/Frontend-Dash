@@ -67,6 +67,18 @@ type BackendConversation = {
     lastBotMessageAt?: string | null;
     lastAgentReplyAt?: string | null;
   };
+  context?: {
+    conversationSummary?: string | null;
+    customerIntent?: string | null;
+    requestedProductService?: string | null;
+    requestedDeliveryDate?: string | null;
+    deliveryAddress?: string | null;
+    budget?: string | null;
+    agreedTerms?: string | null;
+    nextAction?: string | null;
+    lastAiDecision?: string | null;
+    importantNotes?: string | null;
+  };
 };
 
 function toBackendStatus(status?: ConversationFilters["status"]): string | undefined {
@@ -142,7 +154,12 @@ function mapDetails(item: BackendConversation): ConversationDetails {
       id: message.id ?? `${base.id}-message-${index}`,
       conversationId: message.conversationId ?? base.id,
       senderType:
-        (message.senderType as "customer" | "bot" | "agent" | "system") ?? "customer",
+        (message.senderType as
+          | "customer"
+          | "bot"
+          | "agent"
+          | "human_agent"
+          | "system") ?? "customer",
       direction: (message.direction as "inbound" | "outbound") ?? "inbound",
       type:
         (message.type as
@@ -191,6 +208,7 @@ function mapDetails(item: BackendConversation): ConversationDetails {
       lastBotMessageAt: item.activity?.lastBotMessageAt ?? null,
       lastAgentReplyAt: item.activity?.lastAgentReplyAt ?? null,
     },
+    context: item.context,
     messages,
   };
 }

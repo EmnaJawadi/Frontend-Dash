@@ -36,6 +36,10 @@ function categoryLabel(category: ArticleCategory) {
 
 function getErrorMessage(error: unknown): string {
   if (isApiError(error)) {
+    if (error.status >= 500) {
+      return "Erreur serveur pendant l'import. Verifiez que le fichier est lisible, puis reessayez.";
+    }
+
     if (error.details && typeof error.details === "object") {
       const details = error.details as { message?: unknown };
       if (Array.isArray(details.message)) {
@@ -140,7 +144,6 @@ export default function NewArticlePage() {
         router.refresh();
       }, 500);
     } catch (err) {
-      console.error("Failed to create article", err);
       setError(getErrorMessage(err));
     } finally {
       setIsSubmitting(false);
@@ -148,7 +151,7 @@ export default function NewArticlePage() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <Button asChild variant="outline" className="w-fit rounded-xl">
           <Link href="/knowledge-base">

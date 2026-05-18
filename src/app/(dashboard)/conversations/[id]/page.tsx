@@ -99,6 +99,7 @@ export default function ConversationDetailsPage() {
     .find(
       (message) =>
         message.senderType === "agent" ||
+        message.senderType === "human_agent" ||
         (message.direction === "outbound" && message.senderType !== "bot"),
     );
 
@@ -128,13 +129,6 @@ export default function ConversationDetailsPage() {
   if (isLoading) {
     return (
       <div className="space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Conversation</h1>
-          <p className="text-sm text-muted-foreground">
-            Chargement des details de la conversation...
-          </p>
-        </div>
-
         <SectionCard contentClassName="py-14">
           <LoadingSpinner size="lg" label="Chargement des details de la conversation..." />
         </SectionCard>
@@ -184,10 +178,7 @@ export default function ConversationDetailsPage() {
           Retour aux conversations
         </Link>
 
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Details de la conversation</h1>
-          <p className="text-sm text-muted-foreground">ID : {conversation.id}</p>
-        </div>
+        <p className="text-sm text-muted-foreground">ID : {conversation.id}</p>
 
         {shouldSuggestArticle ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -199,7 +190,7 @@ export default function ConversationDetailsPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.85fr]">
-        <SectionCard>
+        <div className="space-y-4">
           <div className="space-y-4">
             <div>
               <h2 className="text-lg font-semibold">Messages</h2>
@@ -213,28 +204,21 @@ export default function ConversationDetailsPage() {
 
             <ConversationMessages messages={conversation.messages} />
           </div>
-        </SectionCard>
+        </div>
 
-        <SectionCard>
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold">Details</h2>
-              <p className="text-sm text-muted-foreground">Informations generales et statut actuel.</p>
-            </div>
+        <div className="space-y-4">
+          <ConversationDetails
+            conversation={conversation}
+            onHandoff={handleHandoff}
+            onReactivateBot={handleReactivateBot}
+            onCreateArticleFromReply={handleCreateArticleFromReply}
+            canCreateArticleFromReply={conversation.messages.length > 0}
+          />
 
-            <ConversationDetails
-              conversation={conversation}
-              onHandoff={handleHandoff}
-              onReactivateBot={handleReactivateBot}
-              onCreateArticleFromReply={handleCreateArticleFromReply}
-              canCreateArticleFromReply={conversation.messages.length > 0}
-            />
-
-            {isActing ? (
-              <p className="text-sm text-muted-foreground">Mise a jour de la conversation...</p>
-            ) : null}
-          </div>
-        </SectionCard>
+          {isActing ? (
+            <p className="text-sm text-muted-foreground">Mise a jour de la conversation...</p>
+          ) : null}
+        </div>
       </div>
     </div>
   );

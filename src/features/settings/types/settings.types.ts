@@ -1,5 +1,7 @@
-export type ConnectionStatus = "connected" | "disconnected";
+export type ConnectionStatus = "connected" | "disconnected" | "pending";
 export type IntegrationStatus = "healthy" | "warning" | "error";
+export type ResponseTone = "professional" | "friendly" | "formal" | "concise";
+export type SupportedLanguage = "fr" | "en" | "ar";
 
 export type BusinessHoursDay = {
   day: string;
@@ -21,23 +23,30 @@ export type CompanyAiPolicy = {
   handoffEnabled: boolean;
   confidenceThreshold: number;
   escalationDelayMinutes: number;
-  responseTone: string;
-  language: string;
+  responseTone: ResponseTone | string;
+  language: SupportedLanguage | string;
   botGuidelines: string;
 };
 
 export type CompanyWorkflow = {
   enabled: boolean;
+  defaultAssigneeId?: string | null;
   defaultAssignment: string;
   welcomeMessage: string;
   preHandoffMessage: string;
 };
 
 export type CompanyGeneral = {
+  officialName: string;
   companyName: string;
+  displayName?: string;
   supportEmail: string;
+  supportPhone?: string;
+  city?: string;
+  country?: string;
   defaultLanguage: string;
   timezone: string;
+  emailNotificationsEnabled: boolean;
   emailNotifications: boolean;
 };
 
@@ -45,9 +54,145 @@ export type CompanyWhatsappProfile = {
   businessPhoneNumber: string;
   displayName: string;
   connectionStatus: ConnectionStatus;
-  phoneNumberId: string;
-  businessAccountId: string;
 };
+
+export type CompanyWhatsappInstanceData = CompanyWhatsappProfile & {
+  companyId: string;
+  id: string | null;
+  evolutionInstanceName: string;
+  whatsappNumber: string;
+  lastConnectionError: string | null;
+  connectedAt: string | null;
+  lastSyncAt: string | null;
+  updatedAt: string | null;
+};
+
+export type CompanyWhatsappConfigData = {
+  id: string | null;
+  evolutionInstanceName: string;
+  connectionStatus: ConnectionStatus;
+  whatsappNumber: string;
+  displayName: string;
+  lastConnectionError: string | null;
+  connectedAt: string | null;
+  lastSyncAt: string | null;
+  updatedAt: string | null;
+  technicalConfigurationManagedByPlatform: boolean;
+  sensitiveFieldsExposed: false;
+  qrAvailable?: boolean;
+};
+
+export type CompanyWhatsappQrData = {
+  status: ConnectionStatus;
+  qrCode: string | null;
+  pairingCode: string | null;
+  checkedAt: string;
+};
+
+export type CompanyAiSettingsData = {
+  enabled: boolean;
+  handoffEnabled: boolean;
+  responseTone: ResponseTone;
+  language: SupportedLanguage;
+  escalationDelayMinutes: number;
+  botGuidelines: string;
+  confidenceThresholdManagedByPlatform: boolean;
+  technicalSettingsManagedByPlatform: boolean;
+};
+
+export type CompanyWorkflowSettingsData = {
+  enabled: boolean;
+  defaultAssigneeId: string | null;
+  defaultAssignment: string;
+  welcomeMessage: string;
+  verificationMessage: string;
+};
+
+export type CompanyPreferencesData = {
+  officialName: string;
+  companyName: string;
+  displayName: string;
+  supportEmail: string;
+  supportPhone: string;
+  city: string;
+  country: string;
+  defaultLanguage: SupportedLanguage;
+  timezone: string;
+  emailNotificationsEnabled: boolean;
+  emailNotifications: boolean;
+  visibleOnlyForCompany: boolean;
+};
+
+export type CompanySupportAssigneeData = {
+  id: string;
+  label: string;
+  email: string;
+  role: string;
+  type: "agent";
+};
+
+export type CompanyAdminSettingsData = {
+  whatsapp: CompanyWhatsappConfigData | null;
+  aiSettings: CompanyAiSettingsData | null;
+  workflowSettings: CompanyWorkflowSettingsData | null;
+  preferences: CompanyPreferencesData;
+  supportAssignees: CompanySupportAssigneeData[];
+};
+
+export type UpdateCompanyWhatsappInstancePayload = Partial<{
+  evolutionInstanceName: string;
+  businessPhoneNumber: string;
+  whatsappNumber: string;
+  displayName: string;
+}>;
+
+export type TestWhatsappConnectionResult = {
+  companyId: string;
+  ok: boolean;
+  code:
+    | "CONNECTION_SUCCESS"
+    | "INSTANCE_NOT_FOUND"
+    | "INVALID_API_KEY"
+    | "EVOLUTION_UNREACHABLE"
+    | "CONFIGURATION_INCOMPLETE"
+    | "INSTANCE_NOT_CONNECTED";
+  status: ConnectionStatus;
+  message: string;
+  checkedAt: string;
+};
+
+export type UpdateCompanyPreferencesPayload = Partial<{
+  officialName: string;
+  displayName: string;
+  supportEmail: string;
+  supportPhone: string;
+  city: string;
+  country: string;
+  defaultLanguage: SupportedLanguage;
+  timezone: string;
+  emailNotificationsEnabled: boolean;
+  emailNotifications: boolean;
+}>;
+
+export type UpdateCompanyAiSettingsPayload = Partial<{
+  enabled: boolean;
+  handoffEnabled: boolean;
+  responseTone: ResponseTone;
+  language: SupportedLanguage;
+  escalationDelayMinutes: number;
+  botGuidelines: string;
+}>;
+
+export type UpdateCompanyWorkflowSettingsPayload = Partial<{
+  enabled: boolean;
+  defaultAssigneeId: string | null;
+  welcomeMessage: string;
+  verificationMessage: string;
+}>;
+
+export type CompanyWhatsappConnectPayload = Partial<{
+  evolutionInstanceName: string;
+}>;
 
 export type CompanyWhatsappTechnicalSettings = {
   webhookUrl: string;
@@ -126,7 +271,8 @@ export type PlatformIntegration = {
     | "redis"
     | "n8n"
     | "smtp"
-    | "whatsapp_meta"
+    | "evolution_api"
+    | "gemini_ai"
     | "file_storage"
     | "queue_jobs";
   label: string;

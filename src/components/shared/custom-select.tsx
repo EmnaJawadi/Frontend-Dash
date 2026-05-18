@@ -52,8 +52,8 @@ export function CustomSelect({
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "flex h-12 w-full items-center justify-between rounded-xl border border-border/70 bg-background px-4 text-left text-sm transition",
-          open && "border-primary ring-2 ring-primary/20",
+          "app-control flex w-full items-center justify-between px-3.5 text-left text-sm font-medium transition",
+          open && "border-primary/50 ring-4 ring-primary/20",
         )}
       >
         <div className="flex min-w-0 items-center gap-3">
@@ -69,7 +69,7 @@ export function CustomSelect({
       </button>
 
       {open ? (
-        <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border border-border/70 bg-background shadow-xl">
+        <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border border-border/80 bg-background shadow-xl">
           <div className="max-h-64 overflow-auto py-1.5">
             {options.map((option) => {
               const isSelected = option.value === value;

@@ -30,12 +30,7 @@ import { isApiError } from "@/src/lib/api-error";
 import { knowledgeBaseService } from "@/src/services/knowledge-base.service";
 
 type ArticleStatus = "published" | "draft" | "archived";
-type ArticleCategory =
-  | "commandes"
-  | "paiements"
-  | "livraison"
-  | "retours"
-  | "general";
+type ArticleCategory = string;
 
 type KnowledgeArticle = {
   id: string;
@@ -54,15 +49,22 @@ type ListResponse = {
     status: ArticleStatus;
     updatedAt: string;
   }>;
+  meta?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 };
 
 function normalizeCategory(value?: string | null): ArticleCategory {
-  const lower = (value ?? "").toLowerCase().trim();
+  const normalized = (value ?? "").trim();
+  const lower = normalized.toLowerCase();
   if (lower === "commandes") return "commandes";
   if (lower === "paiements") return "paiements";
   if (lower === "livraison") return "livraison";
   if (lower === "retours") return "retours";
-  return "general";
+  return normalized || "general";
 }
 
 function formatDate(value: string) {
@@ -192,13 +194,23 @@ export default function KnowledgeBasePage() {
       setIsLoading(true);
       setError(null);
       setSuccess(null);
-      const response = (await knowledgeBaseService.list({
+      const firstResponse = (await knowledgeBaseService.list({
         page: 1,
         limit: 100,
       })) as ListResponse;
+      const allItems = [...(firstResponse.items ?? [])];
+      const totalPages = firstResponse.meta?.totalPages ?? 1;
+
+      for (let page = 2; page <= totalPages; page += 1) {
+        const response = (await knowledgeBaseService.list({
+          page,
+          limit: firstResponse.meta?.limit ?? 100,
+        })) as ListResponse;
+        allItems.push(...(response.items ?? []));
+      }
 
       setItems(
-        (response.items ?? []).map((article) => ({
+        allItems.map((article) => ({
           id: article.id,
           title: article.title,
           category: normalizeCategory(article.summary),
@@ -244,6 +256,14 @@ export default function KnowledgeBasePage() {
       categories: new Set(items.map((a) => a.category)).size,
     };
   }, [items]);
+
+  const categoryOptions = React.useMemo(
+    () =>
+      Array.from(new Set(items.map((article) => article.category)))
+        .filter(Boolean)
+        .sort((a, b) => categoryLabel(a).localeCompare(categoryLabel(b), "fr")),
+    [items],
+  );
 
   React.useEffect(() => {
     setSelectedArticleIds((prev) => {
@@ -361,25 +381,7 @@ export default function KnowledgeBasePage() {
   }, [partiallySelected]);
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Base de connaissances
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Articles reels charges depuis le backend.
-          </p>
-        </div>
-
-        <Button asChild className="rounded-xl bg-slate-950 text-white hover:bg-slate-800">
-          <Link href="/knowledge-base/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Nouvel article
-          </Link>
-        </Button>
-      </div>
-
+    <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Total articles"
@@ -414,7 +416,7 @@ export default function KnowledgeBasePage() {
               <SearchInput value={search} onChange={setSearch} />
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <Select
                 value={status}
                 onValueChange={(value) =>
@@ -443,11 +445,11 @@ export default function KnowledgeBasePage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Toutes categories</SelectItem>
-                  <SelectItem value="commandes">Commandes</SelectItem>
-                  <SelectItem value="paiements">Paiements</SelectItem>
-                  <SelectItem value="livraison">Livraison</SelectItem>
-                  <SelectItem value="retours">Retours</SelectItem>
-                  <SelectItem value="general">General</SelectItem>
+                  {categoryOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {categoryLabel(option)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -460,6 +462,13 @@ export default function KnowledgeBasePage() {
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Reinitialiser
               </Button>
+
+              <Button asChild>
+                <Link href="/knowledge-base/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nouvel article
+                </Link>
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -471,10 +480,10 @@ export default function KnowledgeBasePage() {
       <div className="flex justify-end">
         <Button
           type="button"
-          variant="outline"
+          variant="destructive"
+          size="sm"
           onClick={() => void handleDeleteSelectedArticles()}
           disabled={selectedCount === 0 || isBulkDeleting}
-          className="rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
         >
           {isBulkDeleting ? (
             <>
@@ -504,9 +513,9 @@ export default function KnowledgeBasePage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-hidden rounded-3xl border border-border/60 bg-background shadow-sm">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left text-muted-foreground">
+        <div className="app-table-shell">
+          <table className="app-table">
+            <thead>
               <tr>
                 <th className="px-4 py-3 font-medium">
                   <input
@@ -515,7 +524,7 @@ export default function KnowledgeBasePage() {
                     aria-label="Selectionner tous les articles visibles"
                     checked={allVisibleSelected}
                     onChange={(event) => toggleSelectAllVisible(event.target.checked)}
-                    className="h-4 w-4 rounded border border-border"
+                    className="app-checkbox"
                   />
                 </th>
                 <th className="px-4 py-3 font-medium">Titre</th>
@@ -541,7 +550,7 @@ export default function KnowledgeBasePage() {
                       onChange={(event) =>
                         toggleArticleSelection(article.id, event.target.checked)
                       }
-                      className="h-4 w-4 rounded border border-border"
+                      className="app-checkbox"
                     />
                   </td>
                   <td className="px-4 py-4">
@@ -567,16 +576,16 @@ export default function KnowledgeBasePage() {
 
                   <td className="px-4 py-4">
                     <div className="flex items-center justify-end gap-2">
-                      <Button asChild variant="outline" className="rounded-xl">
+                      <Button asChild variant="outline" size="sm">
                         <Link href={`/knowledge-base/${article.id}`}>Voir</Link>
                       </Button>
-                      <Button asChild variant="outline" className="rounded-xl">
+                      <Button asChild variant="outline" size="sm">
                         <Link href={`/knowledge-base/${article.id}/edit`}>Modifier</Link>
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
-                        className="rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                        variant="destructive"
+                        size="sm"
                         onClick={() => void handleDeleteArticle(article)}
                         disabled={deletingArticleId === article.id || isBulkDeleting}
                       >

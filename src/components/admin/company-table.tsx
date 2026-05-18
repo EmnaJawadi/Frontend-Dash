@@ -1,32 +1,41 @@
 "use client";
 
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/src/components/shared/status-badge";
 import type { SuperAdminCompany } from "@/src/features/super-admin/types/super-admin.types";
 
 type CompanyTableProps = {
   companies: SuperAdminCompany[];
+  deletingCompanyId?: string | null;
+  onDeleteCompany?: (company: SuperAdminCompany) => void;
 };
 
-function statusBadge(status: string) {
-  if (status === "ACTIVE") return "bg-emerald-100 text-emerald-700";
-  if (status === "SUSPENDED") return "bg-amber-100 text-amber-700";
-  if (status === "EXPIRED") return "bg-red-100 text-red-700";
-  return "bg-slate-100 text-slate-700";
+function statusVariant(status: string): "success" | "warning" | "danger" | "neutral" {
+  if (status === "ACTIVE") return "success";
+  if (status === "SUSPENDED") return "warning";
+  if (status === "EXPIRED" || status === "CANCELED") return "danger";
+  return "neutral";
 }
 
-export default function CompanyTable({ companies }: CompanyTableProps) {
+export default function CompanyTable({
+  companies,
+  deletingCompanyId = null,
+  onDeleteCompany,
+}: CompanyTableProps) {
   if (companies.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+      <div className="section-card p-6 text-sm text-muted-foreground">
         Aucune entreprise trouvee.
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      <table className="w-full min-w-[900px] text-sm">
-        <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+    <div className="app-table-shell">
+      <table className="app-table min-w-[900px]">
+        <thead>
           <tr>
             <th className="px-4 py-3">Entreprise</th>
             <th className="px-4 py-3">Admin principal</th>
@@ -39,49 +48,54 @@ export default function CompanyTable({ companies }: CompanyTableProps) {
 
         <tbody>
           {companies.map((company) => (
-            <tr key={company.id} className="border-t border-slate-100">
+            <tr key={company.id} className="border-t border-border/70 transition hover:bg-primary/5">
               <td className="px-4 py-3">
-                <p className="font-semibold text-slate-900">{company.name}</p>
-                <p className="text-xs text-slate-500">{company.industry}</p>
+                <p className="font-semibold text-foreground">{company.name}</p>
+                <p className="text-xs text-muted-foreground">{company.industry}</p>
               </td>
 
               <td className="px-4 py-3">
-                <p className="text-slate-900">{company.ownerName}</p>
-                <p className="text-xs text-slate-500">{company.ownerEmail}</p>
+                <p className="text-foreground">{company.ownerName}</p>
+                <p className="text-xs text-muted-foreground">{company.ownerEmail}</p>
               </td>
 
-              <td className="px-4 py-3 text-slate-700">{company.plan}</td>
+              <td className="px-4 py-3 text-foreground">{company.plan}</td>
 
               <td className="px-4 py-3">
-                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusBadge(company.subscriptionStatus)}`}>
+                <StatusBadge variant={statusVariant(company.subscriptionStatus)}>
                   {company.subscriptionStatus}
-                </span>
+                </StatusBadge>
               </td>
 
-              <td className="px-4 py-3 text-slate-700">
+              <td className="px-4 py-3 text-foreground">
                 {company.adminCount} admins / {company.agentCount} agents
               </td>
 
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">
-                  <Link
-                    href={`/admin/companies/${company.id}`}
-                    className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                  >
-                    Ouvrir
-                  </Link>
-                  <Link
-                    href={`/admin/users?companyId=${company.id}&role=OWNER`}
-                    className="rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 py-1.5 text-xs font-medium text-cyan-700 transition hover:bg-cyan-100"
-                  >
-                    Voir admins
-                  </Link>
-                  <Link
-                    href={`/admin/users?companyId=${company.id}&role=AGENT`}
-                    className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-100"
-                  >
-                    Voir agents
-                  </Link>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/admin/companies/${company.id}`}>Ouvrir</Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/admin/users?companyId=${company.id}&role=OWNER`}>Voir admins</Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/admin/users?companyId=${company.id}&role=AGENT`}>Voir agents</Link>
+                  </Button>
+                  {onDeleteCompany ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      disabled={deletingCompanyId === company.id}
+                      onClick={() => onDeleteCompany(company)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {deletingCompanyId === company.id
+                        ? "Suppression..."
+                        : "Supprimer entreprise"}
+                    </Button>
+                  ) : null}
                 </div>
               </td>
             </tr>

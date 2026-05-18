@@ -26,11 +26,6 @@ export default function ConversationsPage() {
   if (isLoading) {
     return (
       <div className="space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Conversations</h1>
-          <p className="text-sm text-muted-foreground">Consultez, filtrez et gerez les conversations client.</p>
-        </div>
-
         <SectionCard contentClassName="py-14">
           <LoadingSpinner size="lg" label="Chargement des conversations..." />
         </SectionCard>
@@ -59,15 +54,8 @@ export default function ConversationsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between fade-up">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Conversations</h1>
-          <p className="text-sm text-muted-foreground">Consultez, filtrez et gerez les conversations client.</p>
-        </div>
-
-        <div className="text-sm text-muted-foreground">
-          {total} conversation{total !== 1 ? "s" : ""} trouvee{total !== 1 ? "s" : ""}
-        </div>
+      <div className="rounded-2xl border border-border/75 bg-card/72 px-4 py-3 text-sm font-medium text-muted-foreground shadow-sm fade-up">
+        {total} conversation{total !== 1 ? "s" : ""} trouvee{total !== 1 ? "s" : ""}
       </div>
 
       <ConversationFilters

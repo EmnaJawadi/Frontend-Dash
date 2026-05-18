@@ -16,8 +16,8 @@ export function SearchInput({
   disabled = false,
 }: SearchInputProps) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background px-4 py-3 shadow-sm transition focus-within:ring-2 focus-within:ring-primary/25">
-      <Search className="h-5 w-5 text-muted-foreground" />
+    <div className="app-control flex items-center gap-3 px-3.5 transition focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/20">
+      <Search className="h-4 w-4 text-muted-foreground" />
 
       <input
         type="text"

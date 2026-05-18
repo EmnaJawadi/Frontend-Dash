@@ -1,4 +1,5 @@
 import { apiClient } from "@/src/lib/api-client";
+import { getPeriodDateRange, type PeriodFilter } from "@/src/lib/period-filter";
 import type { DashboardData } from "@/src/features/dashboard/types/dashboard.types";
 
 type BackendConversation = {
@@ -8,6 +9,7 @@ type BackendConversation = {
   assignedTo?: string | null;
   botPaused?: boolean | null;
   unreadCount?: number | null;
+  lastMessageAt?: string | null;
   updatedAt?: string | null;
   createdAt?: string | null;
   lastMessage?: string | null;
@@ -17,6 +19,8 @@ type BackendConversation = {
   };
 };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 type BackendListResponse = {
   data?: unknown[];
   meta?: {
@@ -24,8 +28,13 @@ type BackendListResponse = {
   };
 };
 
-function toDateLabel(input: string): string {
-  return new Intl.DateTimeFormat("fr-FR", { weekday: "short" }).format(new Date(input));
+function toDateLabel(input: Date, days: number): string {
+  const formatter =
+    days <= 7
+      ? new Intl.DateTimeFormat("fr-FR", { weekday: "short" })
+      : new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short" });
+
+  return formatter.format(input);
 }
 
 function toRelative(input: string): string {
@@ -59,75 +68,88 @@ function normalizePriority(
   return "medium";
 }
 
+function getConversationDate(conversation: BackendConversation): Date | null {
+  const source = conversation.lastMessageAt ?? conversation.updatedAt ?? conversation.createdAt;
+  if (!source) return null;
+
+  const date = new Date(source);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isInRange(conversation: BackendConversation, startDate: Date, endDate: Date): boolean {
+  const date = getConversationDate(conversation);
+  return date ? date >= startDate && date <= endDate : false;
+}
+
+function isEscalated(conversation: BackendConversation): boolean {
+  return conversation.status === "human_handoff" || !!conversation.assignedTo;
+}
+
 export const dashboardService = {
-  async getDashboardData(): Promise<DashboardData> {
+  async getDashboardData(period: PeriodFilter = "30d"): Promise<DashboardData> {
+    const { days, startDate, endDate } = getPeriodDateRange(period);
+
     const [conversationsRes, contactsRes] = await Promise.all([
-      apiClient.get<BackendListResponse>("/conversations?page=1&limit=100"),
-      apiClient.get<BackendListResponse>("/contacts?page=1&limit=100"),
+      apiClient.get<BackendListResponse>("/conversations?page=1&limit=500"),
+      apiClient.get<BackendListResponse>("/contacts?page=1&limit=1"),
     ]);
 
     const conversations = (conversationsRes.data ?? []) as BackendConversation[];
-    const totalConversations = conversationsRes.meta?.total ?? conversations.length;
+    const periodConversations = conversations.filter((item) => isInRange(item, startDate, endDate));
+    const totalConversations = periodConversations.length;
     const totalContacts = contactsRes.meta?.total ?? 0;
 
-    const activeConversations = conversations.filter(
+    const activeConversations = periodConversations.filter(
       (item) => item.status !== "closed",
     ).length;
-    const botActiveCount = conversations.filter((item) => !(item.botPaused ?? false)).length;
-    const escalatedCount = conversations.filter(
-      (item) => item.status === "human_handoff" || !!item.assignedTo,
-    ).length;
-    const unreadTotal = conversations.reduce((acc, item) => acc + Number(item.unreadCount ?? 0), 0);
+    const botActiveCount = periodConversations.filter((item) => !(item.botPaused ?? false)).length;
+    const escalatedCount = periodConversations.filter(isEscalated).length;
+    const unreadTotal = periodConversations.reduce((acc, item) => acc + Number(item.unreadCount ?? 0), 0);
 
     const automationRate =
       totalConversations > 0
         ? Math.round((botActiveCount / totalConversations) * 100)
         : 0;
 
-    const last7Days = Array.from({ length: 7 }, (_, index) => {
-      const day = new Date();
-      day.setDate(day.getDate() - (6 - index));
-      day.setHours(0, 0, 0, 0);
+    const periodDays = Array.from({ length: days }, (_, index) => {
+      const day = new Date(startDate.getTime() + index * DAY_MS);
       return day;
     });
 
-    const chart = last7Days.map((day) => {
+    const chart = periodDays.map((day) => {
       const start = day.getTime();
-      const end = start + 24 * 60 * 60 * 1000;
+      const end = start + DAY_MS;
 
-      const dayConversations = conversations.filter((conversation) => {
-        const source = conversation.updatedAt ?? conversation.createdAt;
-        if (!source) return false;
-        const ts = new Date(source).getTime();
+      const dayConversations = periodConversations.filter((conversation) => {
+        const date = getConversationDate(conversation);
+        if (!date) return false;
+        const ts = date.getTime();
         return ts >= start && ts < end;
       });
 
       const resolvedByBot = dayConversations.filter(
         (conversation) => !(conversation.botPaused ?? false),
       ).length;
-      const escalated = dayConversations.filter(
-        (conversation) =>
-          conversation.status === "human_handoff" || !!conversation.assignedTo,
-      ).length;
+      const escalated = dayConversations.filter(isEscalated).length;
 
       return {
-        date: toDateLabel(day.toISOString()),
+        date: toDateLabel(day, days),
         conversations: dayConversations.length,
         resolvedByBot,
         escalated,
       };
     });
 
-    const recentConversations = conversations
+    const recentConversations = periodConversations
       .slice()
       .sort((a, b) => {
-        const aDate = new Date(a.updatedAt ?? a.createdAt ?? 0).getTime();
-        const bDate = new Date(b.updatedAt ?? b.createdAt ?? 0).getTime();
+        const aDate = getConversationDate(a)?.getTime() ?? 0;
+        const bDate = getConversationDate(b)?.getTime() ?? 0;
         return bDate - aDate;
       })
       .slice(0, 6)
       .map((item) => {
-        const updatedAt = item.updatedAt ?? item.createdAt ?? new Date().toISOString();
+        const updatedAt = getConversationDate(item)?.toISOString() ?? new Date().toISOString();
         return {
           id: item.id ?? "",
           contactName: item.participant?.contactName ?? "Contact inconnu",
@@ -147,7 +169,7 @@ export const dashboardService = {
           key: "totalConversations",
           title: "Total des conversations",
           value: totalConversations,
-          subtitle: "volume global",
+          subtitle: "sur la periode",
         },
         {
           key: "activeConversations",
@@ -165,13 +187,13 @@ export const dashboardService = {
           key: "escalationsToday",
           title: "Escalades",
           value: escalatedCount,
-          subtitle: "transferts vers agent",
+          subtitle: "sur la periode",
         },
         {
           key: "avgFirstResponseTime",
           title: "Messages non lus",
           value: unreadTotal,
-          subtitle: "a traiter",
+          subtitle: "a traiter sur la periode",
         },
       ],
       chart,
@@ -198,7 +220,7 @@ export const dashboardService = {
           },
           {
             label: "Conversations fermees",
-            value: conversations.filter((item) => item.status === "closed").length,
+            value: periodConversations.filter((item) => item.status === "closed").length,
             hint: "cloturees",
           },
         ],
@@ -206,17 +228,17 @@ export const dashboardService = {
       recentConversations,
       escalationSummary: {
         total: escalatedCount,
-        pending: conversations.filter((item) => item.status === "pending").length,
-        resolved: conversations.filter((item) => item.status === "closed").length,
+        pending: periodConversations.filter((item) => item.status === "pending").length,
+        resolved: periodConversations.filter((item) => item.status === "closed").length,
         averageHandlingTime: "N/A",
         reasons: [
           {
             label: "Handoff manuel",
-            count: conversations.filter((item) => item.status === "human_handoff").length,
+            count: periodConversations.filter((item) => item.status === "human_handoff").length,
           },
           {
             label: "Assignee a un agent",
-            count: conversations.filter((item) => !!item.assignedTo).length,
+            count: periodConversations.filter((item) => !!item.assignedTo).length,
           },
         ],
       },

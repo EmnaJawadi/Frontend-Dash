@@ -1,4 +1,6 @@
-export type PeriodFilter = "7d" | "30d" | "90d";
+import type { PeriodFilter } from "@/src/lib/period-filter";
+
+export type { PeriodFilter };
 export type ChannelFilter = "all" | "whatsapp";
 export type TeamFilter = "all" | "bot" | "human";
 

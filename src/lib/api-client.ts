@@ -1,4 +1,5 @@
 import { ApiError } from "@/src/lib/api-error";
+import { env } from "@/src/config/env";
 import {
   clearAuthTokens,
   getAccessToken,
@@ -15,11 +16,13 @@ type RequestOptions = {
   headers?: Record<string, string>;
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = env.NEXT_PUBLIC_API_URL;
+const NETWORK_ERROR_STATUS = 0;
 
 const AUTH_ENDPOINT_PREFIXES = [
   "/auth/login",
   "/auth/register",
+  "/auth/register-agent",
   "/auth/refresh",
   "/auth/forgot-password",
   "/auth/reset-password",
@@ -155,15 +158,22 @@ async function request<T>(
   const performRequest = async () => {
     const token = getAccessToken();
 
-    return fetch(`${API_URL}${endpoint}`, {
-      method,
-      headers: {
-        ...(isFormData ? {} : { "Content-Type": "application/json" }),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...headers,
-      },
-      body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
-    });
+    try {
+      return await fetch(`${API_URL}${endpoint}`, {
+        method,
+        headers: {
+          ...(isFormData ? {} : { "Content-Type": "application/json" }),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...headers,
+        },
+        body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
+      });
+    } catch {
+      throw new ApiError(
+        `Impossible de joindre le serveur API (${API_URL}). Verifiez que le backend est demarre.`,
+        NETWORK_ERROR_STATUS,
+      );
+    }
   };
 
   let response = await performRequest();
@@ -212,4 +222,10 @@ export const apiClient = {
 
   delete: <T>(endpoint: string, headers?: Record<string, string>) =>
     request<T>(endpoint, { method: "DELETE", headers }),
+
+  deleteWithBody: <T>(
+    endpoint: string,
+    body?: unknown,
+    headers?: Record<string, string>
+  ) => request<T>(endpoint, { method: "DELETE", body, headers }),
 };

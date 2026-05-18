@@ -2,11 +2,21 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, Search } from "lucide-react";
+import { Bell, CalendarDays, ChevronDown, Search } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ThemeToggle } from "@/src/components/theme-toggle";
+import { usePeriodFilter } from "@/src/hooks/use-period-filter";
 import { getCurrentUser } from "@/src/lib/auth";
+import { isApiError } from "@/src/lib/api-error";
+import { PERIOD_OPTIONS, type PeriodFilter } from "@/src/lib/period-filter";
 import { knowledgeAlertsService, type KnowledgeSuggestionAlert } from "@/src/services/knowledge-alerts.service";
 import { headerSearchService, type HeaderSearchResult } from "@/src/services/header-search.service";
 import { ROLE_LABELS } from "@/src/types/role";
@@ -17,6 +27,7 @@ const pageTitles: Record<string, string> = {
   "/conversations": "Conversations",
   "/contacts": "Contacts",
   "/knowledge-base": "Base de connaissances",
+  "/products": "Catalogue produits",
   "/analytics": "Analytique",
   "/settings": "Parametres entreprise",
   "/settings/profile": "Mon profil",
@@ -39,6 +50,10 @@ function getPageTitle(pathname: string) {
     return "Base de connaissances";
   }
 
+  if (pathname.startsWith("/products/")) {
+    return "Catalogue produits";
+  }
+
   return pageTitles[pathname] ?? "Tableau de bord";
 }
 
@@ -56,6 +71,8 @@ function getResultTypeLabel(type: HeaderSearchResult["type"]) {
       return "Contact";
     case "knowledge":
       return "Article";
+    case "product":
+      return "Produit";
     default:
       return "Resultat";
   }
@@ -70,6 +87,7 @@ export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const title = getPageTitle(pathname);
+  const { period, setPeriod } = usePeriodFilter("30d");
 
   const [userName, setUserName] = useState("Utilisateur");
   const [userRole, setUserRole] = useState("Compte connecte");
@@ -106,7 +124,9 @@ export function Header() {
       const pending = await knowledgeAlertsService.listPendingKnowledgeSuggestions();
       setAlerts(pending);
     } catch (error) {
-      console.error("Failed to load alerts", error);
+      if (!isApiError(error)) {
+        console.warn("Failed to load alerts", error);
+      }
       setAlerts([]);
     } finally {
       setIsAlertsLoading(false);
@@ -140,7 +160,9 @@ export function Header() {
         setSearchResults(results);
         setIsSearchOpen(true);
       } catch (error) {
-        console.error("Failed to search", error);
+        if (!isApiError(error)) {
+          console.warn("Failed to search", error);
+        }
         setSearchResults([]);
       } finally {
         setIsSearchLoading(false);
@@ -176,19 +198,21 @@ export function Header() {
   }, [router, searchResults]);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border/70 bg-background/90 backdrop-blur-xl">
-      <div className="flex h-16 items-center justify-between gap-3 px-4 md:h-[4.5rem] md:px-6">
-        <div className="min-w-0 fade-up">
-          <h1 className="truncate text-lg font-semibold text-foreground md:text-xl">{title}</h1>
+    <header className="sticky top-0 z-30 bg-transparent px-4 pt-5 backdrop-blur-xl md:px-7 lg:px-9">
+      <div className="flex min-h-[5.8rem] items-start justify-between gap-4">
+        <div className="min-w-0 pt-1 fade-up">
+          <h1 className="flex items-center gap-2 truncate text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
+            <span className="truncate">{title}</span>
+          </h1>
           <p className="hidden text-sm text-muted-foreground md:block">
             Suivi en temps reel des conversations, de l'activite equipe et des actions support.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 md:gap-3 fade-up-delay-1">
+        <div className="flex flex-wrap items-center justify-end gap-2 md:gap-3 fade-up-delay-1">
           <div ref={searchRef} className="relative hidden lg:block">
-            <div className="flex items-center gap-2 rounded-2xl border border-border/70 bg-card/90 px-3 py-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
+            <div className="app-control flex min-w-[25rem] items-center gap-3 px-3.5">
+              <Search className="h-5 w-5 text-foreground" />
               <input
                 type="text"
                 value={searchQuery}
@@ -209,12 +233,15 @@ export function Header() {
                   }
                 }}
                 placeholder="Recherche dynamique..."
-                className="w-48 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
               />
+              <span className="rounded-lg border border-border/70 bg-background/80 px-2 py-1 text-xs font-semibold text-muted-foreground">
+                ⌘K
+              </span>
             </div>
 
             {isSearchOpen ? (
-              <div className="absolute right-0 top-12 z-50 w-[26rem] rounded-2xl border border-border bg-background p-2 shadow-xl">
+              <div className="absolute right-0 top-14 z-50 w-[26rem] rounded-xl border border-border bg-background p-2 shadow-xl">
                 {isSearchLoading ? (
                   <p className="px-3 py-4 text-sm text-muted-foreground">Recherche...</p>
                 ) : searchResults.length === 0 ? (
@@ -253,19 +280,19 @@ export function Header() {
                   void loadAlerts();
                 }
               }}
-              className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition hover:bg-muted"
+              className="app-control relative inline-flex w-10 items-center justify-center text-foreground transition hover:bg-muted"
               aria-label="Alertes connaissance"
             >
-              <Bell className="h-4 w-4" />
+              <Bell className="h-5 w-5" />
               {alerts.length > 0 ? (
-                <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
+                <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                   {alerts.length}
                 </span>
               ) : null}
             </button>
 
             {isAlertsOpen ? (
-              <div className="absolute right-0 top-12 z-50 w-[25rem] rounded-2xl border border-border bg-background p-2 shadow-xl">
+              <div className="absolute right-0 top-12 z-50 w-[25rem] rounded-xl border border-border bg-background p-2 shadow-xl">
                 <div className="mb-2 flex items-center justify-between px-2 py-1">
                   <p className="text-sm font-semibold text-foreground">Alertes apprentissage bot</p>
                   <button
@@ -306,15 +333,30 @@ export function Header() {
             ) : null}
           </div>
 
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-2.5 py-2 md:px-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground md:h-9 md:w-9">
+          <Select value={period} onValueChange={(value) => setPeriod(value as PeriodFilter)}>
+            <SelectTrigger className="app-control hidden min-w-[13.5rem] items-center gap-2 px-3 text-sm font-semibold text-foreground xl:flex">
+              <CalendarDays className="h-4 w-4" />
+              <SelectValue placeholder="Periode" />
+            </SelectTrigger>
+            <SelectContent align="end">
+              {PERIOD_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="app-control flex items-center gap-2 px-2.5 md:px-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-xs font-bold text-white">
               {avatarInitials}
             </div>
 
             <div className="hidden text-left md:block">
-              <p className="text-sm font-medium text-foreground">{userName}</p>
+              <p className="text-sm font-bold text-foreground">{userName}</p>
               <p className="text-xs text-muted-foreground">{userRole}</p>
             </div>
+            <ChevronDown className="hidden h-4 w-4 text-muted-foreground md:block" />
           </div>
         </div>
       </div>

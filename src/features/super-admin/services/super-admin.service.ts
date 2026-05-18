@@ -3,6 +3,7 @@
 import { apiClient } from "@/src/lib/api-client";
 import type {
   BillingCycle,
+  AgentRegistrationRequestItem,
   CompanyLifecycleStatus,
   CompanyRegistrationRequestItem,
   MaintenanceReport,
@@ -18,7 +19,7 @@ import type {
   UpsertMemberPayload,
 } from "@/src/features/super-admin/types/super-admin.types";
 
-type CompanyStatusBackend = "ACTIVE" | "INACTIVE";
+type CompanyStatusBackend = "ACTIVE" | "INACTIVE" | "PENDING" | "SUSPENDED" | "TRIAL" | "EXPIRED";
 type SubscriptionStatusBackend = "ACTIVE" | "SUSPENDED" | "EXPIRED" | "CANCELED";
 type UserRoleBackend = "SUPER_ADMIN" | "COMPANY_ADMIN" | "AGENT" | "EMPLOYEE";
 
@@ -142,9 +143,33 @@ type BackendCompanyRegistrationRequest = {
   approvedCompanyId: string | null;
 };
 
+type BackendAgentRegistrationRequest = {
+  id: string;
+  companyId: string;
+  fullName: string;
+  email: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  rejectionReason: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  approvedAt: string | null;
+  company: {
+    id: string;
+    name: string;
+    status?: string;
+    isActive?: boolean;
+  };
+  approvedUser?: {
+    id: string;
+    fullName: string | null;
+    email: string;
+    isActive: boolean;
+  } | null;
+};
+
 type BackendNotification = {
   id: string;
-  type: "COMPANY_REGISTRATION_REQUEST";
+  type: "COMPANY_REGISTRATION_REQUEST" | "AGENT_REGISTRATION_REQUEST";
   title: string;
   message: string;
   priority: "low" | "medium" | "high";
@@ -217,7 +242,8 @@ function normalizeSubscriptionStatus(
 }
 
 function normalizeLifecycleStatus(status: CompanyStatusBackend | string): CompanyLifecycleStatus {
-  return status.toUpperCase() === "ACTIVE" ? "ACTIVE" : "INACTIVE";
+  const normalized = status.toUpperCase();
+  return normalized === "ACTIVE" || normalized === "TRIAL" ? "ACTIVE" : "INACTIVE";
 }
 
 function toBackendCompanyStatus(status: CompanyLifecycleStatus): CompanyStatusBackend {
@@ -344,6 +370,24 @@ function toRegistrationRequestItem(
     approvedAt: item.approvedAt,
     activationToken: item.activationToken,
     approvedCompanyId: item.approvedCompanyId,
+  };
+}
+
+function toAgentRegistrationRequestItem(
+  item: BackendAgentRegistrationRequest,
+): AgentRegistrationRequestItem {
+  return {
+    id: item.id,
+    companyId: item.companyId,
+    fullName: item.fullName,
+    email: item.email,
+    status: item.status,
+    rejectionReason: item.rejectionReason,
+    createdAt: item.createdAt,
+    reviewedAt: item.reviewedAt,
+    approvedAt: item.approvedAt,
+    company: item.company,
+    approvedUser: item.approvedUser ?? null,
   };
 }
 
@@ -726,6 +770,17 @@ export const superAdminService = {
     return fetchSnapshot();
   },
 
+  async deleteSubscription(companyId: string): Promise<SuperAdminSnapshot> {
+    const existingSubscription = await resolveCompanySubscription(companyId);
+
+    if (!existingSubscription) {
+      throw new Error("Aucun abonnement a supprimer pour cette entreprise.");
+    }
+
+    await apiClient.delete(`/admin/subscriptions/${existingSubscription.id}`);
+    return fetchSnapshot();
+  },
+
   async addMember(companyId: string, payload: UpsertMemberPayload): Promise<SuperAdminSnapshot> {
     const names = splitFullName(payload.fullName);
     const created = await apiClient.post<BackendUser>("/admin/users", {
@@ -799,14 +854,31 @@ export const superAdminService = {
         limit: number;
         totalPages: number;
       };
-    }>("/admin/company-registration-requests?page=1&limit=200");
+    }>("/admin/company-registration-requests?page=1&limit=100");
 
     return response.items.map(toRegistrationRequestItem);
   },
 
+  async getAgentRegistrationRequests(): Promise<AgentRegistrationRequestItem[]> {
+    const response = await apiClient.get<{
+      items: BackendAgentRegistrationRequest[];
+      meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      };
+    }>("/super-admin/agent-registration-requests?page=1&limit=100");
+
+    return response.items.map(toAgentRegistrationRequestItem);
+  },
+
   async getCompanyRegistrationNotifications(
     limit = 50,
+    refreshKey?: number,
   ): Promise<SuperAdminNotificationItem[]> {
+    const cacheBuster =
+      refreshKey !== undefined ? `&_=${encodeURIComponent(String(refreshKey))}` : "";
     const response = await apiClient.get<{
       items: BackendNotification[];
       meta: {
@@ -818,15 +890,57 @@ export const superAdminService = {
     }>(
       `/notifications?type=COMPANY_REGISTRATION_REQUEST&page=1&limit=${encodeURIComponent(
         String(limit),
-      )}`,
+      )}${cacheBuster}`,
     );
 
     return response.items.map(toSuperAdminNotificationItem);
   },
 
+  async getAgentRegistrationNotifications(
+    limit = 50,
+    refreshKey?: number,
+  ): Promise<SuperAdminNotificationItem[]> {
+    const cacheBuster =
+      refreshKey !== undefined ? `&_=${encodeURIComponent(String(refreshKey))}` : "";
+    const response = await apiClient.get<{
+      items: BackendNotification[];
+      meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      };
+    }>(
+      `/notifications?type=AGENT_REGISTRATION_REQUEST&page=1&limit=${encodeURIComponent(
+        String(limit),
+      )}${cacheBuster}`,
+    );
+
+    return response.items.map(toSuperAdminNotificationItem);
+  },
+
+  async markAllCompanyRegistrationNotificationsAsRead(): Promise<void> {
+    await apiClient.patch(
+      "/notifications/read-all?type=COMPANY_REGISTRATION_REQUEST",
+    );
+  },
+
   async approveCompanyRegistrationRequest(id: string): Promise<void> {
     await apiClient.patch(`/admin/company-registration-requests/${id}/approve`, {
-      companyStatus: "TRIAL",
+      companyStatus: "ACTIVE",
+    });
+  },
+
+  async approveAgentRegistrationRequest(id: string): Promise<void> {
+    await apiClient.patch(`/super-admin/agent-registration-requests/${id}/approve`, {});
+  },
+
+  async rejectAgentRegistrationRequest(
+    id: string,
+    rejectionReason?: string,
+  ): Promise<void> {
+    await apiClient.patch(`/super-admin/agent-registration-requests/${id}/reject`, {
+      rejectionReason: rejectionReason || undefined,
     });
   },
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Bot, Send, Sparkles } from "lucide-react";
+import { Bot, Send } from "lucide-react";
 import { conversationsService } from "@/src/features/conversations/services/conversations.service";
 import type {
   AiReplyDecision,
@@ -161,7 +161,6 @@ export function AiReplyPanel({ conversation, onSent }: AiReplyPanelProps) {
           disabled={isGenerating || !latestCustomerMessage}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <Sparkles className="h-4 w-4" />
           {isGenerating ? "Generation..." : "Generer avec l'IA"}
         </button>
       </div>

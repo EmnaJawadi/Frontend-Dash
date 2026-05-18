@@ -6,6 +6,7 @@ import type {
   BackendAnalyticsOverview,
   PeriodFilter,
 } from "@/src/features/analytics/types/analytics.types";
+import { getPeriodDateRange } from "@/src/lib/period-filter";
 
 type BackendConversation = {
   id?: string;
@@ -26,21 +27,9 @@ type BackendConversationListResponse = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function getPeriodDays(period: PeriodFilter): number {
-  if (period === "30d") return 30;
-  if (period === "90d") return 90;
-  return 7;
-}
-
 function startOfDay(input: Date): Date {
   const date = new Date(input);
   date.setHours(0, 0, 0, 0);
-  return date;
-}
-
-function endOfDay(input: Date): Date {
-  const date = new Date(input);
-  date.setHours(23, 59, 59, 999);
   return date;
 }
 
@@ -126,10 +115,7 @@ function buildTimelineFromConversations(
   conversations: BackendConversation[],
   period: PeriodFilter,
 ): AnalyticsDay[] {
-  const days = getPeriodDays(period);
-  const today = new Date();
-  const start = startOfDay(new Date(today.getTime() - (days - 1) * DAY_MS));
-  const end = endOfDay(today);
+  const { days, startDate: start, endDate: end } = getPeriodDateRange(period);
 
   const range = Array.from({ length: days }, (_, index) => {
     const date = new Date(start.getTime() + index * DAY_MS);
@@ -193,10 +179,7 @@ function sumTimeline(timeline: AnalyticsDay[]) {
 
 export const analyticsService = {
   async getAnalyticsData(filters: AnalyticsFilters): Promise<AnalyticsData> {
-    const days = getPeriodDays(filters.period);
-    const today = new Date();
-    const startDate = startOfDay(new Date(today.getTime() - (days - 1) * DAY_MS));
-    const endDate = endOfDay(today);
+    const { startDate, endDate } = getPeriodDateRange(filters.period);
 
     const params = new URLSearchParams({
       startDate: startDate.toISOString(),

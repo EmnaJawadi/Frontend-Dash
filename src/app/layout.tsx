@@ -8,6 +8,11 @@ import { ThemeProvider } from "@/src/providers/theme-provider";
 export const metadata: Metadata = {
   title: "Centre de Support WhatsApp",
   description: "Interface de support client WhatsApp avec suivi des conversations et performances des agents.",
+  icons: {
+    icon: "/logopfe.png",
+    shortcut: "/logopfe.png",
+    apple: "/logopfe.png",
+  },
 };
 
 type RootLayoutProps = {

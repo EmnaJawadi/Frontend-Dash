@@ -7,6 +7,7 @@ const OWNER_ROUTES = [
   "/conversations",
   "/contacts",
   "/knowledge-base",
+  "/products",
   "/analytics",
   "/settings",
   "/settings/profile",
@@ -30,9 +31,22 @@ const AGENT_ROUTES = [
   "/conversations",
   "/contacts",
   "/knowledge-base",
+  "/products",
   "/analytics",
   "/settings/profile",
   "/settings/account",
+];
+
+const COMPANY_ADMIN_TECHNICAL_SETTINGS_ROUTES = [
+  "/admin-entreprise/whatsapp",
+  "/admin-entreprise/assistant-ia",
+  "/admin-entreprise/workflow",
+  "/whatsapp",
+  "/assistant-ia",
+  "/workflow",
+  "/settings/whatsapp",
+  "/settings/assistant-ia",
+  "/settings/workflow",
 ];
 
 type AppRole = "SUPER_ADMIN" | "OWNER" | "AGENT";
@@ -119,6 +133,10 @@ export function proxy(request: NextRequest) {
         : redirectTo(request, "/admin/dashboard");
 
     case "OWNER":
+      if (matchesRoute(pathname, COMPANY_ADMIN_TECHNICAL_SETTINGS_ROUTES)) {
+        return redirectTo(request, "/settings");
+      }
+
       return matchesRoute(pathname, OWNER_ROUTES)
         ? NextResponse.next()
         : redirectTo(request, "/dashboard");

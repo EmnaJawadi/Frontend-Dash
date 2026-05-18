@@ -25,6 +25,7 @@ export const APP_ROUTES = {
   CONVERSATIONS: "/conversations",
   CONTACTS: "/contacts",
   KNOWLEDGE_BASE: "/knowledge-base",
+  PRODUCTS: "/products",
   ANALYTICS: "/analytics",
   SETTINGS: "/settings",
   PROFILE_SETTINGS: "/settings/profile",
@@ -41,6 +42,7 @@ export const OWNER_ROUTES: string[] = [
   APP_ROUTES.CONVERSATIONS,
   APP_ROUTES.CONTACTS,
   APP_ROUTES.KNOWLEDGE_BASE,
+  APP_ROUTES.PRODUCTS,
   APP_ROUTES.ANALYTICS,
   APP_ROUTES.SETTINGS,
   APP_ROUTES.PROFILE_SETTINGS,
@@ -63,8 +65,21 @@ export const AGENT_ROUTES: string[] = [
   APP_ROUTES.CONVERSATIONS,
   APP_ROUTES.CONTACTS,
   APP_ROUTES.KNOWLEDGE_BASE,
+  APP_ROUTES.PRODUCTS,
   APP_ROUTES.ANALYTICS,
   APP_ROUTES.PROFILE_SETTINGS,
+];
+
+export const COMPANY_ADMIN_TECHNICAL_SETTINGS_ROUTES: string[] = [
+  "/admin-entreprise/whatsapp",
+  "/admin-entreprise/assistant-ia",
+  "/admin-entreprise/workflow",
+  "/whatsapp",
+  "/assistant-ia",
+  "/workflow",
+  "/settings/whatsapp",
+  "/settings/assistant-ia",
+  "/settings/workflow",
 ];
 
 export const DEFAULT_ROUTE_BY_ROLE: Record<UserRole, string> = {
@@ -84,6 +99,10 @@ export function getAllowedRoutes(role: UserRole): string[] {
     default:
       return [];
   }
+}
+
+export function isCompanyAdminTechnicalSettingsRoute(pathname: string): boolean {
+  return matchesAllowedRoute(pathname, COMPANY_ADMIN_TECHNICAL_SETTINGS_ROUTES);
 }
 
 export function getDefaultRouteByRole(role: UserRole): string {

@@ -1,5 +1,10 @@
 import type { UserRole } from "@/src/types/role";
-import { APP_ROUTES, getAllowedRoutes, matchesAllowedRoute } from "@/src/lib/routes";
+import {
+  APP_ROUTES,
+  getAllowedRoutes,
+  isCompanyAdminTechnicalSettingsRoute,
+  matchesAllowedRoute,
+} from "@/src/lib/routes";
 
 export function canAccessAdmin(_role: UserRole): boolean {
   return _role === "SUPER_ADMIN";
@@ -30,6 +35,10 @@ export function canViewConversations(role: UserRole): boolean {
 }
 
 export function canAccessPath(role: UserRole, pathname: string): boolean {
+  if (role === "OWNER" && isCompanyAdminTechnicalSettingsRoute(pathname)) {
+    return false;
+  }
+
   const allowedRoutes = getAllowedRoutes(role);
   return matchesAllowedRoute(pathname, allowedRoutes);
 }
@@ -51,6 +60,7 @@ export function getNavigationByRole(role: UserRole) {
       { label: "Conversations", href: APP_ROUTES.CONVERSATIONS },
       { label: "Contacts", href: APP_ROUTES.CONTACTS },
       { label: "Base de connaissances", href: APP_ROUTES.KNOWLEDGE_BASE },
+      { label: "Produits", href: APP_ROUTES.PRODUCTS },
       { label: "Analyses", href: APP_ROUTES.ANALYTICS },
       { label: "Parametres", href: APP_ROUTES.SETTINGS },
     ];
@@ -61,5 +71,6 @@ export function getNavigationByRole(role: UserRole) {
     { label: "Conversations", href: APP_ROUTES.CONVERSATIONS },
     { label: "Contacts", href: APP_ROUTES.CONTACTS },
     { label: "Base de connaissances", href: APP_ROUTES.KNOWLEDGE_BASE },
+    { label: "Produits", href: APP_ROUTES.PRODUCTS },
   ];
 }

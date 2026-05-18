@@ -151,6 +151,40 @@ export function ConversationDetails({
       </div>
 
       <div className="rounded-2xl border bg-background p-4">
+        <p className="mb-3 text-sm font-semibold">Demande client</p>
+
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">Article / service</span>
+            <span className="text-right">
+              {conversation.context?.requestedProductService ?? "A renseigner"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">Date souhaitee</span>
+            <span className="text-right">
+              {conversation.context?.requestedDeliveryDate ?? "A renseigner"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">Intention</span>
+            <span className="text-right">
+              {conversation.context?.customerIntent ?? "A analyser"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">Prochaine action</span>
+            <span className="text-right">
+              {conversation.context?.nextAction ?? "A definir"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border bg-background p-4">
         <p className="mb-3 text-sm font-semibold">Statut et priorité</p>
 
         <div className="flex flex-wrap gap-2">

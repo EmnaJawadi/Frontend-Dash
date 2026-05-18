@@ -3,12 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { login, getDefaultRedirectByRole } from "@/src/lib/auth";
-import type { UserRole } from "@/src/types/role";
 
 type LoginFormState = {
   email: string;
   password: string;
-  role: UserRole;
 };
 
 export default function LoginForm() {
@@ -17,18 +15,17 @@ export default function LoginForm() {
   const [formData, setFormData] = useState<LoginFormState>({
     email: "",
     password: "",
-    role: "OWNER",
   });
 
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleChange(event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+  function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = event.target;
 
     setFormData((prev) => ({
       ...prev,
-      [name]: value as UserRole,
+      [name]: value,
     }));
   }
 
@@ -47,7 +44,6 @@ export default function LoginForm() {
       const user = await login({
         email: formData.email.trim(),
         password: formData.password,
-        role: formData.role,
       });
 
       const redirectPath = getDefaultRedirectByRole(user.role);
@@ -96,23 +92,6 @@ export default function LoginForm() {
           onChange={handleChange}
           className="auth-input"
         />
-      </div>
-
-      <div className="space-y-1.5">
-        <label htmlFor="role" className="auth-label">
-          Type de compte
-        </label>
-        <select
-          id="role"
-          name="role"
-          value={formData.role}
-          onChange={handleChange}
-          className="auth-select"
-        >
-          <option value="SUPER_ADMIN">Super Admin (plateforme)</option>
-          <option value="OWNER">Admin entreprise (owner)</option>
-          <option value="AGENT">Agent (employe)</option>
-        </select>
       </div>
 
       <button

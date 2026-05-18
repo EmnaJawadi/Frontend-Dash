@@ -5,11 +5,11 @@ import RegisterForm from "@/src/components/auth/register-form";
 export default function RegisterPage() {
   return (
     <AuthShell
-      eyebrow="Inscription entreprise"
-      title="Demandez l'acces pour votre equipe"
-      subtitle="Soumettez votre entreprise en quelques minutes. Le Super Admin valide ensuite votre acces au dashboard."
-      panelTitle="Onboarding fluide pour les entreprises"
-      panelDescription="Un parcours clair pour activer rapidement les comptes, structurer les roles et demarrer vos operations support."
+      eyebrow="Inscription"
+      title="Creer un compte"
+      subtitle="Choisissez le type de compte, puis renseignez les informations demandees."
+      panelTitle="Acces controle au support"
+      panelDescription="Les entreprises soumettent leur creation et les agents rejoignent une entreprise existante apres validation."
       footer={
         <p className="text-muted-foreground">
           Vous avez deja un compte ?{" "}

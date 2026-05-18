@@ -14,7 +14,7 @@ export function StatsCard({ stat }: StatsCardProps) {
   const isNeutral = stat.trend === "neutral" || !stat.trend;
 
   return (
-    <div className="section-card">
+    <div className="section-card h-full">
       <div className="section-card-content">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -35,10 +35,10 @@ export function StatsCard({ stat }: StatsCardProps) {
 
           <div
             className={cn(
-              "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border",
-              isPositive && "border-green-200 bg-green-50 text-green-700",
-              isNegative && "border-red-200 bg-red-50 text-red-700",
-              isNeutral && "border-slate-200 bg-slate-50 text-slate-600"
+              "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border shadow-sm",
+              isPositive && "border-emerald-200 bg-emerald-50 text-emerald-600",
+              isNegative && "border-red-200 bg-red-50 text-red-600",
+              isNeutral && "border-blue-200 bg-blue-50 text-blue-600"
             )}
           >
             {isPositive ? (

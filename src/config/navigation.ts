@@ -10,6 +10,7 @@ import {
   UserRoundPlus,
   ShieldCheck,
   CreditCard,
+  PackageSearch,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { UserRole } from "@/src/types/role";
@@ -39,6 +40,12 @@ const OWNER_NAVIGATION: NavigationItem[] = [
     label: "Base de connaissances",
     href: "/knowledge-base",
     icon: BookOpen,
+    matchStartsWith: true,
+  },
+  {
+    label: "Produits",
+    href: "/products",
+    icon: PackageSearch,
     matchStartsWith: true,
   },
   {
@@ -117,6 +124,12 @@ const AGENT_NAVIGATION: NavigationItem[] = [
     label: "Base de connaissances",
     href: "/knowledge-base",
     icon: BookOpen,
+    matchStartsWith: true,
+  },
+  {
+    label: "Produits",
+    href: "/products",
+    icon: PackageSearch,
     matchStartsWith: true,
   },
   {

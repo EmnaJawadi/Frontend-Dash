@@ -5,7 +5,7 @@ export type RegisterRole = UserRole;
 export interface LoginPayload {
   email: string;
   password: string;
-  role: UserRole;
+  role?: UserRole;
 }
 
 export interface RegisterPayload {

@@ -1,197 +1,338 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import {
+  Building2,
   Bot,
-  Clock3,
+  CheckCircle2,
   MessageCircleMore,
+  PlugZap,
+  QrCode,
   RefreshCw,
+  RotateCcw,
   Save,
   Settings,
+  Unplug,
   Workflow,
 } from "lucide-react";
 import RoleGuard from "@/src/components/layout/role-guard";
+import { getUserRole } from "@/src/lib/auth";
 import { useSettings } from "@/src/features/settings/hooks/use-settings";
+import {
+  getAllowedCompanySettingsCards,
+  type CompanySettingsCardId,
+} from "@/src/features/settings/settings-permissions";
 import type {
-  BusinessHoursDay,
-  CompanySettingsData,
+  CompanyAiSettingsData,
+  CompanyAdminSettingsData,
+  CompanyWhatsappConfigData,
+  CompanyWorkflowSettingsData,
+  ResponseTone,
+  SupportedLanguage,
 } from "@/src/features/settings/types/settings.types";
+import type { UserRole } from "@/src/types/role";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
-const WEEKDAYS = new Set(["monday", "tuesday", "wednesday", "thursday", "friday"]);
+const SAFE_VERIFICATION_MESSAGE =
+  "Nous avons bien reçu votre demande. Elle nécessite une vérification complémentaire et notre équipe vous répondra dès que possible.";
 
-function cloneSettings(value: CompanySettingsData): CompanySettingsData {
-  return JSON.parse(JSON.stringify(value)) as CompanySettingsData;
+const LANGUAGE_OPTIONS: Array<{ value: SupportedLanguage; label: string }> = [
+  { value: "fr", label: "Français" },
+  { value: "en", label: "Anglais" },
+  { value: "ar", label: "Arabe" },
+];
+
+const TONE_OPTIONS: Array<{ value: ResponseTone; label: string }> = [
+  { value: "professional", label: "Professionnel" },
+  { value: "friendly", label: "Amical" },
+  { value: "formal", label: "Formel" },
+  { value: "concise", label: "Concis" },
+];
+
+const TIMEZONE_OPTIONS = [
+  "Africa/Lagos",
+  "Africa/Tunis",
+  "Africa/Casablanca",
+  "Europe/Paris",
+  "UTC",
+];
+
+type SettingsForm = {
+  evolutionInstanceName: string;
+  aiSettings: CompanyAiSettingsData;
+  workflowSettings: CompanyWorkflowSettingsData;
+  preferences: CompanyAdminSettingsData["preferences"];
+};
+
+const DEFAULT_AI_SETTINGS: CompanyAiSettingsData = {
+  enabled: false,
+  handoffEnabled: false,
+  responseTone: "professional",
+  language: "fr",
+  escalationDelayMinutes: 0,
+  botGuidelines: "",
+  confidenceThresholdManagedByPlatform: true,
+  technicalSettingsManagedByPlatform: true,
+};
+
+const DEFAULT_WORKFLOW_SETTINGS: CompanyWorkflowSettingsData = {
+  enabled: false,
+  defaultAssigneeId: null,
+  defaultAssignment: "",
+  welcomeMessage: "",
+  verificationMessage: SAFE_VERIFICATION_MESSAGE,
+};
+
+function cloneForm(data: CompanyAdminSettingsData): SettingsForm {
+  return {
+    evolutionInstanceName: data.whatsapp?.evolutionInstanceName ?? "",
+    aiSettings: { ...(data.aiSettings ?? DEFAULT_AI_SETTINGS) },
+    workflowSettings: { ...(data.workflowSettings ?? DEFAULT_WORKFLOW_SETTINGS) },
+    preferences: { ...data.preferences },
+  };
 }
 
-function getRangeFromDays(
-  days: BusinessHoursDay[],
-  predicate: (day: string) => boolean,
-) {
-  const first = days.find((item) => predicate(item.day));
-  return first ? `${first.start} - ${first.end}` : "";
+function formatDateTime(value: string | null) {
+  if (!value) return "Jamais";
+  return new Date(value).toLocaleString("fr-FR");
 }
 
-function parseRange(input: string, fallbackStart: string, fallbackEnd: string) {
-  const parts = input.split("-").map((item) => item.trim());
-  if (parts.length !== 2 || !parts[0] || !parts[1]) {
-    return { start: fallbackStart, end: fallbackEnd };
-  }
-  return { start: parts[0], end: parts[1] };
+function statusLabel(status: CompanyWhatsappConfigData["connectionStatus"]) {
+  if (status === "connected") return "Connecté";
+  if (status === "pending") return "En attente";
+  return "Déconnecté";
 }
 
-function applyHourRanges(
-  days: BusinessHoursDay[],
-  weekdaysRange: string,
-  saturdayRange: string,
-): BusinessHoursDay[] {
-  return days.map((item) => {
-    if (WEEKDAYS.has(item.day)) {
-      const parsed = parseRange(weekdaysRange, item.start, item.end);
-      return { ...item, active: true, start: parsed.start, end: parsed.end };
-    }
-    if (item.day === "saturday") {
-      if (!saturdayRange.trim()) return { ...item, active: false };
-      const parsed = parseRange(saturdayRange, item.start, item.end);
-      return { ...item, active: true, start: parsed.start, end: parsed.end };
-    }
-    return item;
-  });
+function statusVariant(status: CompanyWhatsappConfigData["connectionStatus"]) {
+  if (status === "connected") return "default";
+  if (status === "pending") return "secondary";
+  return "outline";
+}
+
+function resolveQrImageSrc(qrCodeValue: string) {
+  return qrCodeValue.startsWith("data:")
+    ? qrCodeValue
+    : `data:image/png;base64,${qrCodeValue}`;
 }
 
 export default function SettingsPage() {
-  const { data, isLoading, isSaving, error, saveError, refetch, saveSettings } =
-    useSettings();
-  const [form, setForm] = React.useState<CompanySettingsData | null>(null);
-  const [weekdaysHours, setWeekdaysHours] = React.useState("");
-  const [saturdayHours, setSaturdayHours] = React.useState("");
-  const [saveMessage, setSaveMessage] = React.useState("");
-  const [connectionMessage, setConnectionMessage] = React.useState("");
+  const [currentRole, setCurrentRole] = React.useState<UserRole | null>(null);
+  const visibleSettingsCards = React.useMemo(
+    () => getAllowedCompanySettingsCards(currentRole),
+    [currentRole],
+  );
+  const visibleCardIds = React.useMemo(
+    () => new Set(visibleSettingsCards.map((card) => card.id)),
+    [visibleSettingsCards],
+  );
+  const canShowCard = React.useCallback(
+    (cardId: CompanySettingsCardId) => visibleCardIds.has(cardId),
+    [visibleCardIds],
+  );
+  const showWhatsappSettings = canShowCard("whatsapp");
+  const showAiSettings = canShowCard("ai");
+  const showWorkflowSettings = canShowCard("workflow");
+
+  const {
+    data,
+    qrCode,
+    isLoading,
+    isSaving,
+    isConnecting,
+    isTestingConnection,
+    isQrLoading,
+    isDisconnecting,
+    isResetting,
+    error,
+    saveError,
+    refetch,
+    saveSettings,
+    connectWhatsapp,
+    loadQrCode,
+    testWhatsappConnection,
+    disconnectWhatsapp,
+    resetWhatsapp,
+  } = useSettings({ role: currentRole });
+  const [form, setForm] = React.useState<SettingsForm | null>(null);
+  const [toast, setToast] = React.useState<{
+    tone: "success" | "error";
+    message: string;
+  } | null>(null);
 
   React.useEffect(() => {
-    if (!data) return;
-    const cloned = cloneSettings(data);
-    setForm(cloned);
-    setWeekdaysHours(
-      getRangeFromDays(cloned.businessHours.days, (day) => WEEKDAYS.has(day)),
-    );
-    setSaturdayHours(
-      getRangeFromDays(cloned.businessHours.days, (day) => day === "saturday"),
-    );
+    setCurrentRole(getUserRole());
+  }, []);
+
+  React.useEffect(() => {
+    if (data) {
+      setForm(cloneForm(data));
+    }
   }, [data]);
+
+  React.useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const resetForm = () => {
     if (!data) return;
-    const cloned = cloneSettings(data);
-    setForm(cloned);
-    setWeekdaysHours(
-      getRangeFromDays(cloned.businessHours.days, (day) => WEEKDAYS.has(day)),
-    );
-    setSaturdayHours(
-      getRangeFromDays(cloned.businessHours.days, (day) => day === "saturday"),
-    );
-    setSaveMessage("");
-    setConnectionMessage("");
+    setForm(cloneForm(data));
+    setToast(null);
   };
+
+  const showSuccess = (message: string) => setToast({ tone: "success", message });
+  const showError = (message: string) => setToast({ tone: "error", message });
 
   const onSave = async () => {
     if (!form) return;
     try {
-      const saved = await saveSettings({
-        businessHours: {
-          ...form.businessHours,
-          days: applyHourRanges(form.businessHours.days, weekdaysHours, saturdayHours),
-        },
-        aiPolicy: {
-          enabled: form.aiPolicy.enabled,
-          handoffEnabled: form.aiPolicy.handoffEnabled,
-          escalationDelayMinutes: form.aiPolicy.escalationDelayMinutes,
-          responseTone: form.aiPolicy.responseTone,
-          language: form.aiPolicy.language,
-          botGuidelines: form.aiPolicy.botGuidelines,
-        },
-        workflow: {
-          enabled: form.workflow.enabled,
-          defaultAssignment: form.workflow.defaultAssignment,
-          welcomeMessage: form.workflow.welcomeMessage,
-          preHandoffMessage: form.workflow.preHandoffMessage,
-        },
-        general: {
-          companyName: form.general.companyName,
-          supportEmail: form.general.supportEmail,
-          defaultLanguage: form.general.defaultLanguage,
-          timezone: form.general.timezone,
-          emailNotifications: form.general.emailNotifications,
-        },
-        whatsappProfile: {
-          businessPhoneNumber: form.whatsappProfile.businessPhoneNumber,
-          displayName: form.whatsappProfile.displayName,
-          phoneNumberId: form.whatsappProfile.phoneNumberId,
-          businessAccountId: form.whatsappProfile.businessAccountId,
-          connectionStatus: form.whatsappProfile.connectionStatus,
+      await saveSettings({
+        ...(showAiSettings
+          ? {
+              aiSettings: {
+                enabled: form.aiSettings.enabled,
+                handoffEnabled: form.aiSettings.handoffEnabled,
+                escalationDelayMinutes: form.aiSettings.escalationDelayMinutes,
+                responseTone: form.aiSettings.responseTone,
+                language: form.aiSettings.language,
+                botGuidelines: form.aiSettings.botGuidelines,
+              },
+            }
+          : {}),
+        ...(showWorkflowSettings
+          ? {
+              workflowSettings: {
+                enabled: form.workflowSettings.enabled,
+                defaultAssigneeId: form.workflowSettings.defaultAssigneeId,
+                welcomeMessage: form.workflowSettings.welcomeMessage,
+                verificationMessage: form.workflowSettings.verificationMessage,
+              },
+            }
+          : {}),
+        preferences: {
+          officialName: form.preferences.officialName,
+          displayName: form.preferences.displayName,
+          supportEmail: form.preferences.supportEmail,
+          supportPhone: form.preferences.supportPhone,
+          city: form.preferences.city,
+          country: form.preferences.country,
+          defaultLanguage: form.preferences.defaultLanguage,
+          timezone: form.preferences.timezone,
+          emailNotificationsEnabled: form.preferences.emailNotificationsEnabled,
         },
       });
-      const cloned = cloneSettings(saved);
-      setForm(cloned);
-      setWeekdaysHours(
-        getRangeFromDays(cloned.businessHours.days, (day) => WEEKDAYS.has(day)),
-      );
-      setSaturdayHours(
-        getRangeFromDays(cloned.businessHours.days, (day) => day === "saturday"),
-      );
-      setSaveMessage("Parametres entreprise enregistres avec succes.");
-      setTimeout(() => setSaveMessage(""), 2500);
+      showSuccess("Paramètres entreprise enregistrés.");
     } catch {
-      setSaveMessage("");
+      showError("Impossible d'enregistrer les paramètres.");
+    }
+  };
+
+  const onConnect = async () => {
+    if (!form) return;
+    try {
+      await connectWhatsapp(form.evolutionInstanceName);
+      showSuccess("Connexion WhatsApp préparée.");
+    } catch {
+      showError("Impossible de préparer la connexion WhatsApp.");
+    }
+  };
+
+  const onShowQr = async () => {
+    try {
+      await loadQrCode();
+      showSuccess("QR Code WhatsApp chargé.");
+    } catch {
+      showError("Impossible de charger le QR Code WhatsApp.");
     }
   };
 
   const onTestConnection = async () => {
     try {
-      await refetch();
-      setConnectionMessage("Verification de la connexion terminee.");
-      setTimeout(() => setConnectionMessage(""), 2500);
+      const result = await testWhatsappConnection();
+      if (result.ok) {
+        showSuccess(result.message || "Connexion WhatsApp vérifiée.");
+      } else {
+        showError(result.message || "Connexion WhatsApp non disponible.");
+      }
     } catch {
-      setConnectionMessage("Echec du test de connexion.");
-      setTimeout(() => setConnectionMessage(""), 2500);
+      showError("Echec du test de connexion WhatsApp.");
+    }
+  };
+
+  const onDisconnect = async () => {
+    try {
+      await disconnectWhatsapp();
+      showSuccess("WhatsApp déconnecté.");
+    } catch {
+      showError("Impossible de déconnecter WhatsApp.");
+    }
+  };
+
+  const onReset = async () => {
+    try {
+      await resetWhatsapp();
+      showSuccess("Connexion WhatsApp réinitialisée.");
+    } catch {
+      showError("Impossible de réinitialiser WhatsApp.");
     }
   };
 
   return (
     <RoleGuard allowedRoles={["OWNER"]}>
-      <div className="space-y-6 p-4 md:p-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Parametres entreprise
+            <h1 className="text-xl font-semibold tracking-normal">
+              Paramètres entreprise
             </h1>
             <p className="text-sm text-muted-foreground">
-              Parametres metier de votre entreprise (bot, workflow, horaires et
-              preferences).
+              Visible uniquement par votre entreprise. Aucun paramètre technique
+              sensible n'est exposé.
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={resetForm}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Reinitialiser
+            <Button variant="outline" onClick={resetForm} disabled={!form || isSaving}>
+              <RefreshCw className="h-4 w-4" />
+              Réinitialiser
             </Button>
             <Button onClick={onSave} disabled={isSaving || !form}>
-              <Save className="mr-2 h-4 w-4" />
+              <Save className="h-4 w-4" />
               {isSaving ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </div>
         </div>
 
+        {toast ? (
+          <div
+            className={`fixed right-4 top-4 z-50 rounded-lg border px-4 py-3 text-sm shadow-sm ${
+              toast.tone === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-red-200 bg-red-50 text-red-800"
+            }`}
+          >
+            {toast.message}
+          </div>
+        ) : null}
+
         {isLoading ? (
           <Card>
             <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              Chargement des parametres...
+              Chargement des paramètres...
             </CardContent>
           </Card>
         ) : null}
@@ -200,351 +341,387 @@ export default function SettingsPage() {
           <Card>
             <CardContent className="space-y-3 p-6">
               <p className="text-sm text-red-700">{error}</p>
-              <Button onClick={() => void refetch()}>Reessayer</Button>
+              <Button onClick={() => void refetch()}>Réessayer</Button>
             </CardContent>
           </Card>
         ) : null}
 
-        {saveMessage ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {saveMessage}
-          </div>
-        ) : null}
         {saveError ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {saveError}
           </div>
         ) : null}
-        {connectionMessage ? (
-          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-            {connectionMessage}
-          </div>
-        ) : null}
 
-        {!form ? null : (
-          <>
-            <Card className="rounded-2xl">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MessageCircleMore className="h-5 w-5" />
-                  <h2 className="text-lg font-semibold">
-                    Configuration WhatsApp
-                  </h2>
+        {!form || !data ? null : (
+          <div className="grid gap-5 xl:grid-cols-2">
+            {canShowCard("companyInfo") ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5" />
+                    Informations entreprise
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Coordonnees et identite visibles par votre entreprise.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Nom officiel</Label>
+                      <Input value={form.preferences.officialName} readOnly />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nom affiche</Label>
+                      <Input
+                        value={form.preferences.displayName}
+                        onChange={(event) =>
+                          setForm((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  preferences: {
+                                    ...prev.preferences,
+                                    displayName: event.target.value,
+                                  },
+                                }
+                              : prev,
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email support</Label>
+                      <Input
+                        type="email"
+                        value={form.preferences.supportEmail}
+                        onChange={(event) =>
+                          setForm((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  preferences: {
+                                    ...prev.preferences,
+                                    supportEmail: event.target.value,
+                                  },
+                                }
+                              : prev,
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Telephone support</Label>
+                      <Input
+                        value={form.preferences.supportPhone}
+                        onChange={(event) =>
+                          setForm((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  preferences: {
+                                    ...prev.preferences,
+                                    supportPhone: event.target.value,
+                                  },
+                                }
+                              : prev,
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Ville</Label>
+                      <Input
+                        value={form.preferences.city}
+                        onChange={(event) =>
+                          setForm((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  preferences: {
+                                    ...prev.preferences,
+                                    city: event.target.value,
+                                  },
+                                }
+                              : prev,
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Pays</Label>
+                      <Input
+                        value={form.preferences.country}
+                        onChange={(event) =>
+                          setForm((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  preferences: {
+                                    ...prev.preferences,
+                                    country: event.target.value,
+                                  },
+                                }
+                              : prev,
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {showWhatsappSettings && data.whatsapp ? (
+            <Card>
+              <CardHeader className="flex flex-row items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageCircleMore className="h-5 w-5" />
+                    Connexion WhatsApp
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Géré par la plateforme via Evolution API.
+                  </p>
                 </div>
-                <Badge>
-                  {form.whatsappProfile.connectionStatus === "connected"
-                    ? "Connecte"
-                    : "Deconnecte"}
+                <Badge variant={statusVariant(data.whatsapp.connectionStatus)}>
+                  {statusLabel(data.whatsapp.connectionStatus)}
                 </Badge>
               </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Numero WhatsApp Business</Label>
-                  <Input
-                    value={form.whatsappProfile.businessPhoneNumber}
-                    onChange={(e) =>
-                      setForm((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              whatsappProfile: {
-                                ...prev.whatsappProfile,
-                                businessPhoneNumber: e.target.value,
-                              },
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Nom affiche</Label>
-                  <Input
-                    value={form.whatsappProfile.displayName}
-                    onChange={(e) =>
-                      setForm((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              whatsappProfile: {
-                                ...prev.whatsappProfile,
-                                displayName: e.target.value,
-                              },
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Phone Number ID</Label>
-                  <Input
-                    value={form.whatsappProfile.phoneNumberId}
-                    onChange={(e) =>
-                      setForm((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              whatsappProfile: {
-                                ...prev.whatsappProfile,
-                                phoneNumberId: e.target.value,
-                              },
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Business Account ID</Label>
-                  <Input
-                    value={form.whatsappProfile.businessAccountId}
-                    onChange={(e) =>
-                      setForm((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              whatsappProfile: {
-                                ...prev.whatsappProfile,
-                                businessAccountId: e.target.value,
-                              },
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Button variant="outline" onClick={onTestConnection}>
-                    Tester la connexion
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-2xl">
-              <CardHeader className="flex flex-row items-center gap-2">
-                <Clock3 className="h-5 w-5" />
-                <h2 className="text-lg font-semibold">Horaires de support</h2>
-              </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between rounded-xl border p-4">
-                  <div>
-                    <p className="font-medium">Activer les horaires</p>
-                  </div>
-                  <Switch
-                    checked={form.businessHours.enabled}
-                    onCheckedChange={(checked) =>
-                      setForm((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              businessHours: { ...prev.businessHours, enabled: checked },
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Lundi - Vendredi</Label>
+                    <Label>Nom de l'instance Evolution</Label>
                     <Input
-                      value={weekdaysHours}
-                      onChange={(e) => setWeekdaysHours(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Samedi</Label>
-                    <Input
-                      value={saturdayHours}
-                      onChange={(e) => setSaturdayHours(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Fuseau horaire</Label>
-                  <Input
-                    value={form.businessHours.timezone}
-                    onChange={(e) =>
-                      setForm((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              businessHours: {
-                                ...prev.businessHours,
-                                timezone: e.target.value,
-                              },
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between rounded-xl border p-4">
-                  <div>
-                    <p className="font-medium">Reponse auto hors horaires</p>
-                  </div>
-                  <Switch
-                    checked={form.businessHours.autoReplyOutsideHours}
-                    onCheckedChange={(checked) =>
-                      setForm((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              businessHours: {
-                                ...prev.businessHours,
-                                autoReplyOutsideHours: checked,
-                              },
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Message hors horaires</Label>
-                  <Textarea
-                    value={form.businessHours.outOfHoursMessage}
-                    onChange={(e) =>
-                      setForm((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              businessHours: {
-                                ...prev.businessHours,
-                                outOfHoursMessage: e.target.value,
-                              },
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-2xl">
-              <CardHeader className="flex flex-row items-center gap-2">
-                <Bot className="h-5 w-5" />
-                <h2 className="text-lg font-semibold">Assistant IA</h2>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between rounded-xl border p-4">
-                  <p className="font-medium">Activer le bot</p>
-                  <Switch
-                    checked={form.aiPolicy.enabled}
-                    onCheckedChange={(checked) =>
-                      setForm((prev) =>
-                        prev
-                          ? { ...prev, aiPolicy: { ...prev.aiPolicy, enabled: checked } }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between rounded-xl border p-4">
-                  <p className="font-medium">Activer handoff humain</p>
-                  <Switch
-                    checked={form.aiPolicy.handoffEnabled}
-                    onCheckedChange={(checked) =>
-                      setForm((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              aiPolicy: { ...prev.aiPolicy, handoffEnabled: checked },
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Confiance minimale (%)</Label>
-                    <Input
-                      value={String(Math.round(form.aiPolicy.confidenceThreshold * 100))}
-                      readOnly
-                      disabled
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Gere par la plateforme (lecture seule).
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Delai max avant escalade (min)</Label>
-                    <Input
-                      value={String(form.aiPolicy.escalationDelayMinutes)}
-                      onChange={(e) => {
-                        const n = Number(e.target.value);
-                        if (!Number.isFinite(n)) return;
+                      value={form.evolutionInstanceName}
+                      onChange={(event) =>
                         setForm((prev) =>
                           prev
                             ? {
                                 ...prev,
-                                aiPolicy: {
-                                  ...prev.aiPolicy,
+                                evolutionInstanceName: event.target.value,
+                              }
+                            : prev,
+                        )
+                      }
+                      placeholder="ex: support-whatsapp"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Numéro WhatsApp connecté</Label>
+                    <Input value={data.whatsapp.whatsappNumber || "Non connecté"} readOnly />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nom affiché</Label>
+                    <Input value={data.whatsapp.displayName || "Non renseigné"} readOnly />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Dernière vérification</Label>
+                    <Input value={formatDateTime(data.whatsapp.lastSyncAt)} readOnly />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={onConnect} disabled={isConnecting}>
+                    <PlugZap className="h-4 w-4" />
+                    {isConnecting ? "Connexion..." : "Connecter WhatsApp"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={onShowQr}
+                    disabled={isQrLoading || data.whatsapp.connectionStatus === "connected"}
+                  >
+                    <QrCode className="h-4 w-4" />
+                    {isQrLoading ? "Chargement..." : "Afficher QR Code"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={onTestConnection}
+                    disabled={isTestingConnection}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    {isTestingConnection ? "Test..." : "Tester"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={onDisconnect}
+                    disabled={isDisconnecting}
+                  >
+                    <Unplug className="h-4 w-4" />
+                    {isDisconnecting ? "Déconnexion..." : "Déconnecter"}
+                  </Button>
+                  <Button variant="outline" onClick={onReset} disabled={isResetting}>
+                    <RotateCcw className="h-4 w-4" />
+                    {isResetting ? "Réinitialisation..." : "Réinitialiser"}
+                  </Button>
+                </div>
+                {qrCode?.qrCode ? (
+                  <div className="w-fit rounded-lg border bg-muted/30 p-3">
+                    <Image
+                      src={resolveQrImageSrc(qrCode.qrCode)}
+                      alt="QR Code WhatsApp"
+                      width={208}
+                      height={208}
+                      unoptimized
+                      className="size-52"
+                    />
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+            ) : null}
+
+            {showAiSettings ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="h-5 w-5" />
+                  Assistant IA
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Les paramètres techniques IA sont gérés par la plateforme.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <span className="font-medium">Activer le bot</span>
+                    <Switch
+                      checked={form.aiSettings.enabled}
+                      onCheckedChange={(checked) =>
+                        setForm((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                aiSettings: { ...prev.aiSettings, enabled: checked },
+                              }
+                            : prev,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <span className="font-medium">Activer handoff humain</span>
+                    <Switch
+                      checked={form.aiSettings.handoffEnabled}
+                      onCheckedChange={(checked) =>
+                        setForm((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                aiSettings: {
+                                  ...prev.aiSettings,
+                                  handoffEnabled: checked,
+                                },
+                              }
+                            : prev,
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Ton de réponse</Label>
+                    <Select
+                      value={form.aiSettings.responseTone}
+                      onValueChange={(value) =>
+                        setForm((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                aiSettings: {
+                                  ...prev.aiSettings,
+                                  responseTone: value as ResponseTone,
+                                },
+                              }
+                            : prev,
+                        )
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TONE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Langue par défaut</Label>
+                    <Select
+                      value={form.aiSettings.language}
+                      onValueChange={(value) =>
+                        setForm((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                aiSettings: {
+                                  ...prev.aiSettings,
+                                  language: value as SupportedLanguage,
+                                },
+                              }
+                            : prev,
+                        )
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LANGUAGE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Délai avant alerte support</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={1440}
+                      value={form.aiSettings.escalationDelayMinutes}
+                      onChange={(event) =>
+                        setForm((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                aiSettings: {
+                                  ...prev.aiSettings,
                                   escalationDelayMinutes: Math.max(
                                     0,
-                                    Math.trunc(n),
+                                    Number(event.target.value) || 0,
                                   ),
                                 },
                               }
                             : prev,
-                        );
-                      }}
+                        )
+                      }
                     />
                   </div>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Ton de reponse</Label>
-                    <Input
-                      value={form.aiPolicy.responseTone}
-                      onChange={(e) =>
-                        setForm((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                aiPolicy: {
-                                  ...prev.aiPolicy,
-                                  responseTone: e.target.value,
-                                },
-                              }
-                            : prev,
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Langue par defaut</Label>
-                    <Input
-                      value={form.aiPolicy.language}
-                      onChange={(e) =>
-                        setForm((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                aiPolicy: { ...prev.aiPolicy, language: e.target.value },
-                              }
-                            : prev,
-                        )
-                      }
-                    />
-                  </div>
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                  Confiance minimale : gérée par la plateforme.
                 </div>
                 <div className="space-y-2">
-                  <Label>Consignes du bot</Label>
+                  <Label>Consignes personnalisées du bot</Label>
                   <Textarea
-                    value={form.aiPolicy.botGuidelines}
-                    onChange={(e) =>
+                    value={form.aiSettings.botGuidelines}
+                    maxLength={1200}
+                    onChange={(event) =>
                       setForm((prev) =>
                         prev
                           ? {
                               ...prev,
-                              aiPolicy: {
-                                ...prev.aiPolicy,
-                                botGuidelines: e.target.value,
+                              aiSettings: {
+                                ...prev.aiSettings,
+                                botGuidelines: event.target.value,
                               },
                             }
                           : prev,
@@ -554,57 +731,91 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
+            ) : null}
 
-            <Card className="rounded-2xl">
-              <CardHeader className="flex flex-row items-center gap-2">
-                <Workflow className="h-5 w-5" />
-                <h2 className="text-lg font-semibold">Workflow automatique</h2>
+            {showWorkflowSettings ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Workflow className="h-5 w-5" />
+                  Workflow automatique
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Assignation limitée aux agents de votre entreprise.
+                </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between rounded-xl border p-4">
-                  <p className="font-medium">Activer workflow</p>
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <span className="font-medium">Activer workflow</span>
                   <Switch
-                    checked={form.workflow.enabled}
+                    checked={form.workflowSettings.enabled}
                     onCheckedChange={(checked) =>
-                      setForm((prev) =>
-                        prev
-                          ? { ...prev, workflow: { ...prev.workflow, enabled: checked } }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Assignation par defaut</Label>
-                  <Input
-                    value={form.workflow.defaultAssignment}
-                    onChange={(e) =>
                       setForm((prev) =>
                         prev
                           ? {
                               ...prev,
-                              workflow: {
-                                ...prev.workflow,
-                                defaultAssignment: e.target.value,
+                              workflowSettings: {
+                                ...prev.workflowSettings,
+                                enabled: checked,
                               },
                             }
                           : prev,
                       )
                     }
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Assignation par défaut</Label>
+                  {data.supportAssignees.length === 0 ? (
+                    <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                      Aucun agent disponible. Ajoutez d'abord un membre dans la
+                      section Équipe.
+                    </div>
+                  ) : (
+                    <Select
+                      value={form.workflowSettings.defaultAssigneeId ?? "none"}
+                      onValueChange={(value) =>
+                        setForm((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                workflowSettings: {
+                                  ...prev.workflowSettings,
+                                  defaultAssigneeId:
+                                    value === "none" ? null : value,
+                                },
+                              }
+                            : prev,
+                        )
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Choisir un agent" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Aucune assignation</SelectItem>
+                        {data.supportAssignees.map((assignee) => (
+                          <SelectItem key={assignee.id} value={assignee.id}>
+                            {assignee.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Message d'accueil</Label>
                   <Textarea
-                    value={form.workflow.welcomeMessage}
-                    onChange={(e) =>
+                    value={form.workflowSettings.welcomeMessage}
+                    maxLength={500}
+                    onChange={(event) =>
                       setForm((prev) =>
                         prev
                           ? {
                               ...prev,
-                              workflow: {
-                                ...prev.workflow,
-                                welcomeMessage: e.target.value,
+                              workflowSettings: {
+                                ...prev.workflowSettings,
+                                welcomeMessage: event.target.value,
                               },
                             }
                           : prev,
@@ -613,17 +824,21 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Message avant handoff</Label>
+                  <Label>Message de vérification complémentaire</Label>
                   <Textarea
-                    value={form.workflow.preHandoffMessage}
-                    onChange={(e) =>
+                    value={
+                      form.workflowSettings.verificationMessage ||
+                      SAFE_VERIFICATION_MESSAGE
+                    }
+                    maxLength={500}
+                    onChange={(event) =>
                       setForm((prev) =>
                         prev
                           ? {
                               ...prev,
-                              workflow: {
-                                ...prev.workflow,
-                                preHandoffMessage: e.target.value,
+                              workflowSettings: {
+                                ...prev.workflowSettings,
+                                verificationMessage: event.target.value,
                               },
                             }
                           : prev,
@@ -633,96 +848,94 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
+            ) : null}
 
-            <Card className="rounded-2xl">
-              <CardHeader className="flex flex-row items-center gap-2">
-                <Settings className="h-5 w-5" />
-                <h2 className="text-lg font-semibold">Preferences entreprise</h2>
+            {canShowCard("preferences") ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Preferences entreprise
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Langue, fuseau horaire et notifications generales.
+                </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Nom entreprise</Label>
-                    <Input
-                      value={form.general.companyName}
-                      onChange={(e) =>
-                        setForm((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                general: { ...prev.general, companyName: e.target.value },
-                              }
-                            : prev,
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email support</Label>
-                    <Input
-                      value={form.general.supportEmail}
-                      onChange={(e) =>
-                        setForm((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                general: { ...prev.general, supportEmail: e.target.value },
-                              }
-                            : prev,
-                        )
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
                     <Label>Langue par defaut</Label>
-                    <Input
-                      value={form.general.defaultLanguage}
-                      onChange={(e) =>
+                    <Select
+                      value={form.preferences.defaultLanguage}
+                      onValueChange={(value) =>
                         setForm((prev) =>
                           prev
                             ? {
                                 ...prev,
-                                general: {
-                                  ...prev.general,
-                                  defaultLanguage: e.target.value,
+                                preferences: {
+                                  ...prev.preferences,
+                                  defaultLanguage: value as SupportedLanguage,
                                 },
                               }
                             : prev,
                         )
                       }
-                    />
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LANGUAGE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Fuseau horaire</Label>
-                    <Input
-                      value={form.general.timezone}
-                      onChange={(e) =>
+                    <Select
+                      value={form.preferences.timezone}
+                      onValueChange={(value) =>
                         setForm((prev) =>
                           prev
                             ? {
                                 ...prev,
-                                general: { ...prev.general, timezone: e.target.value },
+                                preferences: {
+                                  ...prev.preferences,
+                                  timezone: value,
+                                },
                               }
                             : prev,
                         )
                       }
-                    />
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIMEZONE_OPTIONS.map((timezone) => (
+                          <SelectItem key={timezone} value={timezone}>
+                            {timezone}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                <div className="flex items-center justify-between rounded-xl border p-4">
-                  <p className="font-medium">Notifications email</p>
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <span className="font-medium">Notifications email</span>
                   <Switch
-                    checked={form.general.emailNotifications}
+                    checked={form.preferences.emailNotificationsEnabled}
                     onCheckedChange={(checked) =>
                       setForm((prev) =>
                         prev
                           ? {
                               ...prev,
-                              general: {
-                                ...prev.general,
-                                emailNotifications: checked,
+                              preferences: {
+                                ...prev.preferences,
+                                emailNotificationsEnabled: checked,
                               },
                             }
                           : prev,
@@ -732,7 +945,8 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
-          </>
+            ) : null}
+          </div>
         )}
       </div>
     </RoleGuard>

@@ -31,7 +31,11 @@ export const contactsService = {
   remove: (id: string) => apiClient.delete(`/contacts/${id}`),
 
   addNote: (contactId: string, payload: { note: string }) =>
-    apiClient.post(`/contacts/${contactId}/notes`, payload),
+    apiClient.post(`/contact-notes`, {
+      contactId,
+      content: payload.note,
+    }),
 
-  listNotes: (contactId: string) => apiClient.get(`/contacts/${contactId}/notes`),
+  listNotes: (contactId: string) =>
+    apiClient.get(`/contact-notes?contactId=${encodeURIComponent(contactId)}`),
 };

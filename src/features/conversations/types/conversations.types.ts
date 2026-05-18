@@ -8,7 +8,12 @@ export type ConversationStatus =
 
 export type ConversationPriority = "low" | "medium" | "high";
 
-export type SenderType = "customer" | "bot" | "agent" | "system";
+export type SenderType =
+  | "customer"
+  | "bot"
+  | "agent"
+  | "human_agent"
+  | "system";
 
 export type MessageDirection = "inbound" | "outbound";
 
@@ -71,6 +76,19 @@ export interface ConversationActivity {
   lastAgentReplyAt?: string | null;
 }
 
+export interface ConversationContext {
+  conversationSummary?: string | null;
+  customerIntent?: string | null;
+  requestedProductService?: string | null;
+  requestedDeliveryDate?: string | null;
+  deliveryAddress?: string | null;
+  budget?: string | null;
+  agreedTerms?: string | null;
+  nextAction?: string | null;
+  lastAiDecision?: string | null;
+  importantNotes?: string | null;
+}
+
 export interface ConversationDetails {
   id: string;
   status: ConversationStatus;
@@ -81,6 +99,7 @@ export interface ConversationDetails {
   createdAt: string;
   updatedAt: string;
   activity: ConversationActivity;
+  context?: ConversationContext;
   messages: ConversationMessage[];
 }
 
@@ -134,7 +153,7 @@ export interface WhatsappReplyRequest {
   conversationId: string;
   message: string;
   automated?: boolean;
-  senderType?: "agent" | "bot" | "system";
+  senderType?: "agent" | "human_agent" | "bot" | "system";
 }
 
 export interface WhatsappReplyResult {

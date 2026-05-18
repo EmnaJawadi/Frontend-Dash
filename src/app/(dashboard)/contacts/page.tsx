@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DataTable } from "@/src/components/shared/data-table";
+import { StatusBadge } from "@/src/components/shared/status-badge";
 import { isApiError } from "@/src/lib/api-error";
 import { contactsService } from "@/src/services/contacts.service";
 
@@ -211,15 +213,6 @@ export default function ContactsPage() {
     }
   }
 
-  const stats = React.useMemo(() => {
-    const blocked = contacts.filter((item) => item.isBlocked).length;
-    return {
-      total: contacts.length,
-      active: contacts.length - blocked,
-      blocked,
-    };
-  }, [contacts]);
-
   const selectedCount = selectedContactIds.size;
   const allVisibleSelected =
     contacts.length > 0 && selectedCount === contacts.length;
@@ -233,41 +226,13 @@ export default function ContactsPage() {
   }, [partiallySelected]);
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Contacts</h1>
-        <p className="text-sm text-muted-foreground">
-          Donnees dynamiques chargees depuis le backend.
-        </p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Total</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">{stats.total}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Actifs</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">{stats.active}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Bloques</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">{stats.blocked}</CardContent>
-        </Card>
-      </div>
-
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Ajouter un contact</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleCreateContact} className="grid gap-3 md:grid-cols-5">
+          <form onSubmit={handleCreateContact} className="grid gap-4 md:grid-cols-5">
             <Input
               placeholder="Prenom *"
               value={firstName}
@@ -311,14 +276,14 @@ export default function ContactsPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Button type="button" variant="outline" onClick={() => void loadContacts()}>
+            <Button type="button" variant="outline" size="sm" onClick={() => void loadContacts()}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Actualiser
             </Button>
             <Button
               type="button"
-              variant="outline"
-              className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+              variant="destructive"
+              size="sm"
               onClick={() => void handleDeleteSelectedContacts()}
               disabled={selectedCount === 0 || isBulkDeleting}
             >
@@ -339,14 +304,15 @@ export default function ContactsPage() {
               <Loader2 className="h-4 w-4 animate-spin" />
               Chargement...
             </div>
-          ) : contacts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucun contact trouve.</p>
           ) : (
-            <div className="overflow-x-auto rounded-xl border">
-              <table className="w-full min-w-[720px] text-sm">
-                <thead className="bg-muted/40">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium">
+            <DataTable
+              data={contacts}
+              rowKey={(contact) => contact.id}
+              emptyMessage="Aucun contact trouve."
+              columns={[
+                {
+                  key: "select",
+                  header: (
                       <input
                         ref={selectAllRef}
                         type="checkbox"
@@ -355,33 +321,49 @@ export default function ContactsPage() {
                           toggleSelectAllVisible(event.target.checked)
                         }
                         aria-label="Selectionner tous les contacts"
+                        className="app-checkbox"
                       />
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium">Nom</th>
-                    <th className="px-4 py-3 text-left font-medium">Telephone</th>
-                    <th className="px-4 py-3 text-left font-medium">Email</th>
-                    <th className="px-4 py-3 text-left font-medium">Tags</th>
-                    <th className="px-4 py-3 text-left font-medium">Statut</th>
-                    <th className="px-4 py-3 text-right font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {contacts.map((contact) => (
-                    <tr key={contact.id} className="border-t">
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedContactIds.has(contact.id)}
-                          onChange={(event) =>
-                            toggleContactSelection(contact.id, event.target.checked)
-                          }
-                          aria-label={`Selectionner ${contact.fullName || contact.phoneNumber}`}
-                        />
-                      </td>
-                      <td className="px-4 py-3">{contact.fullName || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim()}</td>
-                      <td className="px-4 py-3">{contact.phoneNumber}</td>
-                      <td className="px-4 py-3">{contact.email || "-"}</td>
-                      <td className="px-4 py-3">
+                  ),
+                  className: "w-[48px]",
+                  render: (contact) => (
+                    <input
+                      type="checkbox"
+                      checked={selectedContactIds.has(contact.id)}
+                      onChange={(event) =>
+                        toggleContactSelection(contact.id, event.target.checked)
+                      }
+                      aria-label={`Selectionner ${contact.fullName || contact.phoneNumber}`}
+                      className="app-checkbox"
+                    />
+                  ),
+                },
+                {
+                  key: "name",
+                  header: "Nom",
+                  className: "min-w-[220px]",
+                  render: (contact) => (
+                    <span className="font-semibold text-foreground">
+                      {contact.fullName || `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim()}
+                    </span>
+                  ),
+                },
+                {
+                  key: "phone",
+                  header: "Telephone",
+                  className: "min-w-[150px]",
+                  render: (contact) => contact.phoneNumber,
+                },
+                {
+                  key: "email",
+                  header: "Email",
+                  className: "min-w-[190px]",
+                  render: (contact) => contact.email || "-",
+                },
+                {
+                  key: "tags",
+                  header: "Tags",
+                  className: "min-w-[140px]",
+                  render: (contact) => (
                         <div className="flex flex-wrap gap-1">
                           {(contact.tags ?? []).length ? (
                             (contact.tags ?? []).map((tag) => (
@@ -393,14 +375,24 @@ export default function ContactsPage() {
                             <span className="text-muted-foreground">-</span>
                           )}
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={contact.isBlocked ? "destructive" : "secondary"}>
-                          {statusLabel(contact.isBlocked)}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="inline-flex items-center gap-2">
+                  ),
+                },
+                {
+                  key: "status",
+                  header: "Statut",
+                  className: "min-w-[110px]",
+                  render: (contact) => (
+                    <StatusBadge variant={contact.isBlocked ? "danger" : "success"}>
+                      {statusLabel(contact.isBlocked)}
+                    </StatusBadge>
+                  ),
+                },
+                {
+                  key: "actions",
+                  header: "Actions",
+                  className: "min-w-[390px] text-right",
+                  render: (contact) => (
+                        <div className="app-action-row justify-end">
                           <Button asChild variant="outline" size="sm">
                             <Link href={`/contacts/${contact.id}`}>Voir details</Link>
                           </Button>
@@ -409,9 +401,8 @@ export default function ContactsPage() {
                           </Button>
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="destructive"
                             size="sm"
-                            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                             onClick={() => void handleDeleteContact(contact)}
                             disabled={deletingContactId === contact.id || isBulkDeleting}
                           >
@@ -428,12 +419,10 @@ export default function ContactsPage() {
                             )}
                           </Button>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  ),
+                },
+              ]}
+            />
           )}
         </CardContent>
       </Card>

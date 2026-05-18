@@ -37,7 +37,7 @@ export default function AdminSidebar() {
 
   const fullName =
     `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || "Super Admin";
-  const email = user?.email ?? "admin@platform.local";
+  const email = user?.email ?? "admin@centre-support.local";
   const initials =
     `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`.toUpperCase() || "SA";
 
@@ -48,28 +48,32 @@ export default function AdminSidebar() {
   }
 
   return (
-    <aside className="hidden w-[300px] shrink-0 border-r border-slate-800 bg-slate-950 text-slate-100 lg:flex lg:flex-col">
-      <div className="border-b border-slate-800 px-5 py-5">
-        <div className="mb-4 flex items-center gap-3">
-          <div className="rounded-xl bg-slate-900 p-2 ring-1 ring-slate-700">
-            <Shield className="h-5 w-5 text-cyan-300" />
+    <aside className="hidden h-screen w-[320px] shrink-0 p-3 text-card-foreground lg:flex">
+      <div className="flex h-full w-full flex-col rounded-[1.65rem] border border-border/80 bg-card/80 px-4 py-5 shadow-[0_22px_60px_rgba(30,64,175,0.10)] backdrop-blur-2xl">
+      <div className="pb-6">
+        <div className="mb-6 flex items-center gap-4">
+          <div className="rounded-2xl border border-primary/15 bg-white p-3 shadow-sm">
+            <Shield className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Platform</p>
-            <p className="text-lg font-semibold">Admin Panel</p>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-muted-foreground">Plateforme</p>
+            <p className="text-2xl font-extrabold tracking-tight">Admin Panel</p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-3">
-          <p className="text-xs uppercase tracking-widest text-cyan-300">Espace securise</p>
-          <p className="mt-1 text-sm text-slate-300">
+        <div className="rounded-3xl border border-border/80 bg-background/60 p-4 shadow-sm">
+          <div className="mb-2 flex items-center gap-3">
+            <Shield className="h-5 w-5 text-primary" />
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Espace securise</p>
+          </div>
+          <p className="text-sm leading-6 text-muted-foreground">
             Gerez les entreprises, utilisateurs, abonnements et parametres globaux.
           </p>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-4 py-4">
-        <p className="mb-2 px-2 text-xs uppercase tracking-[0.18em] text-slate-500">Navigation</p>
+      <nav className="flex-1 space-y-2 overflow-y-auto pr-1">
+        <p className="mb-3 px-3 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">Navigation</p>
         {ADMIN_NAV_ITEMS.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
@@ -79,38 +83,45 @@ export default function AdminSidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
+                "relative flex items-center gap-3 rounded-2xl px-3.5 py-3.5 text-sm font-semibold transition-all",
                 active
-                  ? "bg-cyan-400/10 text-cyan-200 ring-1 ring-cyan-400/30"
-                  : "text-slate-300 hover:bg-slate-900 hover:text-white",
+                  ? "bg-primary/10 text-primary shadow-[0_10px_22px_rgba(37,99,235,0.08)] ring-1 ring-primary/20"
+                  : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
               )}
             >
-              <Icon className="h-4 w-4" />
+              {active ? (
+                <>
+                  <span className="absolute left-0 top-1/2 h-9 w-1 -translate-y-1/2 rounded-r-full bg-primary" />
+                  <span className="absolute right-3 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-primary" />
+                </>
+              ) : null}
+              <Icon className="h-5 w-5" />
               <span>{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
-      <div className="space-y-3 border-t border-slate-800 px-4 py-4">
-        <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-xs font-semibold">
+      <div className="space-y-3 border-t border-border/70 pt-4">
+        <div className="flex items-center gap-3 rounded-2xl border border-border/80 bg-background/60 px-3 py-3 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-950 text-sm font-bold text-white">
             {initials}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-slate-100">{fullName}</p>
-            <p className="truncate text-xs text-slate-400">{email}</p>
+            <p className="truncate text-sm font-bold text-foreground">{fullName}</p>
+            <p className="truncate text-xs text-muted-foreground">{email}</p>
           </div>
         </div>
 
         <button
           type="button"
           onClick={handleLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5 text-sm text-red-300 transition hover:bg-red-500/10 hover:text-red-200"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50/70 px-3 py-3 text-sm font-semibold text-destructive transition hover:bg-destructive/10"
         >
           <LogOut className="h-4 w-4" />
           Deconnexion
         </button>
+      </div>
       </div>
     </aside>
   );

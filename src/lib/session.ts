@@ -11,6 +11,34 @@ function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
 
+function getSessionStorageItem(key: string): string | null {
+  if (!isBrowser()) return null;
+
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function setSessionStorageItem(key: string, value: string): void {
+  if (!isBrowser()) return;
+
+  try {
+    window.sessionStorage.setItem(key, value);
+  } catch {
+  }
+}
+
+function removeSessionStorageItem(key: string): void {
+  if (!isBrowser()) return;
+
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+  }
+}
+
 export function setCookie(name: string, value: string, days = 7): void {
   if (!isBrowser()) return;
 
@@ -45,6 +73,10 @@ export function saveSession(user: AuthUser): void {
   setCookie(STORAGE_KEYS.ROLE, user.role);
   setCookie(STORAGE_KEYS.USER, JSON.stringify(user));
 
+  setSessionStorageItem(STORAGE_KEYS.AUTH, "true");
+  setSessionStorageItem(STORAGE_KEYS.ROLE, user.role);
+  setSessionStorageItem(STORAGE_KEYS.USER, JSON.stringify(user));
+
   localStorage.setItem(STORAGE_KEYS.AUTH, "true");
   localStorage.setItem(STORAGE_KEYS.ROLE, user.role);
   localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
@@ -54,7 +86,9 @@ export function getSession(): AuthUser | null {
   if (!isBrowser()) return null;
 
   const rawUser =
-    getCookie(STORAGE_KEYS.USER) ?? localStorage.getItem(STORAGE_KEYS.USER);
+    getSessionStorageItem(STORAGE_KEYS.USER) ??
+    localStorage.getItem(STORAGE_KEYS.USER) ??
+    getCookie(STORAGE_KEYS.USER);
 
   if (!rawUser) return null;
 
@@ -72,6 +106,10 @@ export function clearSession(): void {
   deleteCookie(STORAGE_KEYS.ROLE);
   deleteCookie(STORAGE_KEYS.USER);
 
+  removeSessionStorageItem(STORAGE_KEYS.AUTH);
+  removeSessionStorageItem(STORAGE_KEYS.ROLE);
+  removeSessionStorageItem(STORAGE_KEYS.USER);
+
   localStorage.removeItem(STORAGE_KEYS.AUTH);
   localStorage.removeItem(STORAGE_KEYS.ROLE);
   localStorage.removeItem(STORAGE_KEYS.USER);
@@ -79,7 +117,9 @@ export function clearSession(): void {
 
 export function getStoredRole(): UserRole | null {
   const role =
-    getCookie(STORAGE_KEYS.ROLE) ?? localStorage.getItem(STORAGE_KEYS.ROLE);
+    getSessionStorageItem(STORAGE_KEYS.ROLE) ??
+    localStorage.getItem(STORAGE_KEYS.ROLE) ??
+    getCookie(STORAGE_KEYS.ROLE);
 
   if (role === "SUPER_ADMIN" || role === "OWNER" || role === "AGENT") {
     return role;
@@ -90,7 +130,9 @@ export function getStoredRole(): UserRole | null {
 
 export function getAuthFlag(): boolean {
   const auth =
-    getCookie(STORAGE_KEYS.AUTH) ?? localStorage.getItem(STORAGE_KEYS.AUTH);
+    getSessionStorageItem(STORAGE_KEYS.AUTH) ??
+    localStorage.getItem(STORAGE_KEYS.AUTH) ??
+    getCookie(STORAGE_KEYS.AUTH);
 
   return auth === "true";
 }

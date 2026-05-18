@@ -42,7 +42,7 @@ export const knowledgeBaseService = {
     if (payload.summary) formData.append("summary", payload.summary);
     if (payload.language) formData.append("language", payload.language);
     if (payload.tags?.length) formData.append("tags", payload.tags.join(","));
-    if (payload.autoPublish !== undefined) formData.append("autoPublish", String(payload.autoPublish));
+    formData.append("autoPublish", String(payload.autoPublish ?? true));
     if (payload.chunkSize !== undefined) formData.append("chunkSize", String(payload.chunkSize));
     if (payload.chunkOverlap !== undefined) formData.append("chunkOverlap", String(payload.chunkOverlap));
 

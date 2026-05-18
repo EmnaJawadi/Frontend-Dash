@@ -8,18 +8,15 @@ import { StatsCard } from "@/src/components/dashboard/stats-card";
 import { LoadingSpinner } from "@/src/components/shared/loading-spinner";
 import { SectionCard } from "@/src/components/shared/section-card";
 import { useDashboard } from "@/src/features/dashboard/hooks/use-dashboard";
+import { usePeriodFilter } from "@/src/hooks/use-period-filter";
 
 export default function DashboardPage() {
-  const { data, isLoading, error, refetch } = useDashboard();
+  const { period } = usePeriodFilter("30d");
+  const { data, isLoading, error, refetch } = useDashboard(period);
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Tableau de bord</h2>
-          <p className="text-sm text-muted-foreground">Chargement des donnees...</p>
-        </div>
-
         <SectionCard contentClassName="py-12">
           <LoadingSpinner size="lg" label="Chargement du tableau de bord..." />
         </SectionCard>
@@ -48,11 +45,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="fade-up">
-        <h2 className="text-2xl font-bold tracking-tight">Tableau de bord</h2>
-        <p className="text-sm text-muted-foreground">Suivez le volume des conversations, la performance du bot et les escalades.</p>
-      </div>
-
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5 fade-up-delay-1">
         {data.stats.map((stat) => (
           <StatsCard key={stat.key} stat={stat} />

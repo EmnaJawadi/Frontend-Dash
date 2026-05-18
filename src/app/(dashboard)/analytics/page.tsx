@@ -30,6 +30,8 @@ import type {
   PeriodFilter,
   TeamFilter,
 } from "@/src/features/analytics/types/analytics.types";
+import { usePeriodFilter } from "@/src/hooks/use-period-filter";
+import { PERIOD_OPTIONS } from "@/src/lib/period-filter";
 
 function SearchInput({
   value,
@@ -155,7 +157,7 @@ function applyTeamFilter(items: AnalyticsDay[], team: TeamFilter): AnalyticsDay[
 
 export default function AnalyticsPage() {
   const [search, setSearch] = React.useState("");
-  const [period, setPeriod] = React.useState<PeriodFilter>("7d");
+  const { period, setPeriod } = usePeriodFilter("30d");
   const [channel, setChannel] = React.useState<ChannelFilter>("all");
   const [team, setTeam] = React.useState<TeamFilter>("all");
 
@@ -221,11 +223,7 @@ export default function AnalyticsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-4 md:p-6">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Analytics</h1>
-          <p className="text-sm text-muted-foreground">Chargement des donnees...</p>
-        </div>
+      <div className="space-y-6">
         <Card className="rounded-2xl border shadow-sm">
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             Recuperation des statistiques en cours...
@@ -237,14 +235,7 @@ export default function AnalyticsPage() {
 
   if (error || !data) {
     return (
-      <div className="space-y-6 p-4 md:p-6">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Analytics</h1>
-          <p className="text-sm text-muted-foreground">
-            Suivez le volume des messages, la performance du bot et les escalades.
-          </p>
-        </div>
-
+      <div className="space-y-6">
         <Card className="rounded-2xl border shadow-sm">
           <CardContent className="flex flex-col items-start gap-4 p-6">
             <div>
@@ -263,16 +254,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Analytics</h1>
-          <p className="text-sm text-muted-foreground">
-            Suivez le volume des messages, la performance du bot et les escalades.
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Messages totaux"
@@ -328,9 +310,11 @@ export default function AnalyticsPage() {
                   <SelectValue placeholder="Periode" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="7d">7 jours</SelectItem>
-                  <SelectItem value="30d">30 jours</SelectItem>
-                  <SelectItem value="90d">90 jours</SelectItem>
+                  {PERIOD_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { ShieldCheck, Sparkles, Zap, type LucideIcon } from "lucide-react";
+import Image from "next/image";
+import { Bot, ShieldCheck, Zap, type LucideIcon } from "lucide-react";
 
 type AuthHighlight = {
   title: string;
@@ -27,7 +28,7 @@ const defaultHighlights: AuthHighlight[] = [
   {
     title: "Qualite constante",
     description: "Le bot propose des reponses et apprend des transferts vers les humains.",
-    icon: Sparkles,
+    icon: Bot,
   },
   {
     title: "Controle et securite",
@@ -49,10 +50,17 @@ export function AuthShell({
   return (
     <main className="auth-layout flex items-center justify-center">
       <div className="w-full max-w-6xl">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-          <section className="relative hidden overflow-hidden rounded-[2rem] border border-white/20 bg-gradient-to-br from-cyan-500 via-sky-500 to-indigo-500 p-8 text-white shadow-2xl lg:flex lg:flex-col">
-            <div className="pointer-events-none absolute -left-12 top-8 h-44 w-44 rounded-full bg-white/18 blur-2xl float-soft" />
-            <div className="pointer-events-none absolute -right-16 bottom-14 h-48 w-48 rounded-full bg-white/14 blur-2xl float-soft" />
+        <div className="mb-8 flex items-center justify-center gap-3">
+          <Image src="/logopfe.png" alt="Centre Support" width={54} height={54} className="h-12 w-12 object-contain" priority />
+          <div>
+            <p className="text-2xl font-extrabold tracking-tight text-foreground">Centre Support</p>
+            <p className="text-sm font-medium text-emerald-500">WhatsApp Entreprise</p>
+          </div>
+        </div>
+
+        <div className="grid overflow-hidden rounded-[2rem] border border-border/80 bg-card/70 shadow-[0_24px_70px_rgba(30,64,175,0.14)] backdrop-blur-2xl lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+          <section className="relative hidden overflow-hidden bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-500 p-10 text-white lg:flex lg:flex-col">
+            <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(90deg,rgba(255,255,255,0.18)_1px,transparent_1px),linear-gradient(rgba(255,255,255,0.14)_1px,transparent_1px)] [background-size:28px_28px]" />
 
             <div className="relative">
               <span className="inline-flex rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]">
@@ -69,9 +77,9 @@ export function AuthShell({
                 return (
                   <article
                     key={highlight.title}
-                    className="rounded-2xl border border-white/24 bg-white/10 p-4 backdrop-blur-sm"
+                    className="rounded-2xl border border-white/25 bg-white/10 p-4 backdrop-blur-sm"
                   >
-                    <div className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/18">
+                    <div className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/20">
                       <Icon className="h-4 w-4" />
                     </div>
                     <h3 className="text-sm font-bold text-white">{highlight.title}</h3>
@@ -82,7 +90,7 @@ export function AuthShell({
             </div>
           </section>
 
-          <section className="auth-form-panel fade-up">
+          <section className="auth-form-panel rounded-none border-0 shadow-none fade-up">
             <div className="mb-6 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{eyebrow}</p>
               <h1 className="text-2xl font-extrabold leading-tight text-foreground md:text-[2.05rem]">{title}</h1>

@@ -16,6 +16,7 @@ import {
   UserRound,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { DataTable } from "@/src/components/shared/data-table";
 import { StatusBadge } from "@/src/components/shared/status-badge";
 import type { ConversationListItem } from "@/src/features/conversations/types/conversations.types";
@@ -103,7 +104,7 @@ function HeaderCell({
   sortable?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+    <div className="flex items-center gap-2 font-semibold text-foreground/75">
       {icon}
       <span>{label}</span>
       {sortable ? <ArrowUpDown className="h-4 w-4 opacity-60" /> : null}
@@ -239,15 +240,16 @@ export function ConversationTable({
       {deleteSuccess ? <p className="text-sm text-emerald-700">{deleteSuccess}</p> : null}
 
       <div className="flex justify-end">
-        <button
+        <Button
           type="button"
+          variant="destructive"
+          size="sm"
           onClick={() => void handleDeleteSelectedConversations()}
           disabled={selectedCount === 0 || isBulkDeleting}
-          className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isBulkDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
           Supprimer la selection ({selectedCount})
-        </button>
+        </Button>
       </div>
 
       <DataTable
@@ -264,7 +266,7 @@ export function ConversationTable({
                 checked={allVisibleSelected}
                 onChange={(event) => toggleSelectAllVisible(event.target.checked)}
                 aria-label="Selectionner toutes les conversations"
-                className="h-4 w-4 rounded border border-border"
+                className="app-checkbox"
               />
             ),
             className: "w-[52px]",
@@ -272,7 +274,7 @@ export function ConversationTable({
               <input
                 type="checkbox"
                 aria-label="Selectionner la conversation"
-                className="h-4 w-4 rounded border border-border"
+                className="app-checkbox"
                 checked={selectedConversationIds.has(item.id)}
                 onChange={(event) =>
                   toggleConversationSelection(item.id, event.target.checked)
@@ -351,22 +353,22 @@ export function ConversationTable({
           {
             key: "actions",
             header: <span className="text-sm font-medium">Actions</span>,
-            className: "min-w-[250px]",
+            className: "min-w-[260px]",
             render: (item) => (
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/conversations/${item.id}`}
-                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
-                >
-                  <Eye className="h-4 w-4" />
-                  Voir details
-                </Link>
+              <div className="app-action-row">
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/conversations/${item.id}`}>
+                    <Eye className="h-4 w-4" />
+                    Voir details
+                  </Link>
+                </Button>
 
-                <button
+                <Button
                   type="button"
+                  variant="destructive"
+                  size="sm"
                   onClick={() => void handleDelete(item.id, item.contactName)}
                   disabled={deletingConversationId === item.id || isBulkDeleting}
-                  className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {deletingConversationId === item.id ? (
                     <>
@@ -379,7 +381,7 @@ export function ConversationTable({
                       Supprimer
                     </>
                   )}
-                </button>
+                </Button>
               </div>
             ),
           },

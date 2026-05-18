@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { superAdminService } from "@/src/features/super-admin/services/super-admin.service";
 import type {
+  AgentRegistrationRequestItem,
   CompanyRegistrationRequestItem,
   SuperAdminNotificationItem,
 } from "@/src/features/super-admin/types/super-admin.types";
@@ -30,6 +31,7 @@ export default function AdminRegistrationRequestsPage() {
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
   const [requests, setRequests] = useState<CompanyRegistrationRequestItem[]>([]);
+  const [agentRequests, setAgentRequests] = useState<AgentRegistrationRequestItem[]>([]);
   const [notifications, setNotifications] = useState<SuperAdminNotificationItem[]>(
     [],
   );
@@ -39,13 +41,16 @@ export default function AdminRegistrationRequestsPage() {
     setError("");
 
     try {
-      const [nextRequests, nextNotifications] = await Promise.all([
+      const [nextRequests, nextAgentRequests, nextNotifications, nextAgentNotifications] = await Promise.all([
         superAdminService.getCompanyRegistrationRequests(),
+        superAdminService.getAgentRegistrationRequests(),
         superAdminService.getCompanyRegistrationNotifications(100),
+        superAdminService.getAgentRegistrationNotifications(100),
       ]);
 
       setRequests(nextRequests);
-      setNotifications(nextNotifications);
+      setAgentRequests(nextAgentRequests);
+      setNotifications([...nextNotifications, ...nextAgentNotifications]);
     } catch (loadError) {
       setError(resolveError(loadError));
     } finally {
@@ -70,8 +75,16 @@ export default function AdminRegistrationRequestsPage() {
       (request) => request.status === "REJECTED",
     ).length;
 
-    return { pending, approved, rejected };
-  }, [requests]);
+    const pendingAgents = agentRequests.filter((request) => request.status === "PENDING").length;
+    const approvedAgents = agentRequests.filter((request) => request.status === "APPROVED").length;
+    const rejectedAgents = agentRequests.filter((request) => request.status === "REJECTED").length;
+
+    return {
+      pending: pending + pendingAgents,
+      approved: approved + approvedAgents,
+      rejected: rejected + rejectedAgents,
+    };
+  }, [agentRequests, requests]);
 
   async function approveRequest(requestId: string) {
     try {
@@ -97,9 +110,33 @@ export default function AdminRegistrationRequestsPage() {
     }
   }
 
+  async function approveAgentRequest(requestId: string) {
+    try {
+      await superAdminService.approveAgentRegistrationRequest(requestId);
+      setFeedback("Demande agent approuvee.");
+      await loadData();
+    } catch (taskError) {
+      setError(resolveError(taskError));
+      setFeedback("");
+    }
+  }
+
+  async function rejectAgentRequest(requestId: string) {
+    const reason = window.prompt("Motif de refus (optionnel):") ?? "";
+
+    try {
+      await superAdminService.rejectAgentRegistrationRequest(requestId, reason);
+      setFeedback("Demande agent refusee.");
+      await loadData();
+    } catch (taskError) {
+      setError(resolveError(taskError));
+      setFeedback("");
+    }
+  }
+
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
         Chargement des demandes d inscription...
       </div>
     );
@@ -108,12 +145,12 @@ export default function AdminRegistrationRequestsPage() {
   return (
     <div className="space-y-6">
       {feedback ? (
-        <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+        <div className="auth-alert auth-alert-success px-4 py-2">
           {feedback}
         </div>
       ) : null}
       {error ? (
-        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">
+        <div className="auth-alert auth-alert-error px-4 py-2">
           {error}
         </div>
       ) : null}
@@ -122,28 +159,28 @@ export default function AdminRegistrationRequestsPage() {
         <Card>
           <CardContent className="flex items-center justify-between p-4">
             <div>
-              <p className="text-xs text-slate-500">En attente</p>
+              <p className="text-xs text-muted-foreground">En attente</p>
               <p className="text-2xl font-semibold">{requestStats.pending}</p>
             </div>
-            <Clock3 className="h-5 w-5 text-amber-500" />
+            <Clock3 className="h-5 w-5 text-warning" />
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex items-center justify-between p-4">
             <div>
-              <p className="text-xs text-slate-500">Approuvees</p>
+              <p className="text-xs text-muted-foreground">Approuvees</p>
               <p className="text-2xl font-semibold">{requestStats.approved}</p>
             </div>
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            <CheckCircle2 className="h-5 w-5 text-success" />
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex items-center justify-between p-4">
             <div>
-              <p className="text-xs text-slate-500">Rejetees</p>
+              <p className="text-xs text-muted-foreground">Rejetees</p>
               <p className="text-2xl font-semibold">{requestStats.rejected}</p>
             </div>
-            <XCircle className="h-5 w-5 text-red-600" />
+            <XCircle className="h-5 w-5 text-destructive" />
           </CardContent>
         </Card>
       </section>
@@ -158,17 +195,17 @@ export default function AdminRegistrationRequestsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {notifications.length === 0 ? (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Aucune notification de demande d inscription.
               </p>
             ) : (
               notifications.slice(0, 20).map((notification) => (
                 <div
                   key={notification.id}
-                  className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                  className="rounded-xl border border-border bg-muted/40 p-3"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-slate-900">
+                    <p className="text-sm font-medium text-foreground">
                       {notification.title}
                     </p>
                     <div className="flex items-center gap-2">
@@ -178,10 +215,82 @@ export default function AdminRegistrationRequestsPage() {
                       </Badge>
                     </div>
                   </div>
-                  <p className="mt-1 text-sm text-slate-700">{notification.message}</p>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-sm text-muted-foreground">{notification.message}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {formatDate(notification.createdAt)}
                   </p>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Demandes agents support</h2>
+            <Button variant="outline" onClick={() => void loadData()}>
+              Rafraichir
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {agentRequests.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Aucune demande agent.
+              </p>
+            ) : (
+              agentRequests.map((request) => (
+                <div key={request.id} className="rounded-xl border border-border bg-card/70 p-4">
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Agent:</span>{" "}
+                      {request.fullName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Email:</span>{" "}
+                      {request.email}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Entreprise:</span>{" "}
+                      {request.company.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Date:</span>{" "}
+                      {formatDate(request.createdAt)}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">{request.status}</Badge>
+                    {request.rejectionReason ? (
+                      <Badge variant="secondary">
+                        Motif refus: {request.rejectionReason}
+                      </Badge>
+                    ) : null}
+                    {request.approvedUser ? (
+                      <Badge variant="secondary">Compte actif</Badge>
+                    ) : null}
+                  </div>
+
+                  {request.status === "PENDING" ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => void approveAgentRequest(request.id)}
+                      >
+                        Approuver
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-destructive/35 text-destructive hover:bg-destructive/10"
+                        onClick={() => void rejectAgentRequest(request.id)}
+                      >
+                        Refuser
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
               ))
             )}
@@ -199,27 +308,27 @@ export default function AdminRegistrationRequestsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {requests.length === 0 ? (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Aucune demande d inscription.
               </p>
             ) : (
               requests.map((request) => (
-                <div key={request.id} className="rounded-xl border border-slate-200 p-4">
+                <div key={request.id} className="rounded-xl border border-border bg-card/70 p-4">
                   <div className="grid gap-2 md:grid-cols-2">
-                    <p className="text-sm text-slate-700">
-                      <span className="font-medium text-slate-900">Demandeur:</span>{" "}
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Demandeur:</span>{" "}
                       {request.responsibleFullName}
                     </p>
-                    <p className="text-sm text-slate-700">
-                      <span className="font-medium text-slate-900">Email:</span>{" "}
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Email:</span>{" "}
                       {request.businessEmail}
                     </p>
-                    <p className="text-sm text-slate-700">
-                      <span className="font-medium text-slate-900">Entreprise:</span>{" "}
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Entreprise:</span>{" "}
                       {request.companyName}
                     </p>
-                    <p className="text-sm text-slate-700">
-                      <span className="font-medium text-slate-900">Date inscription:</span>{" "}
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground">Date inscription:</span>{" "}
                       {formatDate(request.createdAt)}
                     </p>
                   </div>
@@ -245,7 +354,7 @@ export default function AdminRegistrationRequestsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-red-200 text-red-700 hover:bg-red-50"
+                        className="border-destructive/35 text-destructive hover:bg-destructive/10"
                         onClick={() => void rejectRequest(request.id)}
                       >
                         Refuser

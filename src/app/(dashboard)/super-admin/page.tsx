@@ -24,6 +24,7 @@ import RoleGuard from "@/src/components/layout/role-guard";
 import { superAdminService } from "@/src/features/super-admin/services/super-admin.service";
 import type {
   BillingCycle,
+  AgentRegistrationRequestItem,
   CompanyRegistrationRequestItem,
   CompanyLifecycleStatus,
   ManagedUserRole,
@@ -85,6 +86,9 @@ export default function SuperAdminPage() {
   const [registrationRequests, setRegistrationRequests] = useState<
     CompanyRegistrationRequestItem[]
   >([]);
+  const [agentRegistrationRequests, setAgentRegistrationRequests] = useState<
+    AgentRegistrationRequestItem[]
+  >([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
   const [companyForm, setCompanyForm] = useState<UpsertCompanyPayload>(EMPTY_COMPANY_FORM);
@@ -108,14 +112,16 @@ export default function SuperAdminPage() {
 
     async function bootstrap() {
       try {
-        const [current, requests] = await Promise.all([
+        const [current, requests, agentRequests] = await Promise.all([
           superAdminService.getSnapshot(),
           superAdminService.getCompanyRegistrationRequests(),
+          superAdminService.getAgentRegistrationRequests(),
         ]);
         if (!isMounted) return;
 
         setSnapshot(current);
         setRegistrationRequests(requests);
+        setAgentRegistrationRequests(agentRequests);
         setSelectedCompanyId(current.companies[0]?.id ?? null);
         setGlobalSettingsForm(current.globalSettings);
       } catch (loadError) {
@@ -191,8 +197,12 @@ export default function SuperAdminPage() {
 
   async function refreshRegistrationRequests() {
     try {
-      const requests = await superAdminService.getCompanyRegistrationRequests();
+      const [requests, agentRequests] = await Promise.all([
+        superAdminService.getCompanyRegistrationRequests(),
+        superAdminService.getAgentRegistrationRequests(),
+      ]);
       setRegistrationRequests(requests);
+      setAgentRegistrationRequests(agentRequests);
     } catch (loadError) {
       setError(withErrorMessage(loadError));
     }
@@ -288,6 +298,11 @@ export default function SuperAdminPage() {
     await runWithGuard(() => superAdminService.updateSubscription(companyId, patch), "Abonnement mis a jour.");
   }
 
+  async function handleDeleteSubscription(company: SuperAdminCompany) {
+    if (!window.confirm(`Supprimer l'abonnement de ${company.name} ?`)) return;
+    await runWithGuard(() => superAdminService.deleteSubscription(company.id), "Abonnement supprime.");
+  }
+
   async function handleMemberSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedCompanyId) {
@@ -363,6 +378,21 @@ export default function SuperAdminPage() {
     );
   }
 
+  async function handleApproveAgentRegistrationRequest(requestId: string) {
+    await runRegistrationAction(
+      () => superAdminService.approveAgentRegistrationRequest(requestId),
+      "Demande agent approuvee.",
+    );
+  }
+
+  async function handleRejectAgentRegistrationRequest(requestId: string) {
+    const reason = window.prompt("Motif de refus (optionnel) :") ?? "";
+    await runRegistrationAction(
+      () => superAdminService.rejectAgentRegistrationRequest(requestId, reason),
+      "Demande agent refusee.",
+    );
+  }
+
   if (!snapshot) {
     return (
       <RoleGuard allowedRoles={["SUPER_ADMIN"]}>
@@ -405,10 +435,75 @@ export default function SuperAdminPage() {
             <CardHeader className="flex flex-row items-center gap-2">
               <Building2 className="h-4 w-4" />
               <h3 className="text-lg font-semibold">
-                Demandes d'inscription entreprise
+                Demandes d'inscription
               </h3>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Agents support</p>
+                {agentRegistrationRequests.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Aucune demande agent.
+                  </p>
+                ) : (
+                  agentRegistrationRequests.map((request) => (
+                    <div
+                      key={request.id}
+                      className="rounded-xl border border-border/70 p-3"
+                    >
+                      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                        <div className="space-y-1">
+                          <p className="font-medium">{request.fullName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {request.email} - {request.company.name}
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="secondary">{request.status}</Badge>
+                            {request.approvedUser ? (
+                              <Badge variant="secondary">Compte active</Badge>
+                            ) : null}
+                            {request.rejectionReason ? (
+                              <Badge variant="secondary">
+                                Refus: {request.rejectionReason}
+                              </Badge>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        {request.status === "PENDING" ? (
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                void handleApproveAgentRegistrationRequest(
+                                  request.id,
+                                )
+                              }
+                            >
+                              Approuver
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-red-200 text-red-700 hover:bg-red-50"
+                              onClick={() =>
+                                void handleRejectAgentRegistrationRequest(
+                                  request.id,
+                                )
+                              }
+                            >
+                              Refuser
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="border-t border-border/70 pt-3">
+                <p className="mb-2 text-sm font-semibold">Entreprises</p>
               {registrationRequests.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   Aucune demande en attente.
@@ -487,6 +582,7 @@ export default function SuperAdminPage() {
                   </div>
                 ))
               )}
+              </div>
             </CardContent>
           </Card>
         </section>
@@ -504,7 +600,7 @@ export default function SuperAdminPage() {
             <CardHeader className="flex flex-row items-center gap-2"><CreditCard className="h-4 w-4" /><h3 className="text-lg font-semibold">1) Gestion des abonnements</h3></CardHeader>
             <CardContent className="space-y-3">
               {companies.map((company) => (
-                <div key={company.id} className="grid gap-3 rounded-xl border border-border/70 p-3 md:grid-cols-8">
+                <div key={company.id} className="grid gap-3 rounded-xl border border-border/70 p-3 md:grid-cols-9">
                   <div className="md:col-span-2">
                     <p className="font-medium">{company.name}</p>
                     <p className="text-xs text-muted-foreground">{company.ownerEmail}</p>
@@ -514,9 +610,15 @@ export default function SuperAdminPage() {
                   <Input type="number" min={1} value={company.subscriptionDurationMonths} onChange={(event) => void handleSubscriptionPatch(company.id, { subscriptionDurationMonths: Number(event.target.value) || 1 })} />
                   <select value={company.subscriptionStatus} onChange={(event) => void handleSubscriptionPatch(company.id, { subscriptionStatus: event.target.value as SubscriptionStatus })} className="rounded-xl border border-border bg-background px-2 py-2">{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select>
                   <Input type="date" value={company.nextRenewalDate} onChange={(event) => void handleSubscriptionPatch(company.id, { nextRenewalDate: event.target.value })} />
-                  <Button type="button" variant="outline" onClick={() => void runWithGuard(() => superAdminService.toggleSubscription(company.id, company.subscriptionStatus !== "ACTIVE"), company.subscriptionStatus === "ACTIVE" ? "Abonnement desactive." : "Abonnement active.")}>
-                    {company.subscriptionStatus === "ACTIVE" ? "Desactiver" : "Activer"}
-                  </Button>
+                  <div className="flex flex-wrap gap-2 md:col-span-2">
+                    <Button type="button" variant="outline" onClick={() => void runWithGuard(() => superAdminService.toggleSubscription(company.id, company.subscriptionStatus !== "ACTIVE"), company.subscriptionStatus === "ACTIVE" ? "Abonnement desactive." : "Abonnement active.")}>
+                      {company.subscriptionStatus === "ACTIVE" ? "Desactiver" : "Activer"}
+                    </Button>
+                    <Button type="button" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => void handleDeleteSubscription(company)}>
+                      <Trash2 className="mr-1 h-3.5 w-3.5" />
+                      Supprimer
+                    </Button>
+                  </div>
                 </div>
               ))}
             </CardContent>

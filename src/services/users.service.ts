@@ -58,17 +58,17 @@ function buildQuery(query?: PaginationQuery): string {
 }
 
 export const usersService = {
-  me: (): Promise<UserProfile> => apiClient.get<UserProfile>("/users/me"),
+  me: (): Promise<UserProfile> => apiClient.get<UserProfile>("/auth/me"),
 
-  getProfile: (): Promise<UserProfile> => apiClient.get<UserProfile>("/users/me"),
+  getProfile: (): Promise<UserProfile> => apiClient.get<UserProfile>("/auth/me"),
 
   updateProfile: (payload: UpdateProfilePayload): Promise<UserProfile> =>
-    apiClient.patch<UserProfile>("/users/me", payload),
+    apiClient.patch<UserProfile>("/auth/me", payload),
 
   changePassword: (
     payload: ChangePasswordPayload
   ): Promise<{ message: string }> =>
-    apiClient.post<{ message: string }>("/users/change-password", payload),
+    apiClient.post<{ message: string }>("/auth/change-password", payload),
 
   list: (query?: PaginationQuery): Promise<UsersListResponse> =>
     apiClient.get<UsersListResponse>(`/users${buildQuery(query)}`),

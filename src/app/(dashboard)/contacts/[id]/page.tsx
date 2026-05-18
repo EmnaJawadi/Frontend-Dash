@@ -89,7 +89,7 @@ export default function ContactDetailsPage() {
 
   if (!contact) {
     return (
-      <div className="space-y-4 p-6">
+      <div className="space-y-4">
         <Button asChild variant="outline">
           <Link href="/contacts">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -102,7 +102,7 @@ export default function ContactDetailsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <Button asChild variant="outline">
           <Link href="/contacts">

@@ -69,24 +69,24 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border border-slate-200 bg-white p-4">
-        <p className="text-sm text-slate-600">
+      <section className="section-card p-5">
+        <p className="text-base font-medium text-foreground">
           Acces direct super admin aux comptes admins entreprise et agents.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Link href="/admin/users?role=OWNER" className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 hover:bg-cyan-100">
+          <Link href="/admin/users?role=OWNER" className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 hover:bg-blue-100">
             Voir tous les admins entreprise
           </Link>
-          <Link href="/admin/users?role=AGENT" className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100">
+          <Link href="/admin/users?role=AGENT" className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-bold text-violet-700 hover:bg-violet-100">
             Voir tous les agents
           </Link>
-          <button type="button" onClick={clearFilters} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+          <button type="button" onClick={clearFilters} className="rounded-xl border border-border/80 bg-background/70 px-4 py-2 text-sm font-bold text-foreground hover:bg-muted">
             Reinitialiser filtres
           </button>
         </div>
 
         {(roleFilter || companyIdFilter) ? (
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-muted-foreground">
             Filtres actifs: {roleFilter ? `role=${roleFilter}` : ""} {companyIdFilter ? `companyId=${companyIdFilter}` : ""}
           </p>
         ) : null}

@@ -81,6 +81,7 @@ export const conversationMessageSenderTypeSchema = z.enum([
   "customer",
   "bot",
   "agent",
+  "human_agent",
   "system",
 ]);
 

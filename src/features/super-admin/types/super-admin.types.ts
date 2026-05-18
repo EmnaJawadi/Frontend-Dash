@@ -11,12 +11,13 @@ export type CompanyRegistrationRequestStatus =
   | "APPROVED"
   | "REJECTED"
   | "NEEDS_MORE_INFO";
+export type AgentRegistrationRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export type SuperAdminNotificationPriority = "low" | "medium" | "high";
 
 export interface SuperAdminNotificationItem {
   id: string;
-  type: "COMPANY_REGISTRATION_REQUEST";
+  type: "COMPANY_REGISTRATION_REQUEST" | "AGENT_REGISTRATION_REQUEST";
   title: string;
   message: string;
   priority: SuperAdminNotificationPriority;
@@ -68,6 +69,30 @@ export interface CompanyRegistrationRequestItem {
   approvedAt?: string | null;
   activationToken?: string | null;
   approvedCompanyId?: string | null;
+}
+
+export interface AgentRegistrationRequestItem {
+  id: string;
+  companyId: string;
+  fullName: string;
+  email: string;
+  status: AgentRegistrationRequestStatus;
+  rejectionReason?: string | null;
+  createdAt: string;
+  reviewedAt?: string | null;
+  approvedAt?: string | null;
+  company: {
+    id: string;
+    name: string;
+    status?: string;
+    isActive?: boolean;
+  };
+  approvedUser?: {
+    id: string;
+    fullName?: string | null;
+    email: string;
+    isActive: boolean;
+  } | null;
 }
 
 export interface MaintenanceServiceCheck {

@@ -58,7 +58,7 @@ export async function login(payload: LoginPayload): Promise<AuthUser> {
 
   const safeUser = toAuthUser(response.user);
 
-  if (safeUser.role !== payload.role) {
+  if (payload.role && safeUser.role !== payload.role) {
     authService.logout();
     clearSession();
     throw new Error("Email, mot de passe ou role incorrect.");

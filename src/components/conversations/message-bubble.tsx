@@ -37,7 +37,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const isSystem = message.senderType === "system";
   const isIncoming = message.senderType === "customer";
   const isOutgoing =
-    message.senderType === "bot" || message.senderType === "agent";
+    message.senderType === "bot" ||
+    message.senderType === "agent" ||
+    message.senderType === "human_agent";
 
   if (isSystem) {
     return (

@@ -92,7 +92,7 @@ export default function ArticleDetailsPage() {
   }, [id]);
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="outline" className="rounded-xl">
           <Link href="/knowledge-base">
