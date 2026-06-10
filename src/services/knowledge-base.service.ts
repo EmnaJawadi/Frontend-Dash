@@ -7,6 +7,31 @@ type ListQuery = {
   status?: "draft" | "published" | "archived";
 };
 
+export type KnowledgeSuggestionStatus = "pending" | "approved" | "rejected";
+
+export type KnowledgeSuggestion = {
+  id: string;
+  companyId?: string | null;
+  conversationId: string;
+  customerMessageId: string;
+  humanAnswerMessageId: string;
+  question: string;
+  answer: string;
+  status: KnowledgeSuggestionStatus;
+  reviewedBy?: string | null;
+  createdBy?: string | null;
+  createdAt: string;
+  reviewedAt?: string | null;
+  customerMessage?: string;
+  humanAnswerMessage?: string;
+};
+
+export type ReviewKnowledgeSuggestionPayload = {
+  language?: string;
+  category?: string;
+  tags?: string[];
+};
+
 function toQueryString(q?: Record<string, unknown>) {
   if (!q) return "";
   const params = new URLSearchParams();
@@ -53,4 +78,24 @@ export const knowledgeBaseService = {
   publish: (id: string, published: boolean) =>
     apiClient.patch(`/knowledge-base/articles/${id}/publish`, { published }),
   remove: (id: string) => apiClient.delete(`/knowledge-base/articles/${id}`),
+  listSuggestions: (query?: {
+    status?: KnowledgeSuggestionStatus;
+    companyId?: string;
+  }) =>
+    apiClient.get<KnowledgeSuggestion[]>(
+      `/knowledge-base/suggestions${toQueryString(query as Record<string, unknown>)}`,
+    ),
+  approveSuggestion: (
+    id: string,
+    payload: ReviewKnowledgeSuggestionPayload = {},
+  ) =>
+    apiClient.patch(`/knowledge-base/suggestions/${id}/approve`, {
+      language: payload.language ?? "fr",
+      category: payload.category ?? "agent-learning",
+      tags: payload.tags ?? ["reponse-humaine", "apprentissage-ia"],
+    }),
+  rejectSuggestion: (
+    id: string,
+    payload: ReviewKnowledgeSuggestionPayload = {},
+  ) => apiClient.patch(`/knowledge-base/suggestions/${id}/reject`, payload),
 };

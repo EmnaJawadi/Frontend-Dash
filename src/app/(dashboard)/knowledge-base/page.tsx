@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import {
+  Brain,
   BookOpen,
   CheckCircle2,
   FilePenLine,
@@ -27,7 +28,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { isApiError } from "@/src/lib/api-error";
-import { knowledgeBaseService } from "@/src/services/knowledge-base.service";
+import {
+  knowledgeBaseService,
+  type KnowledgeSuggestion,
+} from "@/src/services/knowledge-base.service";
 
 type ArticleStatus = "published" | "draft" | "archived";
 type ArticleCategory = string;
@@ -182,6 +186,7 @@ export default function KnowledgeBasePage() {
   const [status, setStatus] = React.useState<ArticleStatus | "all">("all");
   const [category, setCategory] = React.useState<ArticleCategory | "all">("all");
   const [items, setItems] = React.useState<KnowledgeArticle[]>([]);
+  const [suggestions, setSuggestions] = React.useState<KnowledgeSuggestion[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [deletingArticleId, setDeletingArticleId] = React.useState<string | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
@@ -228,9 +233,22 @@ export default function KnowledgeBasePage() {
     }
   }, []);
 
+  const loadSuggestions = React.useCallback(async () => {
+    try {
+      const pending = await knowledgeBaseService.listSuggestions({
+        status: "pending",
+      });
+      setSuggestions(pending ?? []);
+    } catch (e) {
+      console.error("Failed to load knowledge suggestions", e);
+      setSuggestions([]);
+    }
+  }, []);
+
   React.useEffect(() => {
     void loadArticles();
-  }, [loadArticles]);
+    void loadSuggestions();
+  }, [loadArticles, loadSuggestions]);
 
   const filteredArticles = React.useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -253,9 +271,10 @@ export default function KnowledgeBasePage() {
       total: items.length,
       published: items.filter((a) => a.status === "published").length,
       draft: items.filter((a) => a.status === "draft").length,
+      pendingSuggestions: suggestions.length,
       categories: new Set(items.map((a) => a.category)).size,
     };
-  }, [items]);
+  }, [items, suggestions.length]);
 
   const categoryOptions = React.useMemo(
     () =>
@@ -402,10 +421,10 @@ export default function KnowledgeBasePage() {
           icon={<FilePenLine className="h-4 w-4" />}
         />
         <StatCard
-          title="Categories"
-          value={stats.categories}
-          subtitle="Organisation"
-          icon={<FileText className="h-4 w-4" />}
+          title="Apprentissages"
+          value={stats.pendingSuggestions}
+          subtitle="Suggestions a valider"
+          icon={<Brain className="h-4 w-4" />}
         />
       </div>
 

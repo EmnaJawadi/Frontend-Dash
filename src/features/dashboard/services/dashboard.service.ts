@@ -1,6 +1,7 @@
 import { apiClient } from "@/src/lib/api-client";
 import { getPeriodDateRange, type PeriodFilter } from "@/src/lib/period-filter";
 import type { DashboardData } from "@/src/features/dashboard/types/dashboard.types";
+import type { BackendAnalyticsOverview } from "@/src/features/analytics/types/analytics.types";
 
 type BackendConversation = {
   id?: string;
@@ -51,6 +52,12 @@ function toRelative(input: string): string {
   return `il y a ${diffDays} j`;
 }
 
+function formatDurationMs(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return "N/A";
+  if (value < 1000) return `${Math.round(value)} ms`;
+  return `${(value / 1000).toFixed(1)} s`;
+}
+
 function normalizeStatus(status: string | null | undefined, botPaused: boolean | null | undefined) {
   if (status === "closed") return "closed" as const;
   if (status === "human_assigned") return "human_assigned" as const;
@@ -89,9 +96,15 @@ export const dashboardService = {
   async getDashboardData(period: PeriodFilter = "30d"): Promise<DashboardData> {
     const { days, startDate, endDate } = getPeriodDateRange(period);
 
-    const [conversationsRes, contactsRes] = await Promise.all([
+    const analyticsParams = new URLSearchParams({
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      groupBy: "day",
+    });
+    const [conversationsRes, contactsRes, analytics] = await Promise.all([
       apiClient.get<BackendListResponse>("/conversations?page=1&limit=500"),
       apiClient.get<BackendListResponse>("/contacts?page=1&limit=1"),
+      apiClient.get<BackendAnalyticsOverview>(`/analytics/overview?${analyticsParams.toString()}`),
     ]);
 
     const conversations = (conversationsRes.data ?? []) as BackendConversation[];
@@ -109,6 +122,13 @@ export const dashboardService = {
     const automationRate =
       totalConversations > 0
         ? Math.round((botActiveCount / totalConversations) * 100)
+        : 0;
+    const averageConfidence = Math.round(
+      Math.max(0, Math.min(1, analytics.aiRuns.averageConfidenceScore ?? 0)) * 100,
+    );
+    const fallbackRate =
+      analytics.aiRuns.totalRuns > 0
+        ? Math.round(100 - analytics.aiRuns.successRate)
         : 0;
 
     const periodDays = Array.from({ length: days }, (_, index) => {
@@ -199,9 +219,9 @@ export const dashboardService = {
       chart,
       botPerformance: {
         automationRate,
-        averageConfidence: 90,
-        averageResponseTime: "12s",
-        fallbackRate: Math.max(0, 100 - automationRate),
+        averageConfidence,
+        averageResponseTime: formatDurationMs(analytics.aiRuns.averageLatencyMs),
+        fallbackRate,
         metrics: [
           {
             label: "Contacts",
@@ -209,14 +229,14 @@ export const dashboardService = {
             hint: "nombre total de contacts",
           },
           {
-            label: "Conversations bot",
-            value: botActiveCount,
-            hint: "avec bot actif",
+            label: "Runs IA",
+            value: analytics.aiRuns.totalRuns,
+            hint: "decisions IA enregistrees",
           },
           {
-            label: "Conversations escaladees",
-            value: escalatedCount,
-            hint: "transfert humain",
+            label: "Reponses IA envoyables",
+            value: analytics.aiRuns.successfulRuns,
+            hint: "runs termines avec reponse",
           },
           {
             label: "Conversations fermees",

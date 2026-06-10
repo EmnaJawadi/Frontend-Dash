@@ -30,6 +30,10 @@ export default function AdminRegistrationRequestsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [processingAgentRequestId, setProcessingAgentRequestId] = useState("");
+  const [agentRequestErrors, setAgentRequestErrors] = useState<
+    Record<string, string>
+  >({});
   const [requests, setRequests] = useState<CompanyRegistrationRequestItem[]>([]);
   const [agentRequests, setAgentRequests] = useState<AgentRegistrationRequestItem[]>([]);
   const [notifications, setNotifications] = useState<SuperAdminNotificationItem[]>(
@@ -111,26 +115,50 @@ export default function AdminRegistrationRequestsPage() {
   }
 
   async function approveAgentRequest(requestId: string) {
+    setProcessingAgentRequestId(requestId);
+    setError("");
+    setFeedback("");
+    setAgentRequestErrors((current) => {
+      const next = { ...current };
+      delete next[requestId];
+      return next;
+    });
+
     try {
       await superAdminService.approveAgentRegistrationRequest(requestId);
       setFeedback("Demande agent approuvee.");
       await loadData();
     } catch (taskError) {
-      setError(resolveError(taskError));
-      setFeedback("");
+      const message = resolveError(taskError);
+      setError(message);
+      setAgentRequestErrors((current) => ({ ...current, [requestId]: message }));
+    } finally {
+      setProcessingAgentRequestId("");
     }
   }
 
   async function rejectAgentRequest(requestId: string) {
     const reason = window.prompt("Motif de refus (optionnel):") ?? "";
 
+    setProcessingAgentRequestId(requestId);
+    setError("");
+    setFeedback("");
+    setAgentRequestErrors((current) => {
+      const next = { ...current };
+      delete next[requestId];
+      return next;
+    });
+
     try {
       await superAdminService.rejectAgentRegistrationRequest(requestId, reason);
       setFeedback("Demande agent refusee.");
       await loadData();
     } catch (taskError) {
-      setError(resolveError(taskError));
-      setFeedback("");
+      const message = resolveError(taskError);
+      setError(message);
+      setAgentRequestErrors((current) => ({ ...current, [requestId]: message }));
+    } finally {
+      setProcessingAgentRequestId("");
     }
   }
 
@@ -277,19 +305,28 @@ export default function AdminRegistrationRequestsPage() {
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button
                         size="sm"
+                        disabled={processingAgentRequestId === request.id}
                         onClick={() => void approveAgentRequest(request.id)}
                       >
-                        Approuver
+                        {processingAgentRequestId === request.id
+                          ? "Traitement..."
+                          : "Approuver"}
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         className="border-destructive/35 text-destructive hover:bg-destructive/10"
+                        disabled={processingAgentRequestId === request.id}
                         onClick={() => void rejectAgentRequest(request.id)}
                       >
                         Refuser
                       </Button>
                     </div>
+                  ) : null}
+                  {agentRequestErrors[request.id] ? (
+                    <p className="mt-2 text-sm text-destructive" role="alert">
+                      {agentRequestErrors[request.id]}
+                    </p>
                   ) : null}
                 </div>
               ))

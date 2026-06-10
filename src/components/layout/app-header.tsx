@@ -308,7 +308,7 @@ export function Header() {
                   <p className="px-3 py-4 text-sm text-muted-foreground">Chargement...</p>
                 ) : alerts.length === 0 ? (
                   <p className="px-3 py-4 text-sm text-muted-foreground">
-                    Aucune alerte. Quand une conversation passe du bot a l'humain, elle apparait ici.
+                    Aucune alerte. Les reponses humaines en attente de validation apparaitront ici.
                   </p>
                 ) : (
                   <div className="space-y-1">
@@ -320,7 +320,7 @@ export function Header() {
                         className="block rounded-xl px-3 py-2 transition hover:bg-muted"
                       >
                         <p className="text-sm font-medium text-foreground">
-                          Ajouter un article pour {alert.contactName}
+                          Valider une connaissance
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {truncate(alert.lastMessage)}

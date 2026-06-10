@@ -89,6 +89,24 @@ export interface ConversationContext {
   importantNotes?: string | null;
 }
 
+export interface ConversationAiRun {
+  id: string;
+  normalizedMessage?: string | null;
+  detectedLanguage?: string | null;
+  intent?: string | null;
+  outputText?: string | null;
+  responseMode?: string | null;
+  needsRag?: boolean | null;
+  usedKb?: boolean | null;
+  canAnswer?: boolean | null;
+  orderIntent?: boolean | null;
+  handoffRequired?: boolean | null;
+  status?: string | null;
+  reason?: string | null;
+  confidenceScore?: number | null;
+  createdAt: string;
+}
+
 export interface ConversationDetails {
   id: string;
   status: ConversationStatus;
@@ -100,6 +118,7 @@ export interface ConversationDetails {
   updatedAt: string;
   activity: ConversationActivity;
   context?: ConversationContext;
+  aiRuns: ConversationAiRun[];
   messages: ConversationMessage[];
 }
 

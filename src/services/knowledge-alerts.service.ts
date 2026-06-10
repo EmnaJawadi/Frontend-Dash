@@ -1,4 +1,4 @@
-﻿import { conversationsService } from "@/src/features/conversations/services/conversations.service";
+import { knowledgeBaseService } from "@/src/services/knowledge-base.service";
 
 export type KnowledgeSuggestionAlert = {
   id: string;
@@ -10,24 +10,19 @@ export type KnowledgeSuggestionAlert = {
 
 export const knowledgeAlertsService = {
   async listPendingKnowledgeSuggestions(): Promise<KnowledgeSuggestionAlert[]> {
-    const response = await conversationsService.getConversations(
-      {
-        search: "",
-        status: "human_assigned",
-        priority: "all",
-        assignedTo: "all",
-        botState: "paused",
-      },
-      1,
-      8,
-    );
+    const suggestions = await knowledgeBaseService.listSuggestions({
+      status: "pending",
+    });
 
-    return (response.data ?? []).map((item) => ({
+    return suggestions.slice(0, 8).map((item) => ({
       id: `kb-alert-${item.id}`,
-      conversationId: item.id,
-      contactName: item.contactName,
-      lastMessage: item.lastMessage || "Conversation en prise en charge humaine.",
-      href: `/conversations/${item.id}?suggestArticle=1`,
+      conversationId: item.conversationId,
+      contactName: "Reponse humaine a valider",
+      lastMessage:
+        item.question ||
+        item.customerMessage ||
+        "Suggestion de connaissance en attente.",
+      href: `/knowledge-base?suggestionId=${item.id}`,
     }));
   },
 };

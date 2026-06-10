@@ -29,6 +29,33 @@ const INITIAL_FILTERS: PlatformAuditFilters = {
   dateTo: "",
 };
 
+const LEGACY_GLOBAL_AI_SYSTEM_PROMPT =
+  "Tu es l assistant WhatsApp global de la plateforme. Priorise la clarte, la securite et l escalade humaine en cas de doute.";
+
+const GLOBAL_AI_SYSTEM_PROMPT =
+  "Tu es l’assistant WhatsApp global de la plateforme. Tu dois répondre de façon claire, sécurisée et adaptée à la langue du client. La plateforme utilise une stratégie IA multi-fournisseur avec fallback automatique : OpenRouter est utilisé en priorité, puis Gemini en cas d’échec, puis Ollama local si nécessaire. En cas de doute, d’information manquante ou de demande sensible, tu dois privilégier l’escalade vers un agent humain.";
+
+const GLOBAL_AI_STRATEGY = [
+  {
+    order: 1,
+    provider: "OpenRouter",
+    role: "Fournisseur prioritaire",
+    model: "meta-llama/llama-3.1-8b-instruct:free",
+  },
+  {
+    order: 2,
+    provider: "Google Gemini",
+    role: "Premier fallback",
+    model: "gemini-2.5-flash",
+  },
+  {
+    order: 3,
+    provider: "Ollama local",
+    role: "Deuxième fallback",
+    model: "llama3.2:3b",
+  },
+] as const;
+
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("fr-FR");
 }
@@ -37,6 +64,21 @@ function statusColor(status: "healthy" | "warning" | "error") {
   if (status === "healthy") return "text-emerald-700 bg-emerald-50 border-emerald-200";
   if (status === "warning") return "text-amber-700 bg-amber-50 border-amber-200";
   return "text-red-700 bg-red-50 border-red-200";
+}
+
+function withGlobalAiPrompt(settings: PlatformSettings): PlatformSettings {
+  const currentPrompt = settings.aiGlobal.systemPrompt.trim();
+
+  return {
+    ...settings,
+    aiGlobal: {
+      ...settings.aiGlobal,
+      systemPrompt:
+        !currentPrompt || currentPrompt === LEGACY_GLOBAL_AI_SYSTEM_PROMPT
+          ? GLOBAL_AI_SYSTEM_PROMPT
+          : settings.aiGlobal.systemPrompt,
+    },
+  };
 }
 
 export default function AdminSettingsPage() {
@@ -55,7 +97,7 @@ export default function AdminSettingsPage() {
       setError(null);
       const snapshot = await settingsService.getPlatformSettings(nextFilters);
       setData(snapshot);
-      setForm(snapshot.settings);
+      setForm(withGlobalAiPrompt(snapshot.settings));
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -83,9 +125,13 @@ export default function AdminSettingsPage() {
         configuration: form.configuration,
         security: form.security,
         aiGlobal: {
-          ...form.aiGlobal,
-          provider: "Google Gemini",
-          model: "gemini-2.5-flash",
+          confidenceThreshold: form.aiGlobal.confidenceThreshold,
+          timeoutMs: form.aiGlobal.timeoutMs,
+          maxTokens: form.aiGlobal.maxTokens,
+          logsEnabled: form.aiGlobal.logsEnabled,
+          maskSensitiveDataInLogs: form.aiGlobal.maskSensitiveDataInLogs,
+          systemPrompt: form.aiGlobal.systemPrompt,
+          humanFallbackEnabled: form.aiGlobal.humanFallbackEnabled,
         },
       });
       await fetchSettings(filters);
@@ -527,25 +573,54 @@ export default function AdminSettingsPage() {
         <article className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
           <h3 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
             <Bot className="h-5 w-5" />
-            3. IA globale
+            Stratégie IA globale
           </h3>
           <div className="grid gap-3 md:grid-cols-2">
-            <label className="space-y-1">
-              <span className="text-sm text-slate-600">Provider IA par defaut</span>
-              <input
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-                value={form.aiGlobal.provider}
-                readOnly
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="text-sm text-slate-600">Modele global par defaut</span>
-              <input
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-                value={form.aiGlobal.model}
-                readOnly
-              />
-            </label>
+            <div className="space-y-1">
+              <span className="text-sm text-slate-600">
+                Fournisseur IA prioritaire
+              </span>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-900">
+                      {GLOBAL_AI_STRATEGY[0].order}. {GLOBAL_AI_STRATEGY[0].provider}
+                    </p>
+                    <p className="mt-1 break-all font-mono text-xs text-slate-600">
+                      {GLOBAL_AI_STRATEGY[0].model}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+                    {GLOBAL_AI_STRATEGY[0].role}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm text-slate-600">
+                Modèles IA de fallback
+              </span>
+              <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                {GLOBAL_AI_STRATEGY.slice(1).map((item) => (
+                  <div
+                    key={item.provider}
+                    className="flex items-start justify-between gap-3"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-900">
+                        {item.order}. {item.provider}
+                      </p>
+                      <p className="mt-1 break-all font-mono text-xs text-slate-600">
+                        {item.model}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
+                      {item.role}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             <label className="space-y-1">

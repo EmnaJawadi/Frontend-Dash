@@ -79,6 +79,23 @@ type BackendConversation = {
     lastAiDecision?: string | null;
     importantNotes?: string | null;
   };
+  aiRuns?: Array<{
+    id?: string;
+    normalizedMessage?: string | null;
+    detectedLanguage?: string | null;
+    intent?: string | null;
+    outputText?: string | null;
+    responseMode?: string | null;
+    needsRag?: boolean | null;
+    usedKb?: boolean | null;
+    canAnswer?: boolean | null;
+    orderIntent?: boolean | null;
+    handoffRequired?: boolean | null;
+    status?: string | null;
+    reason?: string | null;
+    confidenceScore?: number | null;
+    createdAt?: string | null;
+  }>;
 };
 
 function toBackendStatus(status?: ConversationFilters["status"]): string | undefined {
@@ -209,6 +226,24 @@ function mapDetails(item: BackendConversation): ConversationDetails {
       lastAgentReplyAt: item.activity?.lastAgentReplyAt ?? null,
     },
     context: item.context,
+    aiRuns:
+      item.aiRuns?.map((run, index) => ({
+        id: run.id ?? `${base.id}-ai-run-${index}`,
+        normalizedMessage: run.normalizedMessage,
+        detectedLanguage: run.detectedLanguage,
+        intent: run.intent,
+        outputText: run.outputText,
+        responseMode: run.responseMode,
+        needsRag: run.needsRag,
+        usedKb: run.usedKb,
+        canAnswer: run.canAnswer,
+        orderIntent: run.orderIntent,
+        handoffRequired: run.handoffRequired,
+        status: run.status,
+        reason: run.reason,
+        confidenceScore: run.confidenceScore,
+        createdAt: run.createdAt ?? new Date().toISOString(),
+      })) ?? [],
     messages,
   };
 }
