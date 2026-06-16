@@ -70,6 +70,8 @@ export const AGENT_ROUTES: string[] = [
   APP_ROUTES.PROFILE_SETTINGS,
 ];
 
+export const EMPLOYEE_ROUTES: string[] = [APP_ROUTES.PROFILE_SETTINGS];
+
 export const COMPANY_ADMIN_TECHNICAL_SETTINGS_ROUTES: string[] = [
   "/admin-entreprise/whatsapp",
   "/admin-entreprise/assistant-ia",
@@ -86,6 +88,7 @@ export const DEFAULT_ROUTE_BY_ROLE: Record<UserRole, string> = {
   SUPER_ADMIN: APP_ROUTES.ADMIN_DASHBOARD,
   OWNER: APP_ROUTES.DASHBOARD,
   AGENT: APP_ROUTES.CONVERSATIONS,
+  EMPLOYEE: APP_ROUTES.PROFILE_SETTINGS,
 };
 
 export function getAllowedRoutes(role: UserRole): string[] {
@@ -96,6 +99,8 @@ export function getAllowedRoutes(role: UserRole): string[] {
       return OWNER_ROUTES;
     case "AGENT":
       return AGENT_ROUTES;
+    case "EMPLOYEE":
+      return EMPLOYEE_ROUTES;
     default:
       return [];
   }

@@ -37,6 +37,8 @@ const AGENT_ROUTES = [
   "/settings/account",
 ];
 
+const EMPLOYEE_ROUTES = ["/settings/profile"];
+
 const COMPANY_ADMIN_TECHNICAL_SETTINGS_ROUTES = [
   "/admin-entreprise/whatsapp",
   "/admin-entreprise/assistant-ia",
@@ -49,7 +51,7 @@ const COMPANY_ADMIN_TECHNICAL_SETTINGS_ROUTES = [
   "/settings/workflow",
 ];
 
-type AppRole = "SUPER_ADMIN" | "OWNER" | "AGENT";
+type AppRole = "SUPER_ADMIN" | "OWNER" | "AGENT" | "EMPLOYEE";
 
 function isIgnoredRoute(pathname: string): boolean {
   return (
@@ -72,7 +74,7 @@ function matchesRoute(pathname: string, routes: string[]): boolean {
 }
 
 function isValidRole(role: string | undefined): role is AppRole {
-  return role === "SUPER_ADMIN" || role === "OWNER" || role === "AGENT";
+  return role === "SUPER_ADMIN" || role === "OWNER" || role === "AGENT" || role === "EMPLOYEE";
 }
 
 function getDefaultRouteByRole(role: AppRole): string {
@@ -83,6 +85,8 @@ function getDefaultRouteByRole(role: AppRole): string {
       return "/dashboard";
     case "AGENT":
       return "/conversations";
+    case "EMPLOYEE":
+      return "/settings/profile";
     default:
       return "/login";
   }
@@ -101,7 +105,7 @@ export function proxy(request: NextRequest) {
 
   const authCookie = request.cookies.get("is_authenticated")?.value;
   const roleCookie = request.cookies.get("user_role")?.value;
-  const accessTokenCookie = request.cookies.get("accessToken")?.value;
+  const accessTokenCookie = request.cookies.get("access_token")?.value;
 
   const isAuthenticated = authCookie === "true" && Boolean(accessTokenCookie);
   const userRole = isValidRole(roleCookie) ? roleCookie : null;
@@ -145,6 +149,11 @@ export function proxy(request: NextRequest) {
       return matchesRoute(pathname, AGENT_ROUTES)
         ? NextResponse.next()
         : redirectTo(request, "/conversations");
+
+    case "EMPLOYEE":
+      return matchesRoute(pathname, EMPLOYEE_ROUTES)
+        ? NextResponse.next()
+        : redirectTo(request, "/settings/profile");
 
     default:
       return redirectTo(request, "/login");

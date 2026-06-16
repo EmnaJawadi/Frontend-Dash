@@ -1,11 +1,12 @@
-export type UserRole = "SUPER_ADMIN" | "OWNER" | "AGENT";
+export type UserRole = "SUPER_ADMIN" | "OWNER" | "AGENT" | "EMPLOYEE";
 
-export const USER_ROLES: UserRole[] = ["SUPER_ADMIN", "OWNER", "AGENT"];
+export const USER_ROLES: UserRole[] = ["SUPER_ADMIN", "OWNER", "AGENT", "EMPLOYEE"];
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   SUPER_ADMIN: "Super Admin",
   OWNER: "Admin entreprise",
   AGENT: "Agent",
+  EMPLOYEE: "Employe",
 };
 
 export function isSuperAdmin(role: UserRole): boolean {

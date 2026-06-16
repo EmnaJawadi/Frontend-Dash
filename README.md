@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dashboard WhatsApp Support
 
-## Getting Started
+Interface Next.js 16 pour les administrateurs plateforme, administrateurs d'entreprise, agents et employes limites au profil.
 
-First, run the development server:
+## Installation
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Variables publiques minimales:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+NEXT_PUBLIC_APP_NAME=WhatsApp Support
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_ENABLE_ANALYTICS=true
+NEXT_PUBLIC_ENABLE_MOCK_DATA=false
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Authentification
 
-## Learn More
+Les jetons d'acces et de rafraichissement sont geres par le backend dans des cookies HttpOnly et `SameSite=Lax`. Le frontend appelle l'API avec `credentials: include` et ne stocke aucun JWT dans `localStorage` ou `sessionStorage`. Les informations utilisateur locales servent uniquement a l'affichage; le backend reste la source d'autorite. En production, servir le frontend et l'API sur le meme site.
 
-To learn more about Next.js, take a look at the following resources:
+## Roles
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `SUPER_ADMIN`: administration globale.
+- `OWNER`: administration de son entreprise.
+- `AGENT`: conversations, contacts, KB et produits selon les permissions backend.
+- `EMPLOYEE`: profil uniquement.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Verification
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npm run build
+```

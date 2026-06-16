@@ -1,11 +1,5 @@
 import { ApiError } from "@/src/lib/api-error";
 import { env } from "@/src/config/env";
-import {
-  clearAuthTokens,
-  getAccessToken,
-  getRefreshToken,
-  setAuthTokens,
-} from "@/src/lib/auth-token";
 import { clearSession } from "@/src/lib/session";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -28,7 +22,7 @@ const AUTH_ENDPOINT_PREFIXES = [
   "/auth/reset-password",
 ];
 
-let refreshPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<boolean> | null = null;
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
@@ -39,7 +33,6 @@ function isAuthEndpoint(endpoint: string): boolean {
 }
 
 function clearClientAuthState(): void {
-  clearAuthTokens();
   clearSession();
 }
 
@@ -86,11 +79,8 @@ function resolveApiErrorMessage(data: unknown): string {
   return "Request failed";
 }
 
-async function refreshAccessToken(): Promise<string | null> {
-  if (!API_URL) return null;
-
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return null;
+async function refreshAccessToken(): Promise<boolean> {
+  if (!API_URL) return false;
 
   if (refreshPromise) {
     return refreshPromise;
@@ -100,41 +90,21 @@ async function refreshAccessToken(): Promise<string | null> {
     try {
       const response = await fetch(`${API_URL}/auth/refresh`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ refreshToken }),
       });
 
       const data = await parseResponse(response);
 
       if (!response.ok || !data || typeof data !== "object") {
-        return null;
+        return false;
       }
 
-      const tokens = data as {
-        accessToken?: unknown;
-        refreshToken?: unknown;
-      };
-
-      if (
-        typeof tokens.accessToken !== "string" ||
-        !tokens.accessToken.trim()
-      ) {
-        return null;
-      }
-
-      setAuthTokens({
-        accessToken: tokens.accessToken,
-        refreshToken:
-          typeof tokens.refreshToken === "string"
-            ? tokens.refreshToken
-            : undefined,
-      });
-
-      return tokens.accessToken;
+      return true;
     } catch {
-      return null;
+      return false;
     } finally {
       refreshPromise = null;
     }
@@ -156,14 +126,12 @@ async function request<T>(
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
 
   const performRequest = async () => {
-    const token = getAccessToken();
-
     try {
       return await fetch(`${API_URL}${endpoint}`, {
         method,
+        credentials: "include",
         headers: {
           ...(isFormData ? {} : { "Content-Type": "application/json" }),
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...headers,
         },
         body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,

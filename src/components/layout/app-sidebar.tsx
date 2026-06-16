@@ -58,8 +58,8 @@ export default function AppSidebar() {
     return pathname === baseHref;
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.replace("/login");
     router.refresh();
   };

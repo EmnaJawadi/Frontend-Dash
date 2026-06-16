@@ -10,7 +10,7 @@ type DashboardLayoutProps = {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <RoleGuard allowedRoles={["OWNER", "AGENT"]}>
+    <RoleGuard allowedRoles={["OWNER", "AGENT", "EMPLOYEE"]}>
       <div className="min-h-screen">
         <div className="flex min-h-screen">
           <AppSidebar />

@@ -12,6 +12,7 @@ import { DataTable } from "@/src/components/shared/data-table";
 import { StatusBadge } from "@/src/components/shared/status-badge";
 import { isApiError } from "@/src/lib/api-error";
 import { contactsService } from "@/src/services/contacts.service";
+import { useToast } from "@/src/contexts/toast-context";
 
 type BackendContact = {
   id: string;
@@ -34,7 +35,7 @@ type ContactsResponse = {
 };
 
 function statusLabel(isBlocked: boolean) {
-  return isBlocked ? "Bloque" : "Actif";
+  return isBlocked ? "Bloqué" : "Actif";
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -45,6 +46,8 @@ function getErrorMessage(error: unknown, fallback: string): string {
 }
 
 export default function ContactsPage() {
+  const { showToast } = useToast();
+
   const [contacts, setContacts] = React.useState<BackendContact[]>([]);
   const [search, setSearch] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
@@ -52,8 +55,6 @@ export default function ContactsPage() {
   const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
   const [deletingContactId, setDeletingContactId] = React.useState<string | null>(null);
   const [selectedContactIds, setSelectedContactIds] = React.useState<Set<string>>(new Set());
-  const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState<string | null>(null);
 
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
@@ -63,7 +64,6 @@ export default function ContactsPage() {
   const loadContacts = React.useCallback(async () => {
     try {
       setIsLoading(true);
-      setError(null);
 
       const response = (await contactsService.list({
         page: 1,
@@ -74,11 +74,12 @@ export default function ContactsPage() {
       setContacts(response.data ?? []);
     } catch (err) {
       console.error("Failed to load contacts", err);
-      setError("Impossible de charger les contacts.");
+      showToast({ message: "Impossible de charger les contacts.", type: "error" });
       setContacts([]);
     } finally {
       setIsLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
   React.useEffect(() => {
@@ -102,14 +103,12 @@ export default function ContactsPage() {
     e.preventDefault();
 
     if (!firstName.trim() || !phoneNumber.trim()) {
-      setError("Prenom et telephone sont obligatoires.");
+      showToast({ message: "Prénom et téléphone sont obligatoires.", type: "error" });
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setError(null);
-      setSuccess(null);
 
       await contactsService.create({
         firstName: firstName.trim(),
@@ -123,10 +122,10 @@ export default function ContactsPage() {
       setPhoneNumber("");
       setEmail("");
       await loadContacts();
-      setSuccess("Contact ajoute avec succes.");
+      showToast({ message: "Contact ajouté avec succès.", type: "success" });
     } catch (err) {
       console.error("Failed to create contact", err);
-      setError("Impossible de creer le contact.");
+      showToast({ message: "Impossible de créer le contact.", type: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -141,14 +140,12 @@ export default function ContactsPage() {
 
     try {
       setDeletingContactId(contact.id);
-      setError(null);
-      setSuccess(null);
       await contactsService.remove(contact.id);
       await loadContacts();
-      setSuccess("Contact supprime avec succes.");
+      showToast({ message: "Contact supprimé avec succès.", type: "success" });
     } catch (err) {
       console.error("Failed to delete contact", err);
-      setError(getErrorMessage(err, "Impossible de supprimer le contact."));
+      showToast({ message: getErrorMessage(err, "Impossible de supprimer le contact."), type: "error" });
     } finally {
       setDeletingContactId(null);
     }
@@ -178,14 +175,12 @@ export default function ContactsPage() {
     if (selectedContactIds.size === 0) return;
 
     const confirmed = window.confirm(
-      `Supprimer ${selectedContactIds.size} contact(s) selectionne(s) ?`,
+      `Supprimer ${selectedContactIds.size} contact(s) sélectionné(s) ?`,
     );
     if (!confirmed) return;
 
     try {
       setIsBulkDeleting(true);
-      setError(null);
-      setSuccess(null);
 
       const ids = Array.from(selectedContactIds);
       const deletions = await Promise.allSettled(
@@ -199,15 +194,16 @@ export default function ContactsPage() {
       setSelectedContactIds(new Set());
 
       if (failedCount > 0) {
-        setError(
-          `${deletedCount} contact(s) supprime(s), ${failedCount} echec(s).`,
-        );
+        showToast({
+          message: `${deletedCount} contact(s) supprimé(s), ${failedCount} échec(s).`,
+          type: "warning",
+        });
       } else {
-        setSuccess(`${deletedCount} contact(s) supprime(s) avec succes.`);
+        showToast({ message: `${deletedCount} contact(s) supprimé(s) avec succès.`, type: "success" });
       }
     } catch (err) {
       console.error("Failed to delete selected contacts", err);
-      setError(getErrorMessage(err, "Impossible de supprimer la selection."));
+      showToast({ message: getErrorMessage(err, "Impossible de supprimer la sélection."), type: "error" });
     } finally {
       setIsBulkDeleting(false);
     }
@@ -234,7 +230,7 @@ export default function ContactsPage() {
         <CardContent>
           <form onSubmit={handleCreateContact} className="grid gap-4 md:grid-cols-5">
             <Input
-              placeholder="Prenom *"
+              placeholder="Prénom *"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
             />
@@ -244,7 +240,7 @@ export default function ContactsPage() {
               onChange={(e) => setLastName(e.target.value)}
             />
             <Input
-              placeholder="Telephone *"
+              placeholder="Téléphone *"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
             />
@@ -271,7 +267,7 @@ export default function ContactsPage() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="pl-10"
-                placeholder="Rechercher par nom, telephone ou email"
+                placeholder="Rechercher par nom, téléphone ou email"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -292,12 +288,9 @@ export default function ContactsPage() {
               ) : (
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
-              Supprimer la selection ({selectedCount})
+              Supprimer la sélection ({selectedCount})
             </Button>
           </div>
-
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          {success ? <p className="text-sm text-emerald-700">{success}</p> : null}
 
           {isLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -308,7 +301,7 @@ export default function ContactsPage() {
             <DataTable
               data={contacts}
               rowKey={(contact) => contact.id}
-              emptyMessage="Aucun contact trouve."
+              emptyMessage="Aucun contact trouvé."
               columns={[
                 {
                   key: "select",
@@ -320,7 +313,7 @@ export default function ContactsPage() {
                         onChange={(event) =>
                           toggleSelectAllVisible(event.target.checked)
                         }
-                        aria-label="Selectionner tous les contacts"
+                        aria-label="Sélectionner tous les contacts"
                         className="app-checkbox"
                       />
                   ),
@@ -332,7 +325,7 @@ export default function ContactsPage() {
                       onChange={(event) =>
                         toggleContactSelection(contact.id, event.target.checked)
                       }
-                      aria-label={`Selectionner ${contact.fullName || contact.phoneNumber}`}
+                      aria-label={`Sélectionner ${contact.fullName || contact.phoneNumber}`}
                       className="app-checkbox"
                     />
                   ),
@@ -349,7 +342,7 @@ export default function ContactsPage() {
                 },
                 {
                   key: "phone",
-                  header: "Telephone",
+                  header: "Téléphone",
                   className: "min-w-[150px]",
                   render: (contact) => contact.phoneNumber,
                 },
@@ -394,7 +387,7 @@ export default function ContactsPage() {
                   render: (contact) => (
                         <div className="app-action-row justify-end">
                           <Button asChild variant="outline" size="sm">
-                            <Link href={`/contacts/${contact.id}`}>Voir details</Link>
+                            <Link href={`/contacts/${contact.id}`}>Voir détails</Link>
                           </Button>
                           <Button asChild size="sm">
                             <Link href={`/contacts/${contact.id}/edit`}>Modifier</Link>

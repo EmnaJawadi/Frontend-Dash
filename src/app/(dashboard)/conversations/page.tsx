@@ -46,7 +46,7 @@ export default function ConversationsPage() {
           onClick={refetch}
           className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
-          Reessayer
+          Réessayer
         </button>
       </SectionCard>
     );
@@ -55,7 +55,7 @@ export default function ConversationsPage() {
   return (
     <div className="space-y-8">
       <div className="rounded-2xl border border-border/75 bg-card/72 px-4 py-3 text-sm font-medium text-muted-foreground shadow-sm fade-up">
-        {total} conversation{total !== 1 ? "s" : ""} trouvee{total !== 1 ? "s" : ""}
+        {total} conversation{total !== 1 ? "s" : ""} trouvée{total !== 1 ? "s" : ""}
       </div>
 
       <ConversationFilters

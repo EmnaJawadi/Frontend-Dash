@@ -148,6 +148,8 @@ export function getNavigationByRole(role: UserRole): NavigationItem[] {
       return OWNER_NAVIGATION;
     case "AGENT":
       return AGENT_NAVIGATION;
+    case "EMPLOYEE":
+      return [];
     default:
       return [];
   }

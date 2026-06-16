@@ -32,6 +32,16 @@ export type ReviewKnowledgeSuggestionPayload = {
   tags?: string[];
 };
 
+export type KnowledgeBaseRebuildReport = {
+  companyId: string;
+  companyName: string;
+  articlesFound: number;
+  articlesIndexed: number;
+  chunksDeleted: number;
+  chunksCreated: number;
+  errors: Array<{ articleId: string; title: string | null; error: string }>;
+};
+
 function toQueryString(q?: Record<string, unknown>) {
   if (!q) return "";
   const params = new URLSearchParams();
@@ -78,6 +88,10 @@ export const knowledgeBaseService = {
   publish: (id: string, published: boolean) =>
     apiClient.patch(`/knowledge-base/articles/${id}/publish`, { published }),
   remove: (id: string) => apiClient.delete(`/knowledge-base/articles/${id}`),
+  rebuild: (companyId?: string) =>
+    apiClient.post<KnowledgeBaseRebuildReport>('/knowledge-base/articles/rebuild', {
+      ...(companyId ? { companyId } : {}),
+    }),
   listSuggestions: (query?: {
     status?: KnowledgeSuggestionStatus;
     companyId?: string;

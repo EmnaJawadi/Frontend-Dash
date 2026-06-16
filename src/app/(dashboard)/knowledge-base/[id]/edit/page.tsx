@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import Link from "next/link";
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { isApiError } from "@/src/lib/api-error";
 import { knowledgeBaseService } from "@/src/services/knowledge-base.service";
+import { useToast } from "@/src/contexts/toast-context";
 
 type ArticleCategory = "commandes" | "paiements" | "livraison" | "retours" | "general";
 
@@ -54,6 +55,7 @@ function getErrorMessage(error: unknown): string {
 export default function EditArticlePage() {
   const params = useParams();
   const router = useRouter();
+  const { showToast } = useToast();
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -64,12 +66,10 @@ export default function EditArticlePage() {
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [error, setError] = React.useState("");
-  const [success, setSuccess] = React.useState("");
 
   React.useEffect(() => {
     if (!id) {
-      setError("Identifiant article invalide.");
+      showToast({ message: "Identifiant article invalide.", type: "error" });
       setIsLoading(false);
       return;
     }
@@ -80,7 +80,6 @@ export default function EditArticlePage() {
     async function loadArticle() {
       try {
         setIsLoading(true);
-        setError("");
 
         const article = (await knowledgeBaseService.getById(articleId)) as KnowledgeArticle;
 
@@ -93,7 +92,7 @@ export default function EditArticlePage() {
       } catch (err) {
         console.error("Failed to load article", err);
         if (mounted) {
-          setError("Impossible de charger cet article.");
+          showToast({ message: "Impossible de charger cet article.", type: "error" });
         }
       } finally {
         if (mounted) {
@@ -107,46 +106,46 @@ export default function EditArticlePage() {
     return () => {
       mounted = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!id) {
-      setError("Identifiant article invalide.");
+      showToast({ message: "Identifiant article invalide.", type: "error" });
       return;
     }
 
     if (!title.trim()) {
-      setError("Le titre est obligatoire.");
+      showToast({ message: "Le titre est obligatoire.", type: "error" });
       return;
     }
 
     if (content.trim().length < 20) {
-      setError("Le contenu doit contenir au moins 20 caracteres.");
+      showToast({ message: "Le contenu doit contenir au moins 20 caractères.", type: "error" });
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setError("");
-      setSuccess("");
 
       await knowledgeBaseService.update(id, {
         title: title.trim(),
         content: content.trim(),
         summary: category,
         language: language.trim() || "fr",
+        status: "published",
       });
 
-      setSuccess("Article modifie avec succes.");
+      showToast({ message: "Article modifié avec succès.", type: "success" });
       setTimeout(() => {
         router.push(`/knowledge-base/${id}`);
         router.refresh();
       }, 700);
     } catch (err) {
       console.error("Failed to update article", err);
-      setError(getErrorMessage(err));
+      showToast({ message: getErrorMessage(err), type: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -158,7 +157,7 @@ export default function EditArticlePage() {
         <Button asChild variant="outline" className="rounded-xl">
           <Link href="/knowledge-base">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Retour a la base
+            Retour à la base
           </Link>
         </Button>
 
@@ -171,24 +170,16 @@ export default function EditArticlePage() {
 
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Modifier article</h1>
-        <p className="text-sm text-muted-foreground">Mettez a jour le contenu pour ameliorer les reponses du bot.</p>
+        <p className="text-sm text-muted-foreground">Mettez à jour le contenu pour améliorer les réponses du bot.</p>
       </div>
 
-      {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      ) : null}
-
-      {success ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</div>
-      ) : null}
-
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Chargement de l'article...</p>
+        <p className="text-sm text-muted-foreground">Chargement de l&apos;article...</p>
       ) : (
         <form onSubmit={handleSave}>
           <Card className="rounded-3xl border-border/60 shadow-sm">
             <CardHeader>
-              <CardTitle>Edition</CardTitle>
+              <CardTitle>Édition</CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-5">
@@ -204,17 +195,17 @@ export default function EditArticlePage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Categorie</Label>
+                  <Label>Catégorie</Label>
                   <Select value={category} onValueChange={(value) => setCategory(value as ArticleCategory)}>
                     <SelectTrigger className="h-11 rounded-xl">
-                      <SelectValue placeholder="Choisir une categorie" />
+                      <SelectValue placeholder="Choisir une catégorie" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="commandes">Commandes</SelectItem>
                       <SelectItem value="paiements">Paiements</SelectItem>
                       <SelectItem value="livraison">Livraison</SelectItem>
                       <SelectItem value="retours">Retours</SelectItem>
-                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="general">Général</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

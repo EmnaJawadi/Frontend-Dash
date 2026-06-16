@@ -18,5 +18,9 @@ export default async function HomePage() {
     redirect("/conversations");
   }
 
+  if (role === "EMPLOYEE") {
+    redirect("/profile");
+  }
+
   redirect("/dashboard");
 }

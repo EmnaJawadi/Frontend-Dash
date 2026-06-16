@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Brain,
   BookOpen,
@@ -13,8 +14,11 @@ import {
   RefreshCw,
   Search,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
+import { pdfImportService } from "@/src/features/knowledge-base/services/pdf-import.service";
+import { usePdfImports } from "@/src/features/knowledge-base/hooks/usePdfImports";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +36,7 @@ import {
   knowledgeBaseService,
   type KnowledgeSuggestion,
 } from "@/src/services/knowledge-base.service";
+import { useToast } from "@/src/contexts/toast-context";
 
 type ArticleStatus = "published" | "draft" | "archived";
 type ArticleCategory = string;
@@ -49,6 +54,7 @@ type ListResponse = {
   items: Array<{
     id: string;
     title: string;
+    category?: string | null;
     summary?: string | null;
     status: ArticleStatus;
     updatedAt: string;
@@ -89,7 +95,7 @@ function categoryLabel(category: ArticleCategory) {
     case "retours":
       return "Retours";
     case "general":
-      return "General";
+      return "Général";
     default:
       return category;
   }
@@ -98,11 +104,11 @@ function categoryLabel(category: ArticleCategory) {
 function statusLabel(status: ArticleStatus) {
   switch (status) {
     case "published":
-      return "Publie";
+      return "Publié";
     case "draft":
       return "Brouillon";
     case "archived":
-      return "Archive";
+      return "Archivé";
     default:
       return status;
   }
@@ -182,6 +188,7 @@ function SearchInput({
 }
 
 export default function KnowledgeBasePage() {
+  const router = useRouter();
   const [search, setSearch] = React.useState("");
   const [status, setStatus] = React.useState<ArticleStatus | "all">("all");
   const [category, setCategory] = React.useState<ArticleCategory | "all">("all");
@@ -191,34 +198,84 @@ export default function KnowledgeBasePage() {
   const [deletingArticleId, setDeletingArticleId] = React.useState<string | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
   const [selectedArticleIds, setSelectedArticleIds] = React.useState<Set<string>>(new Set());
-  const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState<string | null>(null);
+  const [isUploadingPdf, setIsUploadingPdf] = React.useState(false);
+  const [isRebuilding, setIsRebuilding] = React.useState(false);
+  const { showToast } = useToast();
+  const pdfInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const { data: pendingImports } = usePdfImports("PENDING_REVIEW");
+  const { data: partialImports } = usePdfImports("PARTIALLY_DONE");
+  const pendingImportCount = (pendingImports?.length ?? 0) + (partialImports?.length ?? 0);
+
+  async function handlePdfFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!pdfInputRef.current) return;
+    pdfInputRef.current.value = "";
+    if (!file) return;
+
+    try {
+      setIsUploadingPdf(true);
+      const result = await pdfImportService.uploadPdf(file);
+      router.push(`/knowledge-base/pdf-imports/${result.importId}`);
+    } catch (err) {
+      const message = isApiError(err)
+        ? err.message
+        : "Impossible d'analyser le PDF. Veuillez réessayer.";
+      showToast({ message, type: "error" });
+      setIsUploadingPdf(false);
+    }
+  }
+
+  async function handleRebuildKnowledgeBase() {
+    if (!window.confirm('Reconstruire tous les chunks et embeddings publies de cette entreprise ?')) {
+      return;
+    }
+
+    try {
+      setIsRebuilding(true);
+      const report = await knowledgeBaseService.rebuild();
+      showToast({
+        message: `${report.articlesIndexed} article(s) reindexes, ${report.chunksCreated} chunk(s) crees.`,
+        type: report.errors.length > 0 ? 'warning' : 'success',
+      });
+      await loadArticles();
+    } catch (err) {
+      showToast({
+        message: isApiError(err) ? err.message : 'Impossible de reconstruire la base de connaissance.',
+        type: 'error',
+      });
+    } finally {
+      setIsRebuilding(false);
+    }
+  }
 
   const loadArticles = React.useCallback(async () => {
     try {
       setIsLoading(true);
-      setError(null);
-      setSuccess(null);
       const firstResponse = (await knowledgeBaseService.list({
         page: 1,
         limit: 100,
       })) as ListResponse;
       const allItems = [...(firstResponse.items ?? [])];
       const totalPages = firstResponse.meta?.totalPages ?? 1;
+      const pageLimit = firstResponse.meta?.limit ?? 100;
 
-      for (let page = 2; page <= totalPages; page += 1) {
-        const response = (await knowledgeBaseService.list({
-          page,
-          limit: firstResponse.meta?.limit ?? 100,
-        })) as ListResponse;
-        allItems.push(...(response.items ?? []));
+      if (totalPages > 1) {
+        const remaining = await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_, i) =>
+            knowledgeBaseService.list({ page: i + 2, limit: pageLimit }) as Promise<ListResponse>,
+          ),
+        );
+        for (const response of remaining) {
+          allItems.push(...(response.items ?? []));
+        }
       }
 
       setItems(
         allItems.map((article) => ({
           id: article.id,
           title: article.title,
-          category: normalizeCategory(article.summary),
+          category: normalizeCategory(article.category ?? article.summary),
           status: article.status ?? "draft",
           author: "Equipe",
           updatedAt: article.updatedAt,
@@ -227,7 +284,7 @@ export default function KnowledgeBasePage() {
     } catch (e) {
       console.error("Failed to load knowledge base", e);
       setItems([]);
-      setError("Impossible de charger les articles.");
+      showToast({ message: "Impossible de charger les articles.", type: "error" });
     } finally {
       setIsLoading(false);
     }
@@ -329,8 +386,6 @@ export default function KnowledgeBasePage() {
 
     try {
       setDeletingArticleId(article.id);
-      setError(null);
-      setSuccess(null);
       await knowledgeBaseService.remove(article.id);
       await loadArticles();
       setSelectedArticleIds((prev) => {
@@ -338,14 +393,13 @@ export default function KnowledgeBasePage() {
         next.delete(article.id);
         return next;
       });
-      setSuccess("Article supprime avec succes.");
+      showToast({ message: "Article supprimé avec succès.", type: "success" });
     } catch (err) {
       console.error("Failed to delete article", err);
-      setError(
-        isApiError(err) && err.message
-          ? err.message
-          : "Impossible de supprimer l'article.",
-      );
+      showToast({
+        message: isApiError(err) && err.message ? err.message : "Impossible de supprimer l'article.",
+        type: "error",
+      });
     } finally {
       setDeletingArticleId(null);
     }
@@ -355,14 +409,12 @@ export default function KnowledgeBasePage() {
     if (selectedArticleIds.size === 0) return;
 
     const confirmed = window.confirm(
-      `Supprimer ${selectedArticleIds.size} article(s) selectionne(s) ?`,
+      `Supprimer ${selectedArticleIds.size} article(s) sélectionné(s) ?`,
     );
     if (!confirmed) return;
 
     try {
       setIsBulkDeleting(true);
-      setError(null);
-      setSuccess(null);
 
       const ids = Array.from(selectedArticleIds);
       const deletions = await Promise.allSettled(
@@ -375,13 +427,13 @@ export default function KnowledgeBasePage() {
       setSelectedArticleIds(new Set());
 
       if (failedCount > 0) {
-        setError(`${deletedCount} article(s) supprime(s), ${failedCount} echec(s).`);
+        showToast({ message: `${deletedCount} article(s) supprimé(s), ${failedCount} échec(s).`, type: "warning" });
       } else {
-        setSuccess(`${deletedCount} article(s) supprime(s) avec succes.`);
+        showToast({ message: `${deletedCount} article(s) supprimé(s) avec succès.`, type: "success" });
       }
     } catch (err) {
       console.error("Failed to delete selected articles", err);
-      setError("Impossible de supprimer la selection.");
+      showToast({ message: "Impossible de supprimer la sélection.", type: "error" });
     } finally {
       setIsBulkDeleting(false);
     }
@@ -401,6 +453,35 @@ export default function KnowledgeBasePage() {
 
   return (
     <div className="space-y-6">
+      {pendingImportCount > 0 && (
+        <Link
+          href="/knowledge-base/pdf-imports"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 transition hover:bg-amber-100"
+        >
+          <span className="font-medium">
+            {pendingImportCount} import{pendingImportCount > 1 ? "s" : ""} PDF en attente de validation
+          </span>
+          <span className="shrink-0 rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
+            Voir →
+          </span>
+        </Link>
+      )}
+
+      {isUploadingPdf && (
+        <div className="flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+          <span>Analyse du PDF en cours, veuillez patienter...</span>
+        </div>
+      )}
+
+      <input
+        ref={pdfInputRef}
+        type="file"
+        accept=".pdf,application/pdf"
+        className="hidden"
+        onChange={(e) => void handlePdfFileChange(e)}
+      />
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Total articles"
@@ -447,9 +528,9 @@ export default function KnowledgeBasePage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous statuts</SelectItem>
-                  <SelectItem value="published">Publie</SelectItem>
+                  <SelectItem value="published">Publié</SelectItem>
                   <SelectItem value="draft">Brouillon</SelectItem>
-                  <SelectItem value="archived">Archive</SelectItem>
+                  <SelectItem value="archived">Archivé</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -479,7 +560,35 @@ export default function KnowledgeBasePage() {
                 onClick={resetFilters}
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Reinitialiser
+                Réinitialiser
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 rounded-xl"
+                onClick={() => void handleRebuildKnowledgeBase()}
+                disabled={isRebuilding}
+              >
+                <RefreshCw
+                  className={`mr-2 h-4 w-4 ${isRebuilding ? 'animate-spin' : ''}`}
+                />
+                {isRebuilding ? 'Reconstruction...' : 'Reconstruire la base'}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 rounded-xl"
+                onClick={() => pdfInputRef.current?.click()}
+                disabled={isUploadingPdf}
+              >
+                {isUploadingPdf ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
+                Importer PDF
               </Button>
 
               <Button asChild>
@@ -492,9 +601,6 @@ export default function KnowledgeBasePage() {
           </div>
         </CardContent>
       </Card>
-
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {success ? <p className="text-sm text-emerald-700">{success}</p> : null}
 
       <div className="flex justify-end">
         <Button
@@ -519,7 +625,7 @@ export default function KnowledgeBasePage() {
       </div>
 
       <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-        {isLoading ? "Chargement..." : `${filteredArticles.length} article(s) trouve(s)`}
+        {isLoading ? "Chargement..." : `${filteredArticles.length} article(s) trouvé(s)`}
       </div>
 
       {!isLoading && filteredArticles.length === 0 ? (
@@ -528,7 +634,7 @@ export default function KnowledgeBasePage() {
             <div className="mb-3 rounded-full bg-muted p-3">
               <BookOpen className="h-5 w-5 text-muted-foreground" />
             </div>
-            <h3 className="mb-1 text-lg font-semibold">Aucun article trouve</h3>
+            <h3 className="mb-1 text-lg font-semibold">Aucun article trouvé</h3>
           </CardContent>
         </Card>
       ) : (
@@ -550,7 +656,7 @@ export default function KnowledgeBasePage() {
                 <th className="px-4 py-3 font-medium">Categorie</th>
                 <th className="px-4 py-3 font-medium">Statut</th>
                 <th className="px-4 py-3 font-medium">Auteur</th>
-                <th className="px-4 py-3 font-medium">Mis a jour</th>
+                <th className="px-4 py-3 font-medium">Mis à jour</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>

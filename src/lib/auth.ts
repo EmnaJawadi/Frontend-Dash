@@ -11,7 +11,6 @@ import {
   getStoredRole,
   saveSession,
 } from "@/src/lib/session";
-import { clearAuthTokens, hasAccessToken } from "@/src/lib/auth-token";
 import { getDefaultRouteByRole } from "@/src/lib/routes";
 import {
   authService,
@@ -25,7 +24,8 @@ export type CurrentUser = AuthUser;
 function mapBackendRole(role: BackendRole): UserRole {
   if (role === "SUPER_ADMIN") return "SUPER_ADMIN";
   if (role === "COMPANY_ADMIN") return "OWNER";
-  return "AGENT";
+  if (role === "AGENT") return "AGENT";
+  return "EMPLOYEE";
 }
 
 function toAuthUser(user: BackendAuthUser, companyName?: string): AuthUser {
@@ -59,7 +59,7 @@ export async function login(payload: LoginPayload): Promise<AuthUser> {
   const safeUser = toAuthUser(response.user);
 
   if (payload.role && safeUser.role !== payload.role) {
-    authService.logout();
+    await authService.logout();
     clearSession();
     throw new Error("Email, mot de passe ou role incorrect.");
   }
@@ -141,22 +141,16 @@ export async function updateCurrentUserPassword(payload: {
   });
 }
 
-export function logout(): void {
-  authService.logout();
-  clearSession();
+export async function logout(): Promise<void> {
+  try {
+    await authService.logout();
+  } finally {
+    clearSession();
+  }
 }
 
 export function isAuthenticated(): boolean {
-  const authFlag = getAuthFlag();
-  if (!authFlag) return false;
-
-  if (!hasAccessToken()) {
-    clearAuthTokens();
-    clearSession();
-    return false;
-  }
-
-  return true;
+  return getAuthFlag();
 }
 
 export function getCurrentUser(): CurrentUser | null {

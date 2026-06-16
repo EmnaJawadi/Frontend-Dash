@@ -11,7 +11,12 @@ export function canAccessAdmin(_role: UserRole): boolean {
 }
 
 export function canAccessDashboard(role: UserRole): boolean {
-  return role === "SUPER_ADMIN" || role === "OWNER" || role === "AGENT";
+  return (
+    role === "SUPER_ADMIN" ||
+    role === "OWNER" ||
+    role === "AGENT" ||
+    role === "EMPLOYEE"
+  );
 }
 
 export function canManageCompany(role: UserRole): boolean {
@@ -64,6 +69,10 @@ export function getNavigationByRole(role: UserRole) {
       { label: "Analyses", href: APP_ROUTES.ANALYTICS },
       { label: "Parametres", href: APP_ROUTES.SETTINGS },
     ];
+  }
+
+  if (role === "EMPLOYEE") {
+    return [];
   }
 
   return [

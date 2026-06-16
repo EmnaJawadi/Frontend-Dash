@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { QueryProvider } from "@/src/providers/query-provider";
 import { ThemeProvider } from "@/src/providers/theme-provider";
+import { ToastProvider } from "@/src/contexts/toast-context";
 
 export const metadata: Metadata = {
   title: "Centre de Support WhatsApp",
@@ -24,7 +25,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="fr" suppressHydrationWarning>
       <body className="antialiased">
         <ThemeProvider defaultTheme="light">
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

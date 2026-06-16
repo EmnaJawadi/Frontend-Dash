@@ -1,9 +1,4 @@
 import { apiClient } from "@/src/lib/api-client";
-import {
-  clearAuthTokens,
-  getRefreshToken,
-  setAuthTokens,
-} from "@/src/lib/auth-token";
 
 export type BackendRole = "SUPER_ADMIN" | "COMPANY_ADMIN" | "AGENT" | "EMPLOYEE";
 
@@ -44,9 +39,8 @@ export type BackendAuthUser = {
 };
 
 export type AuthResponse = {
-  accessToken: string;
-  refreshToken?: string;
   user: BackendAuthUser;
+  tokenType?: "Cookie";
 };
 
 export type RegisterResponse = {
@@ -87,25 +81,13 @@ export type ChangePasswordRequest = {
 };
 
 export type RefreshResponse = {
-  accessToken: string;
-  refreshToken?: string;
   user: BackendAuthUser;
+  tokenType?: "Cookie";
 };
-
-function persistTokens(tokens: { accessToken?: string; refreshToken?: string }) {
-  if (!tokens.accessToken) return;
-
-  setAuthTokens({
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
-  });
-}
 
 export const authService = {
   async login(payload: LoginRequest): Promise<AuthResponse> {
-    const res = await apiClient.post<AuthResponse>("/auth/login", payload);
-    persistTokens(res);
-    return res;
+    return apiClient.post<AuthResponse>("/auth/login", payload);
   },
 
   async register(payload: RegisterRequest): Promise<RegisterResponse> {
@@ -118,13 +100,7 @@ export const authService = {
   },
 
   async refresh(): Promise<RefreshResponse> {
-    const refreshToken = getRefreshToken();
-    const res = await apiClient.post<RefreshResponse>(
-      "/auth/refresh",
-      refreshToken ? { refreshToken } : undefined
-    );
-    persistTokens(res);
-    return res;
+    return apiClient.post<RefreshResponse>("/auth/refresh");
   },
 
   async me(): Promise<BackendAuthUser> {
@@ -147,7 +123,7 @@ export const authService = {
     return apiClient.post("/auth/reset-password", { token, newPassword });
   },
 
-  logout(): void {
-    clearAuthTokens();
+  async logout(): Promise<void> {
+    await apiClient.post("/auth/logout");
   },
 };

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import Link from "next/link";
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { isApiError } from "@/src/lib/api-error";
 import { knowledgeBaseService } from "@/src/services/knowledge-base.service";
+import { useToast } from "@/src/contexts/toast-context";
 
 type ArticleCategory = "commandes" | "paiements" | "livraison" | "retours" | "general";
 
@@ -28,7 +29,7 @@ function categoryLabel(category: ArticleCategory) {
     case "retours":
       return "Retours";
     case "general":
-      return "General";
+      return "Général";
     default:
       return category;
   }
@@ -37,7 +38,7 @@ function categoryLabel(category: ArticleCategory) {
 function getErrorMessage(error: unknown): string {
   if (isApiError(error)) {
     if (error.status >= 500) {
-      return "Erreur serveur pendant l'import. Verifiez que le fichier est lisible, puis reessayez.";
+      return "Erreur serveur pendant l'import. Vérifiez que le fichier est lisible, puis réessayez.";
     }
 
     if (error.details && typeof error.details === "object") {
@@ -59,6 +60,7 @@ function getErrorMessage(error: unknown): string {
 export default function NewArticlePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showToast } = useToast();
 
   const [title, setTitle] = React.useState("");
   const [content, setContent] = React.useState("");
@@ -69,8 +71,6 @@ export default function NewArticlePage() {
   const [sourceApplied, setSourceApplied] = React.useState(false);
 
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [saveMessage, setSaveMessage] = React.useState("");
-  const [error, setError] = React.useState("");
 
   React.useEffect(() => {
     if (sourceApplied) return;
@@ -109,18 +109,17 @@ export default function NewArticlePage() {
     e.preventDefault();
 
     if (!title.trim() && !documentFile) {
-      setError("Le titre est obligatoire.");
+      showToast({ message: "Le titre est obligatoire.", type: "error" });
       return;
     }
 
     if (!documentFile && content.trim().length < 20) {
-      setError("Le contenu doit contenir au moins 20 caracteres.");
+      showToast({ message: "Le contenu doit contenir au moins 20 caractères.", type: "error" });
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setError("");
 
       if (documentFile) {
         await knowledgeBaseService.createFromFile({
@@ -135,16 +134,17 @@ export default function NewArticlePage() {
           content: content.trim(),
           summary: category,
           language: "fr",
+          status: "published",
         });
       }
 
-      setSaveMessage("Article enregistre en base avec succes.");
+      showToast({ message: "Article enregistré en base avec succès.", type: "success" });
       setTimeout(() => {
         router.push("/knowledge-base");
         router.refresh();
       }, 500);
     } catch (err) {
-      setError(getErrorMessage(err));
+      showToast({ message: getErrorMessage(err), type: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -156,21 +156,15 @@ export default function NewArticlePage() {
         <Button asChild variant="outline" className="w-fit rounded-xl">
           <Link href="/knowledge-base">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Retour a la base
+            Retour à la base
           </Link>
         </Button>
       </div>
 
-      {saveMessage ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {saveMessage}
-        </div>
-      ) : null}
-
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Nouvel article</h1>
         <p className="text-sm text-muted-foreground">
-          Ajoutez un contenu qui sera utilise par le bot pour repondre aux clients.
+          Ajoutez un contenu qui sera utilisé par le bot pour répondre aux clients.
         </p>
       </div>
 
@@ -184,15 +178,11 @@ export default function NewArticlePage() {
         </div>
       ) : null}
 
-      {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      ) : null}
-
       <form onSubmit={handleSave} className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <Card className="rounded-3xl border-border/60 shadow-sm">
             <CardHeader>
-              <CardTitle>Contenu de l'article</CardTitle>
+              <CardTitle>Contenu de l&apos;article</CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-6">
@@ -211,17 +201,17 @@ export default function NewArticlePage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Categorie</Label>
+                  <Label>Catégorie</Label>
                   <Select value={category} onValueChange={(value) => setCategory(value as ArticleCategory)}>
                     <SelectTrigger className="h-11 rounded-xl">
-                      <SelectValue placeholder="Choisir une categorie" />
+                      <SelectValue placeholder="Choisir une catégorie" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="commandes">Commandes</SelectItem>
                       <SelectItem value="paiements">Paiements</SelectItem>
                       <SelectItem value="livraison">Livraison</SelectItem>
                       <SelectItem value="retours">Retours</SelectItem>
-                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="general">Général</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -245,7 +235,7 @@ export default function NewArticlePage() {
                 <Textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Redigez ici le contenu de l'article..."
+                  placeholder="Rédigez ici le contenu de l'article..."
                   disabled={Boolean(documentFile)}
                   className="min-h-[220px] rounded-xl disabled:cursor-not-allowed disabled:bg-muted/50"
                 />
@@ -264,12 +254,11 @@ export default function NewArticlePage() {
                   onChange={(event) => {
                     const file = event.target.files?.[0] ?? null;
                     setDocumentFile(file);
-                    setError("");
                   }}
                 />
                 {documentFile ? (
                   <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm text-cyan-800">
-                    Fichier selectionne: {documentFile.name} ({Math.ceil(documentFile.size / 1024)} KB)
+                    Fichier sélectionné : {documentFile.name} ({Math.ceil(documentFile.size / 1024)} KB)
                   </div>
                 ) : null}
               </div>
@@ -280,13 +269,13 @@ export default function NewArticlePage() {
         <div className="space-y-6">
           <Card className="rounded-3xl border-border/60 shadow-sm">
             <CardHeader>
-              <CardTitle>Apercu rapide</CardTitle>
+              <CardTitle>Aperçu rapide</CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-4">
               <div>
                 <p className="text-lg font-semibold">{title || "Titre de l'article"}</p>
-                <p className="mt-1 text-sm text-muted-foreground">Auteur: {author || "Non defini"}</p>
+                <p className="mt-1 text-sm text-muted-foreground">Auteur : {author || "Non défini"}</p>
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -294,7 +283,7 @@ export default function NewArticlePage() {
                   {categoryLabel(category)}
                 </Badge>
                 <Badge variant="outline" className="rounded-full">
-                  Brouillon
+                  Publié
                 </Badge>
               </div>
 
@@ -315,7 +304,7 @@ export default function NewArticlePage() {
                 Conseils
               </div>
               <p className="text-sm text-muted-foreground">
-                Utilisez des reponses courtes, claires et faciles a reutiliser par le bot dans les conversations clients.
+                Utilisez des réponses courtes, claires et faciles à réutiliser par le bot dans les conversations clients.
               </p>
               <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                 <Upload className="h-3.5 w-3.5" />
@@ -339,4 +328,3 @@ export default function NewArticlePage() {
     </div>
   );
 }
-

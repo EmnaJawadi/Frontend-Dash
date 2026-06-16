@@ -231,8 +231,8 @@ export default function SuperAdminPage() {
     setEditingMemberId(null);
   }
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     router.replace("/login");
     router.refresh();
   }
